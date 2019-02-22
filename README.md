@@ -1,5 +1,7 @@
 # speech and udio understanding course project
 
+[Project Logs.ipynb](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project%20Logs.ipynb)
+
 Assumes Python3.7
 
 Conda cheatsheet:  
