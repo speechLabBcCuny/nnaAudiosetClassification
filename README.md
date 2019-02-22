@@ -20,6 +20,6 @@ Requirements
 * kaggle
 
 
-kaggle uses 7zip with dataset:
-sudo apt-get update
-sudo apt install p7zip-full
+kaggle uses 7zip with dataset:  
+sudo apt-get update  
+sudo apt install p7zip-full  
