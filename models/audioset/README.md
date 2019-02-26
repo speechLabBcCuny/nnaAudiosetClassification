@@ -8,6 +8,7 @@ TODO:
 - [ ] Update installation and test session example on README:
 - [ ] Change vggish_inference_demo.py with pytorch example
 - [ ] Add link to inference demo notebook
+- [ ] Update vggish_train_demo.py with pytorch example
 - [ ] Add example to run vggish pre-process in parallel
 
 
