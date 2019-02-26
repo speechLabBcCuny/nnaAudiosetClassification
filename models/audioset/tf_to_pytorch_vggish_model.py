@@ -37,7 +37,7 @@ class KitModel(nn.Module):
 
     def forward(self, x):
         self.vggish_Flatten_flatten_Reshape_shape_1 = torch.autograd.Variable(torch.Tensor([-1]), requires_grad=False)
-        vggish_Reshape  = torch.reshape(input = x, shape = (1,96,64,1)).permute(0, 3, 1, 2)
+        vggish_Reshape  = torch.reshape(input = x, shape = (-1,96,64,1)).permute(0, 3, 1, 2)
 
         vggish_conv1_Conv2D_pad = F.pad(vggish_Reshape, (1, 1, 1, 1))
         vggish_conv1_Conv2D = self.vggish_conv1_Conv2D(vggish_conv1_Conv2D_pad)
