@@ -5,6 +5,7 @@
 I used MMdnn to convert model to Pytorch. You can see [that notebook](https://colab.research.google.com/drive/1dBH3-r7IG7xhmL2a-O6ik8P6OUESn6dT#scrollTo=dRpHisuHplqc) for pipeline, and [that](https://github.com/Microsoft/MMdnn/issues/595) issue for problems I faced.
 
 TODO:
+- [ ] Update installation and test session example on README:
 - [ ] Change vggish_inference_demo.py with pytorch example
 - [ ] Add link to inference demo notebook
 - [ ] Add example to run vggish pre-process in parallel
@@ -12,7 +13,7 @@ TODO:
 
 [Original tensorflow repo](https://github.com/tensorflow/models/tree/master/research/audioset)
 
-#Info from original repository (links and requirements updated to work with pytorch):
+## Info from original repository (links and requirements updated to work with pytorch):
 
 [AudioSet](http://g.co/audioset), a dataset of over 2 million human-labeled
 10-second YouTube video soundtracks, with labels taken from an ontology of
