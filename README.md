@@ -4,7 +4,7 @@
 
 Assumes Python3.7
 ```
-Conda cheatsheet:  
+#Conda cheatsheet:  
 envName="speechEnv"  
 conda create --name $envName  
 conda activate speechEnv  
