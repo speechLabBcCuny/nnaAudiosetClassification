@@ -3,7 +3,7 @@
 [Project Logs.ipynb](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project%20Logs.ipynb)
 
 Assumes Python3.7
-
+```
 Conda cheatsheet:  
 envName="speechEnv"  
 conda create --name $envName  
@@ -12,6 +12,7 @@ conda config --add channels anaconda
 conda confic --add channels pytorch  
 conda install --file req.txt  
 conda clean --yes --all  
+```
 
 Add kernel to jupyter kernels (use python that have ipython installed):  
 python -m ipykernel install --user --name $envName --display-name "Python speechEnv"  
