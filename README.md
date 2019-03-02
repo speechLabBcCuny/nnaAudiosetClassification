@@ -14,6 +14,9 @@ conda install --file req.txt
 conda clean --yes --all  
 ```
 
+
+
+
 Add kernel to jupyter kernels (use python that have ipython installed):  
 python -m ipykernel install --user --name $envName --display-name "Python speechEnv"  
 
@@ -26,3 +29,11 @@ Requirements
 kaggle uses 7zip with dataset:  
 sudo apt-get update  
 sudo apt install p7zip-full  
+```
+# for Getting data from cloud on unix with credentials
+curl https://sdk.cloud.google.com | bash
+exec -l $SHELL
+gcloud init
+
+pip install kaggle
+```
