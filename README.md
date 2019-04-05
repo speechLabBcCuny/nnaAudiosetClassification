@@ -20,7 +20,7 @@ conda clean --yes --all
 Add kernel to jupyter kernels (use python that have ipython installed):  
 ```
 conda install ipykernel 
-python -m ipykernel install --user --name "$envName" --display-name "Python3 "+"$envName"  
+python -m ipykernel install --user --name "$envName" --display-name "Python3-$envName"  
 ```
 Requirements
 * pytorch
