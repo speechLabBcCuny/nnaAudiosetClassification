@@ -1,0 +1,10 @@
+python process_audio.py --input_files /scratch/mim/nna/samples/split_02\:00/USGS_20160613_234225_2820m_00s__2880m_00s_56m_00s__58m_00s.mp3 --output_folder /scratch/enis/data/nna/samples_wav/split_02\:00/
+
+ls -d -1 /scratch/mim/nna/samples/split_02\:00/* | parallel -P 20 -n 20 'python process_audio.py --input_files {} --output_folder /scratch/enis/data/nna/samples_wav/split_02\:00/'
+
+cd ./projects/nna/
+rm -rf datas
+
+python pre_process.py --input_files /scratch/enis/data/nna/samples_wav/split_02\:00/USGS_20160613_234225_2820m_00s__2880m_00s_56m_00s__58m_00s.wav --output_folder ./datas --job_id 0
+
+ls -d -1 /scratch/enis/data/nna/samples_wav/split_02\:00/*  | parallel -P 30 -n 50 python pre_process.py --input_files {} --output_folder ./data --job_id {#}
