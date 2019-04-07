@@ -6,7 +6,7 @@ Assumes Python3.7
 ```
 #Conda cheatsheet:  
 envName="speechEnv"  
-conda create --name $envName  
+conda create --name $envName python=3.7
 conda activate speechEnv  
 conda config --add channels anaconda  
 conda confic --add channels pytorch  
@@ -18,8 +18,10 @@ conda clean --yes --all
 
 
 Add kernel to jupyter kernels (use python that have ipython installed):  
-python -m ipykernel install --user --name $envName --display-name "Python speechEnv"  
-
+```
+conda install ipykernel 
+python -m ipykernel install --user --name "$envName" --display-name "Python3-$envName"  
+```
 Requirements
 * pytorch
 * scipy
