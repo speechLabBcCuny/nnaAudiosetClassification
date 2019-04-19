@@ -2,7 +2,7 @@
 python process_audio.py --input_files /scratch/mim/nna/samples/split_60:00/CLVL5_20160621_074419_0000m_00s__0060m_00s.mp3 --output_folder $wav_folder
 
 ### 1) turn into wav files (24 hour example)
-wav_folder=scratch/enis/data/nna/samples_wav/24_hour/
+wav_folder=/scratch/enis/data/nna/samples_wav/24_hour/
 
 ls -d -1 /scratch/mim/nna/samples/split_60\:00/* | sort -k9,9 | head --lines 24 | parallel -P 20 -n 1 'python process_audio.py --input_files {} --output_folder scratch/enis/data/nna/samples_wav/24_hour/'
 

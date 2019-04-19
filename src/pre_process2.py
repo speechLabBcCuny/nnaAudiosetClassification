@@ -15,7 +15,7 @@ if first_run==True:
     os.system("svn export https://github.com/tensorflow/models/trunk/research/audioset")
 
 import sys
-sys.path.insert(0, './audioset')
+sys.path.insert(0, '../audioset')
 
 import vggish_slim
 import vggish_params
@@ -87,7 +87,7 @@ def vggish_inference():
         # postprocessed_batch = pproc.postprocess(embedding_batch)
         # print(postprocessed_batch)
     np.save(os.path.join(args.output_folder,"embeddings.npy"),embeddings)
-    
+
 
 
 if __name__ == "__main__":
