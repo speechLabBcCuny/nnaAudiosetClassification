@@ -94,7 +94,7 @@ cat mp3_files.txt | shuf | parallel -P 1 -N 10 'python pipe4.py --input_files {}
 
 srun cat mp3_files.txt | parallel -P 1 'python pipe3.py --input_files {} --abs_input_path "/scratch/ebc327/nna/NUI_DATA_copy/" --output_folder "/scratch/ebc327/nna/NUI_DATA_copy/" --segment_len "00:30:00" '
 
-srun  -t08:00:00 --mem=30000  -c4 --gres=gpu:v100:1 --pty /bin/bash
+srun  -t04:00:00 --mem=30000  -c4 --gres=gpu:v100:1 --pty /bin/bash
 srun  -t06:00:00 --mem=30000  -c4 --gres=gpu:v100:1 --pty /bin/bash
 #############latestgpu##################
 

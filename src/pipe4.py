@@ -70,6 +70,7 @@ def inference(input_x,batch_size=500,first_k=1):
   left=input_x.shape[0]%batch_size
   # print(input_x.shape)
   # print(left)
+  i=0
   for i in range(0,end,batch_size):
     y_pred=model(input_x[i:i+batch_size].reshape(int(batch_size/10),10,128))
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
