@@ -149,8 +149,8 @@ if __name__ == "__main__":
         ##### step - 0 get prepare names
         mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,
           output_folder,abs_input_path)
-        predictions_file_name=embeddings_file_name[:-17]+"_preds.npy"
-        prediction_index_file_name=embeddings_file_name[:-17]+"_preds_index.npy"
+        predictions_file_name=embeddings_file_name[:-15]+"_preds.npy"
+        prediction_index_file_name=embeddings_file_name[:-15]+"_preds_index.npy"
         if os.path.exists(predictions_file_name):
             continue
 
