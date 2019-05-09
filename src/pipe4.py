@@ -72,22 +72,22 @@ def inference(input_x,batch_size=500,first_k=1):
   # print(left)
   i=0
   for i in range(0,end,batch_size):
-    y_pred=model(input_x[i:i+batch_size].reshape(int(batch_size/10),10,128))
+    y_pred=model(input_x[i:i+batch_size].reshape(int(batch_size/20),20,128))
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
     y_preds=np.concatenate((y_preds,y_pred.detach().numpy()),0)
     y_pred_indexs=np.concatenate((y_pred_indexs,y_pred_index.detach().numpy()),0)
-  left_10=left%10
-  left-=left_10
+  left_20=left%20
+  left-=left_20
   if left>0:
 #   for i in range(input_x.shape[0]-left,input_x.shape[0]):
 #     print(i)
-    y_pred=model(input_x[i:i+left].reshape(int(left/10),10,128))
+    y_pred=model(input_x[i:i+left].reshape(int(left/20),20,128))
 #     y_pred=model(input_x[i:i+1].reshape(1,10,128))
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
     y_preds=np.concatenate((y_preds,y_pred.detach().numpy()),0)
     y_pred_indexs=np.concatenate((y_pred_indexs,y_pred_index.detach().numpy()),0)
-  if left_10>0:
-    y_pred=model(input_x[-left_10:].reshape(1,left_10,128))
+  if left_20>0:
+    y_pred=model(input_x[-left_20:].reshape(1,left_20,128))
 #     y_pred=model(input_x[i:i+1].reshape(1,10,128))
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
     y_preds=np.concatenate((y_preds,y_pred.detach().numpy()),0)
