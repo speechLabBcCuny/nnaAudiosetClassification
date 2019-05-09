@@ -42,7 +42,7 @@ def preb_names(mp3_file_path,output_dicretory,abs_input_path):
 	pre_processed_folder=os.path.join(output_dicretory,path_to_file,mp3_file_name+"_preprocessed/")
 	return mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder
 
-
+# gs://deep_learning_enis/speech_audio_understanding/nna/test/
 def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
 	# print(segments_folder)
 	# print("******",os.path.exists(segments_folder))
