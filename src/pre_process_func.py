@@ -7,6 +7,8 @@ sys.path.insert(0, '../models/audioset')
 import vggish_input
 # import vggish_postprocess
 
+import librosa
+
 import shutil
 
 import numpy as np
@@ -57,30 +59,34 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
 	mp3_segments=os.listdir(segments_folder)
 	return mp3_segments
 
-def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
+def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False,use_audio_segment=False):
 	# for mp3_segment in mp3_segments:
 	input_file_path=segments_folder+mp3_segment
 	tmp_npy=pre_processed_folder+mp3_segment[:-4]+".npy"
 
 	####get_wav#####
-	wav_data = AudioSegment.from_mp3(input_file_path)
-	sr=wav_data.frame_rate
-	wav_data=wav_data.set_channels(1)
-	wav_data = wav_data.get_array_of_samples()
-	wav_data = np.array(wav_data)
-	##########
-	assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
-	wav_data = wav_data/  32768.0  # Convert to [-1.0, +1.0]
-	# print("ready to waveform")
-	# sys.stdout.flush()
-	excerpt_len=10
-	sample_size=(len(wav_data)//(sr))*2
-	sound=np.zeros((sample_size,96,64),dtype=np.float32)
-	count=0
-	for i in range(0,len(wav_data)-(sr*excerpt_len),sr*excerpt_len):
-		a_sound= vggish_input.waveform_to_examples(wav_data[i:i+(sr*excerpt_len)], sr)
-		sound[count:count+(excerpt_len*2),:,:]=a_sound[:,:,:]
-		count+=1
+	if use_audio_segment:
+		wav_data = AudioSegment.from_mp3(input_file_path)
+		sr=wav_data.frame_rate
+		wav_data=wav_data.set_channels(1)
+		wav_data = wav_data.get_array_of_samples()
+		wav_data = np.array(wav_data)
+		##########
+		assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+		wav_data = wav_data/  32768.0  # Convert to [-1.0, +1.0]
+		# print("ready to waveform")
+		# sys.stdout.flush()
+		excerpt_len=10
+		sample_size=(len(wav_data)//(sr))*2
+		sound=np.zeros((sample_size,96,64),dtype=np.float32)
+		count=0
+		for i in range(0,len(wav_data)-(sr*excerpt_len),sr*excerpt_len):
+			a_sound= vggish_input.waveform_to_examples(wav_data[i:i+(sr*excerpt_len)], sr)
+			sound[count:count+(excerpt_len*2),:,:]=a_sound[:,:,:]
+			count+=1
+	else:
+		wav_data, sr = librosa.load(input_file_path, sr=None, mono=True)
+		sound = vggish_input.waveform_to_examples(wav_data, sr)
 	sound=sound.astype(np.float32)
 
 	if saveNoReturn:
