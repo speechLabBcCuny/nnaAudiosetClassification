@@ -12,7 +12,7 @@ import tensorflow as tf
 import argparse
 
 import sys
-sys.path.insert(0, './audioset')
+sys.path.insert(0, '../models/audioset')
 import vggish_slim
 import vggish_params
 import vggish_input

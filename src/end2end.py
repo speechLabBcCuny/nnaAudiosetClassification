@@ -10,7 +10,7 @@ import tensorflow as tf
 import argparse
 
 import sys
-sys.path.insert(0, './audioset')
+sys.path.insert(0, '../models/audioset')
 
 import vggish_slim
 import vggish_params
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         mp3_segments=divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00")
         # parallelize pre_process
         mp3_segments.sort()
-        pool = mp.Pool(processes=25)
+        pool = Pool(processes=25)
         sounds = [pool.apply(pre_process, args=(mp3_segment,segments_folder)) for mp3_segment in mp3_segments]
         # sound=pre_process(mp3_segment,segments_folder,input_file_path)
         # single cpu and gpu

@@ -2,7 +2,7 @@ import os
 from pydub import AudioSegment
 import sys
 
-sys.path.insert(0, './audioset')
+sys.path.insert(0, '../models/audioset')
 # import vggish_slim
 import vggish_input
 # import vggish_postprocess
@@ -43,8 +43,8 @@ def preb_names(mp3_file_path,output_dicretory,abs_input_path):
 
 # gs://deep_learning_enis/speech_audio_understanding/nna/test/
 def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
-	# print(segments_folder)
-	# print("******",os.path.exists(segments_folder))
+	print(segments_folder)
+	print("******",os.path.exists(segments_folder))
 	sys.stdout.flush()
 	if not os.path.exists(segments_folder):
 		os.mkdir(segments_folder)

@@ -114,3 +114,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 files_missing.txt
+
+
+# Models
+src/md_50000_iters.tar
+src/vggish_model.ckpt
+src/vggish_pca_params.npz
+

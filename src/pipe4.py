@@ -1,6 +1,5 @@
 #reqiures:
 # curl https://storage.googleapis.com/deep_learning_enis/speech_audio_understanding/Eusipco2018_Google_AudioSet/md_50000_iters.tar --output ./md_50000_iters.tar
-# curl https://gist.githubusercontent.com/EnisBerk/19d817e9a6a9c060465a5b95c8d54d97/raw/8e0c24e92853e779e222bc3a152d7d65351cfe52/model.py --output ./model.py
 #
 
 from pre_process_func import *
@@ -11,7 +10,7 @@ import sys
 import numpy as np
 import h5py
 
-from model import *
+from audioset_model import *
 
 
 def load_data(hdf5_path):
