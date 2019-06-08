@@ -120,6 +120,8 @@ vgg,pproc = CreateVGGishNetwork()
 
 for i in range(0,len(temp),file_per_epoch):
     epoch_files=temp[i:i+file_per_epoch]
+
+    # epoch_files=un_processed
     with open("/home/enis/projects/nna/input.txt", 'w') as f:
         for item in epoch_files:
             k=f.write("%s\n" % item)
@@ -130,10 +132,12 @@ for i in range(0,len(temp),file_per_epoch):
     command_list=command_text.split(" ")
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
-    ##### step - 0 get prepare names
+    ##### step - inference
     for input_file in epoch_files:
         mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,output_folder,abs_input_path)
         pre_processed_npy_files=[pre_processed_folder+file for file in os.listdir(pre_processed_folder)]
+        if os.path.exists(embeddings_file_name):
+            continue
         embeddings_file_name=inference(pre_processed_npy_files,vgg,sess,embeddings_file_name,batch_size=128)
         rmv_segmets(pre_processed_folder)
 
