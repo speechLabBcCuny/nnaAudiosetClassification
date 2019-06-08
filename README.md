@@ -1,4 +1,4 @@
-# speech and udio understanding course project
+# Nature Sound Processing Project
 
 [Project Logs.ipynb](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project%20Logs.ipynb)
 
