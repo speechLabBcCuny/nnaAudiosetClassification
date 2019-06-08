@@ -4,6 +4,7 @@ import argparse
 import sys
 import numpy as np
 
+# This one splits mp3 files into smaller chunks, wrapper for ffmpeg
 # find /home/data/nna/stinchcomb/ -name "*.*3" -print0 | xargs -0 python end2end.py --input_files &> endlogs.txt &
 if __name__ == "__main__":
 

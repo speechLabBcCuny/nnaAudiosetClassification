@@ -5,6 +5,8 @@ import argparse
 import sys
 import numpy as np
 
+# pre-processing mp3 files for VGGish and store as .npy mp3_files
+# mp3 to npy size gets
 # find /home/data/nna/stinchcomb/ -name "*.*3" -print0 | xargs -0 python end2end.py --input_files &> endlogs.txt &
 if __name__ == "__main__":
 
