@@ -13,7 +13,7 @@ if __name__ == "__main__":
 	# abs_input_path="/home/data/nna/stinchcomb/NUI_DATA/"
 	parser = argparse.ArgumentParser(description='mp3 to embeddings')
 	parser.add_argument('--output_folder', type=str,
-					   help='output folder',default="/scratch/enis/data/nna/wav_files/")
+					   help='output folder',default="/scratch/enis/data/nna/NUI_DATA/")
 	parser.add_argument('--abs_input_path', type=str,
 					   help='absoulute input folder such as',default="/home/data/nna/stinchcomb/NUI_DATA/")
 	parser.add_argument('--segment_len', type=str,
@@ -33,10 +33,6 @@ if __name__ == "__main__":
 	input_files=args.input_files
 	output_folder=args.output_folder
 	abs_input_path=args.abs_input_path
-	if not os.path.exists(output_folder):
-		SRC=abs_input_path
-		DEST=output_folder
-		shutil.copytree(SRC, DEST, ignore=ig_f)
 
 	input_files.sort()
 	print(input_files)
@@ -53,12 +49,12 @@ if __name__ == "__main__":
 		##### step 1 -  divide files into parts
 		mp3_segments=divide_mp3(mp3_file_path,segments_folder,segment_len=args.segment_len)
 		# #### step 2 - pre-process
-		# mp3_segments=os.listdir(segments_folder)
-		# if not os.path.exists(pre_processed_folder):
-		# 	os.mkdir(pre_processed_folder)
-		# for mp3_segment in mp3_segments:
-		# 	pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=True)
-		# rmv_segmets(segments_folder)
+		mp3_segments=os.listdir(segments_folder)
+		if not os.path.exists(pre_processed_folder):
+			os.mkdir(pre_processed_folder)
+		for mp3_segment in mp3_segments:
+			pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=True)
+		rmv_segmets(segments_folder)
         # #### step 3 - inference
 		# tmp_npy=mp3_file_path[:-4]+".npy"
 		# sounds=np.load(tmp_npy)
