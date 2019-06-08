@@ -14,5 +14,6 @@
   pipe4.py  [Audioset inference] 1 folder of items --->  1 folder of items
 
 # TODO
-  I add pipe2, pipe3, pipe4 to 1 file to 1 file capability
+  Add pipe2, pipe3, pipe4 to 1 file to 1 file capability
   Main.py will manage running jobs.
+  

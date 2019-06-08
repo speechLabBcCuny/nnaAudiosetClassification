@@ -45,10 +45,12 @@ if __name__ == "__main__":
 		print("{} - file: {}".format(i,input_file))
 		sys.stdout.flush()
 		##### step - 0 get prepare names
+
 		mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,
 											  output_folder,abs_input_path)
 		if os.path.exists(embeddings_file_name):
 			continue
+        	sys.stdout.flush()
 
 		##### step 1 -  divide files into parts
 		mp3_segments=divide_mp3(mp3_file_path,segments_folder,segment_len=args.segment_len)
@@ -60,5 +62,6 @@ if __name__ == "__main__":
 		# sounds=np.load(tmp_npy)
 		# embeddings_file_name=inference(sounds,vgg,sess,embeddings_file_name,batch_size=256)
 		end=time()
+
 		print("It took {} seconds".format(end-start))
 		sys.stdout.flush()

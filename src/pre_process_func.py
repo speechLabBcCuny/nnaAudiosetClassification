@@ -42,20 +42,30 @@ def preb_names(mp3_file_path,output_dicretory,abs_input_path):
 	return mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder
 
 # gs://deep_learning_enis/speech_audio_understanding/nna/test/
-def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
-	# print(segments_folder)
-	# print("******",os.path.exists(segments_folder))
+# mp3_file_path: ..../a_folder/example.mp3
+# output_folder: ..../a_folder/
+# segment_len: HH:MM:SS
+def divide_mp3(mp3_file_path,output_folder,segment_len="01:00:00"):
+	# print(output_folder)
+	# print("******",os.path.exists(output_folder))
 	sys.stdout.flush()
-	if not os.path.exists(segments_folder):
-		os.mkdir(segments_folder)
+
+	if not os.path.exists(output_folder):
+        print("output folder does not exits:\n",output_folder,"\n mp3 file: ",mp3_file_path)
+        return False
+		# os.mkdir(output_folder)
 	sp = subprocess.run(['ffmpeg','-y','-i',mp3_file_path,"-c","copy","-map","0",
 								"-segment_time", segment_len, "-f", "segment",
-								segments_folder+"output%03d.mp3"],stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+								output_folder+"output%03d.mp3"],stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 	# sp.wait()
-	print("processssssseing done")
+	# print("processssssseing done")
 	sys.stdout.flush()
-	mp3_segments=os.listdir(segments_folder)
-	return mp3_segments
+    # output folder might have other files
+	# mp3_segments=os.listdir(output_folder)
+
+    # TODO Return false if it fails
+	# return True
+    return None
 
 def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
 	# for mp3_segment in mp3_segments:
