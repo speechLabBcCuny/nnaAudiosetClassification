@@ -35,7 +35,7 @@ if __name__ == "__main__":
     abs_input_path=args.abs_input_path
 
     input_files.sort()
-    print(input_files)
+    # print(input_files)
     for i,input_file in enumerate(input_files):
         start=time()
         print("{} - file: {}".format(i,input_file))

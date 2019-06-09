@@ -40,22 +40,18 @@ if not os.path.exists(output_folder):
     DEST=output_folder
     shutil.copytree(SRC, DEST, ignore=ig_f)
 
-def CreateVGGishNetwork(hop_size=0.96):   # Hop size is in seconds.
+def CreateVGGishNetwork():   # Hop size is in seconds.
     """Define VGGish model, load the checkpoint, and return a dictionary that points
     to the different tensors defined by the model.
     """
-
     vggish_slim.define_vggish_slim(training=False)
     checkpoint_path = 'vggish_model.ckpt'
-    vggish_params.EXAMPLE_HOP_SECONDS = hop_size
-
+    # vggish_params.EXAMPLE_HOP_SECONDS = hop_size
     vggish_slim.load_vggish_slim_checkpoint(sess, checkpoint_path)
-
     features_tensor = sess.graph.get_tensor_by_name(
       vggish_params.INPUT_TENSOR_NAME)
     embedding_tensor = sess.graph.get_tensor_by_name(
       vggish_params.OUTPUT_TENSOR_NAME)
-
     layers = {'conv1': 'vggish/conv1/Relu',
     'pool1': 'vggish/pool1/MaxPool',
     'conv2': 'vggish/conv2/Relu',
@@ -74,7 +70,6 @@ def CreateVGGishNetwork(hop_size=0.96):   # Hop size is in seconds.
         layers[k] = g.get_tensor_by_name( layers[k] + ':0')
         pca_params_path="./vggish_pca_params.npz"
         pproc = vggish_postprocess.Postprocessor(pca_params_path)
-
     return {'features': features_tensor,
       'embedding': embedding_tensor,
       'layers': layers,
@@ -99,7 +94,7 @@ def inference(pre_processed_npy_files,vgg,sess,embeddings_file_name,batch_size=2
             embeddings = np.concatenate((embeddings,embedding_batch))
         # print("postprocess")
         # del sounds
-    raw_embeddings_file_name=embeddings_file_name[:-15]+"rawembeddings.npy"
+    raw_embeddings_file_name=embeddings_file_name[:-15]+"_rawembeddings.npy"
     np.save(raw_embeddings_file_name,embeddings)
     postprocessed_batch = pproc.postprocess(embeddings)
     # del embeddings
@@ -115,12 +110,15 @@ temp = my_file.read().splitlines()
 my_file.close()
 
 tf.reset_default_graph()
-sess = tf.Session()
+config = tf.ConfigProto()
+config.gpu_options.visible_device_list = str(1)
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config,)
 vgg,pproc = CreateVGGishNetwork()
 
 for i in range(0,len(temp),file_per_epoch):
     epoch_files=temp[i:i+file_per_epoch]
-
+    # print(epoch_files)
     # epoch_files=un_processed
     with open("/home/enis/projects/nna/input.txt", 'w') as f:
         for item in epoch_files:
@@ -129,15 +127,18 @@ for i in range(0,len(temp),file_per_epoch):
     command_text+="cat /home/enis/projects/nna/input.txt | "
     command_text+="parallel -P {} -n 1 ".format(cpu_count)
     command_text+="python pipe_pre.py --input_files {} > logs.txt"
+    # print(command_text)
     command_list=command_text.split(" ")
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
+    print(stdout, stderr)
     ##### step - inference
     for input_file in epoch_files:
         mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,output_folder,abs_input_path)
-        pre_processed_npy_files=[pre_processed_folder+file for file in os.listdir(pre_processed_folder)]
         if os.path.exists(embeddings_file_name):
             continue
+        pre_processed_npy_files=[pre_processed_folder+file for file in os.listdir(pre_processed_folder)]
+        # print(pre_processed_npy_files)
         embeddings_file_name=inference(pre_processed_npy_files,vgg,sess,embeddings_file_name,batch_size=128)
         rmv_segmets(pre_processed_folder)
 

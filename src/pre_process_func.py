@@ -75,6 +75,7 @@ def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=Fa
     # sys.stdout.flush()
     excerpt_len=10
     sample_size=(len(wav_data)//(sr))*2
+    # print(sample_size,sr,len(wav_data))
     sound=np.zeros((sample_size,96,64),dtype=np.float32)
     count=0
     for i in range(0,len(wav_data)-(sr*excerpt_len),sr*excerpt_len):
