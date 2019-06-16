@@ -19,13 +19,16 @@
   * **(08/05/2019)**
     * I realized problems with pre-processing parameters causing input/output ratio to be different than 1. Refer to hop-size title.
   * **(07/06/2019)**
-    * When we divide mp3 files into 1 hour segments, precision is +/- 2 precision because we are not re-encoding/decoding. Since pre-processing is done on 1 hour segments separately, this might result in shifts between input and outputs again. So we decided to keep results for each file seperatly.
+    * When we divide mp3 files into 1 hour segments, precision is +/- 1 second because we are not re-encoding/decoding. Since pre-processing is done on 1 hour segments separately, this might result in shifts between input and outputs again. So we decided to keep results for each file separately.
       * When it is slightly shorter, pre-processed version still becomes 20
       * when it is slightly  longer, we cannot pre-process that small extra part, so gets ignored
+    * I also found a array indexing bug and fixed it, correct one is at the
+  * **(16/06/2019)**
+    * mp3's logical frame have 2 chunks per channel and each chunk stores 576 frequency samples. Since 44100 is not multiple of 576, we might not be able to divide mp3 with second granularity. As a result, while one file have extra 576 samples other one misses 576 samples for an exact second. Here how we handle those two files in python code:
       ```python
-        #bgger
+        #longer 1 hour file
         len_wav_data=158760576
-        #smaller
+        #shorther 1 hour file
         len_wav_data=158759424
         print("left raw:",len_wav_data%(sr*excerpt_len))
         left=len_wav_data%(sr*excerpt_len)
@@ -37,11 +40,10 @@
         else:
            print("extra samples:", ((left-22712)//20286))
       ```
-    * I also found a array indexing bug and fixed it, correct one is at the
+
 
 
 ### Next:
-* Update notebooks and codes to remove bug and organise codes on src
 * Prepare a notebook with playing those specific parts, and share with you.
 * Running Audioset model over all the data would be good to do
 * Creating spatio-temporal distributions of the tags coming from Audioset model
