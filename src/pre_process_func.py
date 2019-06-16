@@ -71,14 +71,13 @@ def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=Fa
     ##########
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
     wav_data = wav_data/  32768.0  # Convert to [-1.0, +1.0]
-
     excerpt_len=10
     offset=sr*excerpt_len
     #EXPECTED sample size, after processing
     sample_size=(len(wav_data)//offset)*20
     remainder_wav_data=len(wav_data)%offset
     if remainder_wav_data>=42998:
-    sample_size+=((remainder_wav_data-22712)//20286)
+        sample_size+=((remainder_wav_data-22712)//20286)
     # in this loop wav_data jumps offset elements and sound jumps excerpt_len*2
     # because offset number of raw data turns into excerpt_len*2 pre-processed
     sound=np.zeros((sample_size,96,64),dtype=np.float32)
@@ -86,11 +85,10 @@ def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=Fa
     for i in range(0,len(wav_data),offset):
     #this is when wav_data%offset!=0
         if i+offset>len(wav_data):
-            print(i,i+offset,len(wav_data))
             # left data is smaller than 22712, we cannot pre-process
             # if smaller than 42998, will be 0 anyway
             if remainder_wav_data<42998:
-            continue
+                continue
             a_sound= vggish_input.waveform_to_examples(wav_data[i:i+(offset)], sr)
             sound[count:(count+a_sound.shape[0]),:,:]=a_sound[:,:,:]
             count+=a_sound.shape[0]

@@ -14,6 +14,17 @@
   pipe4.py  [Audioset inference] 1 folder of items --->  1 folder of items
 
 # TODO
-  I add pipe2, pipe3, pipe4 to 1 file to 1 file capability
   Main.py will manage running jobs.
-/scratch/enis/data/nna/NUI_DATA/02 Colville 2/August 2016/
+
+sample file: /scratch/enis/data/nna/NUI_DATA/02 Colville 2/August 2016/
+
+
+#run:
+ * update paths, resources in main,py
+ * clean output folder such as "/scratch/enis/data/nna/NUI_DATA/"
+ * copy main.py, pre_process_func.py, vggish_params.py
+    #rm main.py && vim  main.py
+    #rm pre_process_func.py && vim  pre_process_func.py
+    #rm vggish_params.py && vim  vggish_params.py
+
+ * python main.py
