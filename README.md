@@ -1,6 +1,7 @@
 # Nature Sound Processing Project
 
-[Project Logs.ipynb](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project%20Logs.ipynb)
+[Project Logs.md](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project_Logs.md)
+
 
 Assumes Python3.7
 ```
