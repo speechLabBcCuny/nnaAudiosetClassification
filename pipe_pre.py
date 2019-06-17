@@ -46,11 +46,15 @@ if __name__ == "__main__":
         # #if inference is done
         if os.path.exists(embeddings_file_name):
             continue
-
+        if os.path.exists(pre_processed_folder):
+            pre_processed_files=os.listdir(pre_processed_folder)
+            if len(pre_processed_files)==50:
+                continue
         ##### step 1 -  divide files into parts
         mp3_segments=divide_mp3(mp3_file_path,segments_folder,segment_len=args.segment_len)
         # #### step 2 - pre-process
         mp3_segments=os.listdir(segments_folder)
+
         if not os.path.exists(pre_processed_folder):
             os.mkdir(pre_processed_folder)
         for mp3_segment in mp3_segments:

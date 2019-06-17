@@ -22,9 +22,14 @@ sample file: /scratch/enis/data/nna/NUI_DATA/02 Colville 2/August 2016/
 #run:
  * update paths, resources in main,py
  * clean output folder such as "/scratch/enis/data/nna/NUI_DATA/"
- * copy main.py, pre_process_func.py, vggish_params.py
+ * copy main.py, pre_process_func.py, vggish_params.py,pipe_pre.py
     #rm main.py && vim  main.py
     #rm pre_process_func.py && vim  pre_process_func.py
     #rm vggish_params.py && vim  vggish_params.py
 
  * python main.py
+check progress:
+pre-process: x/400*49
+embeddings: x/400
+find "/scratch/enis/data/nna/NUI_DATA/" -wholename "*preprocessed/*.npy" wc -l
+find "/scratch/enis/data/nna/NUI_DATA/" -wholename "*.npy" | wc -l

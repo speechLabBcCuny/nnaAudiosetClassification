@@ -19,6 +19,7 @@ import vggish_postprocess
 
 #async
 
+logs_folder="./job_logs/"
 
 ram_memory=100 #GB
 segment_length=1 #hour
@@ -126,7 +127,10 @@ for i in range(0,len(temp),file_per_epoch):
     command_text="conda run -n speechEnv "
     command_text+="cat /home/enis/projects/nna/input.txt | "
     command_text+="parallel -P {} -n 1 ".format(cpu_count)
-    command_text+="python pipe_pre.py --input_files {} > logs.txt"
+    # recover where job state, save pre-processing logs
+    if not os.path.exists(logs_folder):
+        os.mkdir(logs_folder)
+    command_text+="python pipe_pre.py --input_files {} > "+logs_folder+"logs-epoch_"+str(i)+".txt"
     # print(command_text)
     command_list=command_text.split(" ")
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
