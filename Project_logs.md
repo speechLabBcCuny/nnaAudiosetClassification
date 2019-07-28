@@ -49,6 +49,7 @@
 * Creating spatio-temporal distributions of the tags coming from Audioset model
     * ( _So "honk" probably means waterfowl, and you could see what date they show up.  Not sure about "turkey" and "gobble".  Maybe "fowl" or "music" are songbirds?  See what the frog is.  See when the insects show up.  I think there's lots that we can learn by just counting these occurrences in different time chunks (every 4 hours over the summer, time of day aggregated over all days, etc)._)
 *  Date at which migrating birds arrive
+* find similar embeddings
 
 ### Long Term:
 * Take the clips that have a strong prediction and use them in the game.

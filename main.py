@@ -136,6 +136,8 @@ for i in range(0,len(temp),file_per_epoch):
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
     print(stdout, stderr)
+    sys.stdout.flush()
+    sys.stderr.flush()
     ##### step - inference
     for input_file in epoch_files:
         mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,output_folder,abs_input_path)
@@ -147,3 +149,5 @@ for i in range(0,len(temp),file_per_epoch):
         rmv_segmets(pre_processed_folder)
 
 # this one does VGGish inference
+# echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt &
+#cat "/home/enis/projects/nna/mp3files.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4.py --input_files {} &>> logs_run_last.txt &

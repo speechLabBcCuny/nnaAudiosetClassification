@@ -43,7 +43,7 @@ if __name__ == "__main__":
         print("{} - file: {}".format(i,input_file))
         sys.stdout.flush()
 		##### step - 0 get prepare names
-		mp3_file_path,segments_folder,embeddings_file_name=preb_names(input_file,
+		mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,
 		                                      output_folder,abs_input_path)
 		if os.path.exists(embeddings_file_name):
 			return None

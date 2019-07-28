@@ -28,9 +28,11 @@ sample file: /scratch/enis/data/nna/NUI_DATA/02 Colville 2/August 2016/
     #rm vggish_params.py && vim  vggish_params.py
     #rm pipe_pre.py && vim pipe_pre.py
 
- * python main.py > logs_run1.txt &
-check progress:
-pre-process: x/400*49
-embeddings: x/400
+ * echo "13:53/27/June\n" &>> logs_run.txt &&  python main.py &>> logs_run.txt &
+ *  cat "/home/enis/projects/nna/mp3files.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4.py --input_files {} &>> logs_run_last.txt &
+ * gsutil -m cp -r "/home/data/nna/stinchcomb/NUI_DATA/" gs://deep_learning_enis/speech_audio_understanding/nna/ &>> upload_logs.txt &
+
+# check progress:
+
 find "/scratch/enis/data/nna/NUI_DATA/" -wholename "*preprocessed/*.npy" wc -l
 find "/scratch/enis/data/nna/NUI_DATA/" -wholename "*.npy" | wc -l
