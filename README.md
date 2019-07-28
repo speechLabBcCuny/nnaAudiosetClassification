@@ -23,10 +23,6 @@ Add kernel to jupyter kernels (use python that have ipython installed):
 conda install ipykernel
 python -m ipykernel install --user --name "$envName" --display-name "Python3-$envName"  
 ```
-Requirements
-* pytorch
-* scipy
-* kaggle
 
 
 kaggle uses 7zip with dataset:  
@@ -38,7 +34,6 @@ curl https://sdk.cloud.google.com | bash
 exec -l $SHELL
 gcloud init
 
-pip install kaggle
 ```
 np_0=np.random.rand(122,128)
 tr_0=torch.tensor(np_0)
