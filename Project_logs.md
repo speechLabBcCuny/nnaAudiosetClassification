@@ -16,14 +16,14 @@
             * (youtube video) --> [VGGish] -->  (128 8bit quantized features) --> [attention model] --> labels
 
     * I found the bug in my code that causes attention model to output random results. It was a type casting issue.
-  * **(08/05/2019)**
+* **(08/05/2019)**
     * I realized problems with pre-processing parameters causing input/output ratio to be different than 1. Refer to hop-size title.
-  * **(07/06/2019)**
+* **(07/06/2019)**
     * When we divide mp3 files into 1 hour segments, precision is +/- 1 second because we are not re-encoding/decoding. Since pre-processing is done on 1 hour segments separately, this might result in shifts between input and outputs again. So we decided to keep results for each file separately.
       * When it is slightly shorter, pre-processed version still becomes 20
       * when it is slightly  longer, we cannot pre-process that small extra part, so gets ignored
     * I also found a array indexing bug and fixed it, correct one is at the
-  * **(16/06/2019)**
+* **(16/06/2019)**
     * mp3's logical frame have 2 chunks per channel and each chunk stores 576 frequency samples. Since 44100 is not multiple of 576, we might not be able to divide mp3 with second granularity. As a result, while one file have extra 576 samples other one misses 576 samples for an exact second. Here how we handle those two files in python code:
       ```python
         #longer 1 hour file
