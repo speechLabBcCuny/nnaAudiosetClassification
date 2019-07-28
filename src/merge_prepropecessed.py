@@ -1,3 +1,6 @@
+#this is the script for combining results, during the process we divide datafiles
+#and process them spereatly, this script combines those parts into one file
+#basically loads arrays, merge them then re-write to a new file
 import os
 import numpy as np
 

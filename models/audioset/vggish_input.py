@@ -48,6 +48,7 @@ def waveform_to_examples(data, sample_rate):
     data = resampy.resample(data, sample_rate, vggish_params.SAMPLE_RATE)
 
   # Compute log mel spectrogram features.
+  # print("HOP seconds",vggish_params.STFT_HOP_LENGTH_SECONDS)
   log_mel = mel_features.log_mel_spectrogram(
       data,
       audio_sample_rate=vggish_params.SAMPLE_RATE,

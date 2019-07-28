@@ -1,3 +1,5 @@
+#this script's is written to change file names that have errors because of a typo in file name generation
+
 import os
 
 def preb_names(mp3_file_path,output_dicretory,abs_input_path):

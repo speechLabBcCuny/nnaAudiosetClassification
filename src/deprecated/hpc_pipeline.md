@@ -22,3 +22,10 @@ python merge_prepropecessed.py
 rsync -avz --progress Momentsnotice:/home/enis/projects/nna/data/ /Users/berk/Desktop/data/
 you can use "nature sounds, inference with VGGish.ipynb"
 rsync -avz --progress Momentsnotice:/home/enis/projects/nna/download/ /Users/berk/Desktop/download/
+
+gsutil
+gsutil cp "/home/data/nna/stinchcomb/NUI_DATA/07 Ice Rd/August 2016/ICERD_20160808_024504.MP3" gs://deep_learning_enis/speech_audio_understanding/nna/test/
+gsutil init
+gsutil config
+
+gsutil -m cp -r "/scratch/enis/data/nna/NUI_DATA/" gs://deep_learning_enis/speech_audio_understanding/nna/ &>> upload_logs.txt &

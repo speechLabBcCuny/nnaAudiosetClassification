@@ -20,7 +20,7 @@ conda clean --yes --all
 
 Add kernel to jupyter kernels (use python that have ipython installed):  
 ```
-conda install ipykernel 
+conda install ipykernel
 python -m ipykernel install --user --name "$envName" --display-name "Python3-$envName"  
 ```
 Requirements
@@ -39,4 +39,16 @@ exec -l $SHELL
 gcloud init
 
 pip install kaggle
+```
+np_0=np.random.rand(122,128)
+tr_0=torch.tensor(np_0)
+np_1=np.array(tr_0)
+tr_0_numbers,tr_0_index=torch.topk(tr_0, 128, dim=1, largest=True, sorted=True)
+np_0_numbers=np.argsort(np_0,axis=1)
+
+```
+echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt && python sendmail.py -s -m "all files 0.96" || python sendmail.py -m "all files 0.96" &
+
+cat "/home/enis/projects/nna/mp3file.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4-2.py --input_files {} &>> logs_run_last.txt && python sendmail.py -s -m "audioset inf" || python sendmail.py -m "audioset inference" &
+
 ```
