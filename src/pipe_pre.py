@@ -41,8 +41,9 @@ if __name__ == "__main__":
         print("{} - file: {}".format(i,input_file))
         sys.stdout.flush()
         ##### step - 0 get prepare names
-        mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,
-                                              output_folder,abs_input_path)
+        mp3_file_path,segments_folder,embeddings_file_name,
+            pre_processed_folder=preb_names(input_file,output_folder,
+                abs_input_path)
         # #if inference is done
         if os.path.exists(embeddings_file_name):
             continue
@@ -51,7 +52,8 @@ if __name__ == "__main__":
             if len(pre_processed_files)==50:
                 continue
         ##### step 1 -  divide files into parts
-        mp3_segments=divide_mp3(mp3_file_path,segments_folder,segment_len=args.segment_len)
+        mp3_segments=divide_mp3(mp3_file_path,segments_folder,
+            segment_len=args.segment_len)
         # #### step 2 - pre-process
         mp3_segments=os.listdir(segments_folder)
 

@@ -47,7 +47,6 @@ def CreateVGGishNetwork():   # Hop size is in seconds.
     """
     vggish_slim.define_vggish_slim(training=False)
     checkpoint_path = 'vggish_model.ckpt'
-    # vggish_params.EXAMPLE_HOP_SECONDS = hop_size
     vggish_slim.load_vggish_slim_checkpoint(sess, checkpoint_path)
     features_tensor = sess.graph.get_tensor_by_name(
       vggish_params.INPUT_TENSOR_NAME)
@@ -70,7 +69,8 @@ def CreateVGGishNetwork():   # Hop size is in seconds.
     for k in layers:
         layers[k] = g.get_tensor_by_name( layers[k] + ':0')
         pca_params_path="./vggish_pca_params.npz"
-        pproc = vggish_postprocess.Postprocessor(pca_params_path)
+    #BUG-fixed-perf that should not be inside the loop
+    pproc = vggish_postprocess.Postprocessor(pca_params_path)
     return {'features': features_tensor,
       'embedding': embedding_tensor,
       'layers': layers,

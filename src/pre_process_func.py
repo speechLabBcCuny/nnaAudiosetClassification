@@ -57,21 +57,28 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
     mp3_segments=os.listdir(segments_folder)
     return mp3_segments
 
-def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
-    # for mp3_segment in mp3_segments:
-    input_file_path=segments_folder+mp3_segment
-    tmp_npy=pre_processed_folder+mp3_segment[:-4]+".npy"
+#waveform_to_examples is expecting `np.int16`,
+# original code is using soundfile which does support wav files.
+# so we load mp3 files as wav
+# other ways and performance comparison
+#https://colab.research.google.com/drive/1VyZIWY-3_xe8IsqZwlPzaD1nGFyRI6rX
 
-    ####get_wav#####
-    wav_data = AudioSegment.from_mp3(input_file_path)
+def load_mp3(input_file_path):
+        wav_data = AudioSegment.from_mp3(input_file_path)
     sr=wav_data.frame_rate
-    wav_data=wav_data.set_channels(1)
+    # wav_data=wav_data.set_channels(1)
     wav_data = wav_data.get_array_of_samples()
     wav_data = np.array(wav_data)
-    ##########
+    wav_data=wav_data.reshape(-1,2)
+    return wav_data,sr
+
+#read **(16/06/2019)** at Project_logs.md for reasoning.
+# another version of waveform_to_examples from models/audioset/vggish_input.py
+def iterate_for_waveform_to_examples(wav_data,sr):
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
-    wav_data = wav_data/  32768.0  # Convert to [-1.0, +1.0]
-    excerpt_len=10
+    wav_data = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+
+    excerpt_len=10 #seconds
     offset=sr*excerpt_len
     #EXPECTED sample size, after processing
     sample_size=(len(wav_data)//offset)*20
@@ -96,6 +103,17 @@ def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=Fa
             a_sound= vggish_input.waveform_to_examples(wav_data[i:i+(offset)], sr)
             sound[count:(count+a_sound.shape[0]),:,:]=a_sound[:,:,:]
             count+=a_sound.shape[0]
+    return sound
+
+def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
+    # for mp3_segment in mp3_segments:
+    input_file_path=segments_folder+mp3_segment
+    tmp_npy=pre_processed_folder+mp3_segment[:-4]+".npy"
+
+    #######get_wav from mp3#######
+    wav_data,sr=load_mp3(input_file_path)
+    #######iterate over 10 seconds#########
+    sound=iterate_wav_form(wav_data,sr)
     sound=sound.astype(np.float32)
 
     if saveNoReturn:
