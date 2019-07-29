@@ -72,8 +72,10 @@ def load_mp3(input_file_path):
     wav_data=wav_data.reshape(-1,2)
     return wav_data,sr
 
-#read **(16/06/2019)** at Project_logs.md for reasoning.
 # another version of waveform_to_examples from models/audioset/vggish_input.py
+# iterate over data with 10 second batches, so waveform_to_examples produces
+# stable results
+#read **(16/06/2019)** at Project_logs.md for explanations.
 def iterate_for_waveform_to_examples(wav_data,sr):
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
     wav_data = wav_data / 32768.0  # Convert to [-1.0, +1.0]
