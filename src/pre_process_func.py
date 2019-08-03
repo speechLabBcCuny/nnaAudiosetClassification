@@ -1,6 +1,7 @@
 import os
 from pydub import AudioSegment
 import sys
+from pathlib import Path
 
 sys.path.insert(0, './audioset')
 # import vggish_slim
@@ -11,7 +12,7 @@ import shutil
 
 import numpy as np
 import subprocess
-
+from params import EXCERPT_LENGTH
 
 def rmv_segmets(segments_folder):
     try:
@@ -64,31 +65,48 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
 #https://colab.research.google.com/drive/1VyZIWY-3_xe8IsqZwlPzaD1nGFyRI6rX
 
 def load_mp3(input_file_path):
-        wav_data = AudioSegment.from_mp3(input_file_path)
+    wav_data = AudioSegment.from_mp3(input_file_path)
     sr=wav_data.frame_rate
+    # waveform_to_examples already takes mean of two channels
     # wav_data=wav_data.set_channels(1)
     wav_data = wav_data.get_array_of_samples()
     wav_data = np.array(wav_data)
     wav_data=wav_data.reshape(-1,2)
     return wav_data,sr
 
-# another version of waveform_to_examples from models/audioset/vggish_input.py
-# iterate over data with 10 second batches, so waveform_to_examples produces
-# stable results
-#read **(16/06/2019)** at Project_logs.md for explanations.
-def iterate_for_waveform_to_examples(wav_data,sr):
-    assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
-    wav_data = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+def mp3file_to_examples(mp3_file_path):
+    """Convenience wrapper around iterate_for_waveform_to_examples()
+    for a common mp3 format.
 
-    excerpt_len=10 #seconds
-    offset=sr*excerpt_len
+    Args:
+    mp3_file_path: String path to a file. The file is assumed to contain
+        mp3 audio data.
+
+    Returns:
+    See waveform_to_examples.
+    """
+    wav_data,sr=load_mp3(mp3_file_path)
+    assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+    samples = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+    #######iterate over 10 seconds#########
+    return iterate_for_waveform_to_examples(samples,sr)
+
+
+def iterate_for_waveform_to_examples(wav_data,sr):
+    """
+    Wrapper for waveform_to_examples from models/audioset/vggish_input.py
+        Iterate over data with 10 second batches, so waveform_to_examples produces
+        stable results (equal size)
+        read **(16/06/2019)** at Project_logs.md for explanations.
+    """
+    offset=sr*EXCERPT_LENGTH
     #EXPECTED sample size, after processing
     sample_size=(len(wav_data)//offset)*20
     remainder_wav_data=len(wav_data)%offset
     if remainder_wav_data>=42998:
         sample_size+=((remainder_wav_data-22712)//20286)
-    # in this loop wav_data jumps offset elements and sound jumps excerpt_len*2
-    # because offset number of raw data turns into excerpt_len*2 pre-processed
+    # in this loop wav_data jumps offset elements and sound jumps EXCERPT_LENGTH*2
+    # because offset number of raw data turns into EXCERPT_LENGTH*2 pre-processed
     sound=np.zeros((sample_size,96,64),dtype=np.float32)
     count=0
     for i in range(0,len(wav_data),offset):
@@ -107,16 +125,20 @@ def iterate_for_waveform_to_examples(wav_data,sr):
             count+=a_sound.shape[0]
     return sound
 
-def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
-    # for mp3_segment in mp3_segments:
-    input_file_path=segments_folder+mp3_segment
-    tmp_npy=pre_processed_folder+mp3_segment[:-4]+".npy"
+def pre_process(mp3_file_path,npy_file_path, saveNoReturn=False):
+# def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
+    """
 
-    #######get_wav from mp3#######
-    wav_data,sr=load_mp3(input_file_path)
-    #######iterate over 10 seconds#########
-    sound=iterate_wav_form(wav_data,sr)
-    sound=sound.astype(np.float32)
+    :param name: The name of foo
+    :param age: The ageof foo
+    :return: returns nothing
+    """
+    # for mp3_segment in mp3_segments:
+    # mp3_file_path = segments_folder+mp3_segment
+    # tmp_npy = pre_processed_folder+mp3_segment[:-4]+".npy"
+
+    sound = mp3file_to_examples(mp3_file_path)
+    sound = sound.astype(np.float32)
 
     if saveNoReturn:
         np.save(tmp_npy,sound)
