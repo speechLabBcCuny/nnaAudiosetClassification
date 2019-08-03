@@ -144,3 +144,24 @@ def pre_process(mp3_file_path,npy_file_path, saveNoReturn=False):
         np.save(tmp_npy,sound)
     else:
         return sound
+
+# this function will replace pipe_pre.py
+def pre_process_big_file(mp3_file_path,output_dir="./"):
+    """
+    This function divides mp3 files into segments (default: 1 hour)
+    calls pre_process on each segment with saveNoReturn=False.
+
+    If resulting .npy files exists in output_dir/mp3_file_name_preprocessed
+     does not re-compute them
+
+    :param mp3_file_path: Path to mp3 file
+    :param output_folder: where resulting .npy files will be saved
+    :return: returns nothing
+    """
+    mp3_file_path= Path(mp3_file_path)
+    pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed")
+
+    # if os.path.exists(pre_processed_dir):
+    #     pre_processed_files=os.listdir(pre_processed_dir)
+    #     if len(pre_processed_files)==50:
+    #         continue
