@@ -53,7 +53,7 @@ if __name__ == "__main__":
                 continue
         ##### step 1 -  divide files into parts
         mp3_segments=divide_mp3(mp3_file_path,segments_folder,
-            segment_len=args.segment_len)
+                                segment_len=args.segment_len)
         # #### step 2 - pre-process
         mp3_segments=os.listdir(segments_folder)
 
