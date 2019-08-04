@@ -14,7 +14,7 @@ import numpy as np
 import subprocess
 from params import EXCERPT_LENGTH
 
-def rmv_segmets(segments_folder):
+def rmv_folder(folder):
     try:
         shutil.rmtree(segments_folder)
     except OSError as e:
@@ -219,4 +219,4 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         # # if pre-processed
         pre_process(mp3_segment_path,output_dir=pre_processed_folder,
                     saveAsFile=True)
-    rmv_segmets(segments_folder)
+    rmv_folder(segments_folder)

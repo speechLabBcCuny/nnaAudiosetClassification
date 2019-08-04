@@ -64,7 +64,7 @@ if __name__ == "__main__":
             if os.path.exists(pre_processed_folder+mp3_segment[:-4]+".npy"):
                 continue
             pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=True)
-        rmv_segmets(segments_folder)
+        rmv_folder(segments_folder)
         # #### step 3 - inference
         # tmp_npy=mp3_file_path[:-4]+".npy"
         # sounds=np.load(tmp_npy)

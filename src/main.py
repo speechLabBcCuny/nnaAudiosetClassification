@@ -146,7 +146,7 @@ for i in range(0,len(temp),file_per_epoch):
         pre_processed_npy_files=[pre_processed_folder+file for file in os.listdir(pre_processed_folder)]
         # print(pre_processed_npy_files)
         embeddings_file_name=inference(pre_processed_npy_files,vgg,sess,embeddings_file_name,batch_size=128)
-        rmv_segmets(pre_processed_folder)
+        rmv_folder(pre_processed_folder)
 
 # this one does VGGish inference
 # echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt &
