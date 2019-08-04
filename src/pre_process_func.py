@@ -44,27 +44,49 @@ def preb_names(mp3_file_path,output_dicretory,abs_input_path):
 
 # gs://deep_learning_enis/speech_audio_understanding/nna/test/
 def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
-    # print(segments_folder)
-    # print("******",os.path.exists(segments_folder))
-    sys.stdout.flush()
+    """Convenience wrapper around ffmpeg segmenting for a common mp3 format.
+
+    Note that splitting may not be accurate. We do not force the reference
+    stream key-frames at the given time.
+    Creates segments folder if it does not exists already.
+
+    Args:
+        mp3_file_path (str/Path): Path to the file is assumed to contain
+            mp3 audio data.
+        segments_folder (str/Path): folder to save segments of the mp3
+        segment_len (str): length of segments to generate, HOURS:MM:SS
+    Returns:
+        List of file path strings to segments.
+    """
     if not os.path.exists(segments_folder):
         os.mkdir(segments_folder)
+    #TODO handle stderror
     sp = subprocess.run(['ffmpeg','-y','-i',mp3_file_path,"-c","copy","-map","0",
                                 "-segment_time", segment_len, "-f", "segment",
-                                segments_folder+"output%03d.mp3"],stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    # sp.wait()
-    print("processssssseing done")
-    sys.stdout.flush()
+                                segments_folder+"output%03d.mp3"],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.STDOUT)
     mp3_segments=os.listdir(segments_folder)
     return mp3_segments
 
-#waveform_to_examples is expecting `np.int16`,
-# original code is using soundfile which does support wav files.
-# so we load mp3 files as wav
-# other ways and performance comparison
-#https://colab.research.google.com/drive/1VyZIWY-3_xe8IsqZwlPzaD1nGFyRI6rX
 
 def load_mp3(input_file_path):
+    """ Loads mp3 and returns an array within wav data format
+
+    waveform_to_examples is expecting `np.int16`,
+    original code is using soundfile which does support wav files.
+    so we load mp3 files as wav
+    other ways and performance comparison
+    https://colab.research.google.com/drive/1VyZIWY-3_xe8IsqZwlPzaD1nGFyRI6rX
+
+    Args:
+        input_file_path (str/Path): Path to the file is assumed to contain
+            mp3 audio data.
+    Returns:
+        A tuple (wav_data, sampling_rate)
+    """
+    input_file_path=Path(input_file_path)
+
     wav_data = AudioSegment.from_mp3(input_file_path)
     sr=wav_data.frame_rate
     # waveform_to_examples already takes mean of two channels
@@ -75,15 +97,14 @@ def load_mp3(input_file_path):
     return wav_data,sr
 
 def mp3file_to_examples(mp3_file_path):
-    """Convenience wrapper around iterate_for_waveform_to_examples()
-    for a common mp3 format.
+    """Wrapper around iterate_for_waveform_to_examples() for a common mp3 format.
 
     Args:
-    mp3_file_path: String path to a file. The file is assumed to contain
-        mp3 audio data.
+        mp3_file_path (str/Path): String path to a file. The file is assumed to contain
+            mp3 audio data.
 
     Returns:
-    See waveform_to_examples.
+        See iterate_for_waveform_to_examples.
     """
     wav_data,sr=load_mp3(mp3_file_path)
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
@@ -93,11 +114,18 @@ def mp3file_to_examples(mp3_file_path):
 
 
 def iterate_for_waveform_to_examples(wav_data,sr):
-    """
-    Wrapper for waveform_to_examples from models/audioset/vggish_input.py
+    """Wrapper for waveform_to_examples from models/audioset/vggish_input.py
+
         Iterate over data with 10 second batches, so waveform_to_examples produces
         stable results (equal size)
         read **(16/06/2019)** at Project_logs.md for explanations.
+
+        Args:
+            wav_data (numpy.array): audio data in wav format
+            sr (int): sampling rate of the audio
+
+        Returns:
+            See waveform_to_examples.
     """
     offset=sr*EXCERPT_LENGTH
     #EXPECTED sample size, after processing
@@ -125,43 +153,70 @@ def iterate_for_waveform_to_examples(wav_data,sr):
             count+=a_sound.shape[0]
     return sound
 
-def pre_process(mp3_file_path,npy_file_path, saveNoReturn=False):
-# def pre_process(mp3_segment,segments_folder,pre_processed_folder,saveNoReturn=False):
-    """
+def pre_process(mp3_file_path,output_dir="./", saveAsFile=False):
+    """Wrapper for mp3file_to_examples, handles input and output logic
 
-    :param name: The name of foo
-    :param age: The ageof foo
-    :return: returns nothing
+        Saves as a file called mp3_file_name_preprocessed.npy in output_dir
+        If output npy file already exists returns None
+
+        Args:
+            mp3_file_path (numpy.array): audio data in wav format
+            output_dir (str/Path): output directory
+            saveAsFile (bool): save as file or not
+            sr (int): sampling rate of the audio
+
+        Returns:
+            Returns pre_processed sound (numpy.array) if file does not exists
     """
-    # for mp3_segment in mp3_segments:
-    # mp3_file_path = segments_folder+mp3_segment
-    # tmp_npy = pre_processed_folder+mp3_segment[:-4]+".npy"
+    mp3_file_path = Path(mp3_file_path)
+    output_dir = Path(output_dir)
+
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+
+    npy_file_path = Path(output_dir) / mp3_file_path.stem + "_preprocessed.npy"
+
+    if os.path.exists(npy_file_path):
+        return None
 
     sound = mp3file_to_examples(mp3_file_path)
     sound = sound.astype(np.float32)
 
-    if saveNoReturn:
-        np.save(tmp_npy,sound)
-    else:
-        return sound
+    if saveAsFile:
+        np.save(npy_file_path,sound)
+
+    return sound
 
 # this function will replace pipe_pre.py
-def pre_process_big_file(mp3_file_path,output_dir="./"):
-    """
+def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
+    """Divides into segments and calls pre_process on each segment.
+
     This function divides mp3 files into segments (default: 1 hour)
-    calls pre_process on each segment with saveNoReturn=False.
+    Calls pre_process on each segment with saveAsFile=True
+    saves each segment file into output_dir/mp3_file_name_preprocessed
+    If resulting .npy files exists, does not re-compute them.
 
-    If resulting .npy files exists in output_dir/mp3_file_name_preprocessed
-     does not re-compute them
+    Args:
+        mp3_file_path (str/Path): String path to a file.
+            The file is assumed to contain mp3 audio data.
+        output_folder (str/Path): where resulting .npy files will be saved
+        segment_len (str): length of segments to generate, HOURS:MM:SS
 
-    :param mp3_file_path: Path to mp3 file
-    :param output_folder: where resulting .npy files will be saved
-    :return: returns nothing
+    Returns:
+        None
     """
-    mp3_file_path= Path(mp3_file_path)
+    mp3_file_path = Path(mp3_file_path)
+    # divide files
+    segments_folder = Path(output_dir) / (mp3_file_path.stem + "_segments/")
+    mp3_segments=divide_mp3(mp3_file_path,segments_folder,
+                            segment_len=segment_len)
+    # pre-process each segment
     pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed")
+    if not os.path.exists(pre_processed_folder):
+        os.mkdir(pre_processed_folder)
 
-    # if os.path.exists(pre_processed_dir):
-    #     pre_processed_files=os.listdir(pre_processed_dir)
-    #     if len(pre_processed_files)==50:
-    #         continue
+    for mp3_segment in mp3_segments:
+        # # if pre-processed
+        pre_process(mp3_segment_path,output_dir=pre_processed_folder,
+                    saveAsFile=True)
+    rmv_segmets(segments_folder)
