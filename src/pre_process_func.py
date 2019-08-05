@@ -2,6 +2,9 @@ import os
 from pydub import AudioSegment
 import sys
 from pathlib import Path
+from time import gmtime, strftime
+from subprocess import Popen, PIPE
+
 
 sys.path.insert(0, './audioset')
 # import vggish_slim
@@ -12,7 +15,7 @@ import shutil
 
 import numpy as np
 import subprocess
-from params import EXCERPT_LENGTH
+from params import EXCERPT_LENGTH,INPUT_DIR_PARENT
 
 def rmv_folder(folder):
     try:
@@ -20,6 +23,13 @@ def rmv_folder(folder):
     except OSError as e:
         print ("Error: %s - %s." % (e.filename, e.strerror))
 
+def relative2outputdir(mp3_file_path,output_dir):
+    # mp3_file_path /foo/foo/'18 Fish Creek 4/July 2016'
+    # relative_path='18 Fish Creek 4/July 2016'
+    relative_path =   mp3_file_path.relative_to(INPUT_DIR_PARENT).parent
+    # output_dir= '/output/directory/18 Fish Creek 4/July 2016/
+    relative_output_dir = output_dir / relative_path
+    return (relative_output_dir)
 
 # create directories given set of file paths
 def ig_f(dir, files):
@@ -220,3 +230,61 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         pre_process(mp3_segment_path,output_dir=pre_processed_folder,
                     saveAsFile=True)
     rmv_folder(segments_folder)
+
+
+def parallel_pre_process(input_path_list,output_dir="./",
+                        cpu_count=50,segment_len="01:00:00",
+                        logs_file_path="logs.txt"):
+    """Call pre_process with a seperate cpu process per file
+
+    This function calls pre_process_big_file for each file within a new process
+
+    Args:
+        input_path_list (List[str]): List of paths to mp3 files
+        output_dir (str/Path): where resulting .npy files will be saved
+        segment_len (str): length of segments to generate, HOURS:MM:SS
+
+    Returns:
+        None
+    """
+    conda_env_name="speechEnv"
+
+    output_dir=Path(output_dir)
+    uuid_time=strftime("%Y-%m-%d_%H:%M:%S", gmtime())
+    uuid_time="test"
+    tmp_input_file = output_dir / ("input_" + uuid_time + ".txt")
+
+    # write mp3 file path  and relative output path to a file
+    with open(tmp_input_file, 'w') as f:
+        for mp3_file_path in input_path_list:
+            relative2output_dir = relative2outputdir(mp3_file_path,
+                                                    output_dir)
+            line="{} {}\n".format(mp3_file_path,relative2output_dir)
+            k=f.write(line)
+
+    command_text="conda run -n {} ".format(conda_env_name)
+    command_text+="cat {} | ".format(tmp_input_file)
+    command_text+=("parallel "
+                  + "--colsep ' ' "
+                  + "-P {} ".format(cpu_count)
+                  + "-n 1 "
+                  + "-q " )
+
+    #DO NOT put space in python code
+    python_code=("\"from pre_process_func import pre_process_big_file;"
+                + "pre_process_big_file({1},"#{} for GNU parallel
+                + "output_dir={2},"
+                + "segment_len={})\" ".format(segment_len))
+
+    command_text+=("python -c {}".format(python_code)
+                 +"&>> {}".format(logs_file_path))
+
+    command_list=command_text.split(" ")
+    process = Popen(command_list, stdout=PIPE, stderr=PIPE)
+    # print(command_text)
+    stdout, stderr = process.communicate()
+    print(stdout, stderr)
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    tmp_input_file.unlink()
