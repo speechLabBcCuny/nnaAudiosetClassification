@@ -30,6 +30,7 @@ class VggishModelWrapper:
         self.embedding_checkpoint=embedding_checkpoint
         self.pca_params=pca_params
         self.model_loaded = model_loaded
+        self.sess_config=sess_config
         # Initialize the vgg-ish embedding model and load post-Processsing
         if model_loaded:
             self.load_pre_trained_model(embedding_checkpoint,pca_params)
@@ -80,21 +81,12 @@ class VggishModelWrapper:
                 run([self.embedding_tensor],
                     feed_dict={self.features_tensor: a_batch})
             raw_embeddings = np.concatenate((raw_embeddings,embedding_batch))
+        #TODO post-processing can be batched as well
         post_processed_embeddings = self.pproc.postprocess(raw_embeddings)
 
         return raw_embeddings,post_processed_embeddings
 
-    def pre_process(self,)
-
-
-
-
-
-
-
-
-
-
+    # def pre_process(self,)
 
 
 
