@@ -34,9 +34,9 @@
         left=len_wav_data%(sr*excerpt_len)
         print("left seconds:",left/sr)
         if left<22712:
-           print("cannot")
+           print("cannot, func gives error")
         elif left<42998:
-          print("result will be emtpy")
+          print("result of 'waveform_to_examples' func will be emtpy")
         else:
            print("extra samples:", ((left-22712)//20286))
       ```

@@ -21,7 +21,7 @@ import resampy
 import mel_features
 import vggish_params
 
-import soundfile as sf
+
 
 
 def waveform_to_examples(data, sample_rate):
@@ -73,6 +73,7 @@ def waveform_to_examples(data, sample_rate):
 
 
 def wavfile_to_examples(wav_file):
+  import soundfile as sf
   """Convenience wrapper around waveform_to_examples() for a common WAV format.
 
   Args:
