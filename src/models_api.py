@@ -63,11 +63,11 @@ class VggishModelWrapper:
         Generates embeddings as per the Audioset VGG-ish model.
         Post processes embeddings with PCA Quantization
         Input args:
-            sound   = numpy array with samples from mp3file_to_examples
-            batch_size
+            sound (numpy.ndarray) : samples from mp3file_to_examples
+            batch_size (int) : batch size of input to vgg inference
         Returns:
-                list of numpy arrays
-                [raw_embeddings,post_processed_embeddings]
+                list : list of numpy arrays
+                    [raw_embeddings,post_processed_embeddings]
         """
         if not self.model_loaded:
             self.load_pre_trained_model()

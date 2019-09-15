@@ -19,41 +19,39 @@ import vggish_postprocess
 
 #async
 from params import INPUT_DIR_PARENT,OUTPUT_DIR
+from params import disk_usage,disk_space,memory_usage,ram_memory
 from models_api import VggishModelWrapper
 
 
-
-logs_folder="./job_logs/"
-
-ram_memory=100 #GB
-segment_length=1 #hour
-cpu_count=50
-file_per_epoch=70
-
-#1 hour is 0.04
-memory_usage=(0.04*30*segment_length*cpu_count)
-disk_space=500 #gb
-disk_usage= file_per_epoch*2 #gb
 assert disk_usage<=disk_space, "not enough disk space"
 assert memory_usage<=ram_memory, "not enough ram memory"
 
-abs_input_path="/home/data/nna/stinchcomb/NUI_DATA/"
-output_folder="/scratch/enis/data/nna/NUI_DATA/"
 
-if not os.path.exists(output_folder):
-    SRC=abs_input_path
-    DEST=output_folder
+if not os.path.exists(OUTPUT_DIR):
+    SRC=INPUT_DIR_PARENT
+    DEST=OUTPUT_DIR
     shutil.copytree(SRC, DEST, ignore=ig_f)
 
 
 def inference(pre_processed_npy_files,vgg,embeddings_file_name,batch_size=256):
-    # print("len sounds",len(sounds))
+    """
+    Calls vgg.generate_embeddings per file from pre_processed_npy_files.
+    Saves embeddings and raw_embeddings into two different files.
+
+    Input args:
+        pre_processed_npy_files (list) : list of paths to file storing sound
+        vgg (VggishModelWrapper) : vgg model wrapper instance
+        embeddings_file_name (str) : file name to save generated embeddings
+    Returns:
+            str : embeddings_file_name
+
+    """
     embeddings = np.array([], dtype=np.int16).reshape(0,128)
     postprocessed = np.array([], dtype=np.uint8).reshape(0,128)
     for npy_file in pre_processed_npy_files:
         sound=np.load(npy_file)
 
-        raw_embeddings_file,post_processed_embed_file = vgg.generate_embeddings(sound)
+        raw_embeddings_file,post_processed_embed_file = vgg.generate_embeddings(sound,batch_size)
 
         embeddings = np.concatenate((embeddings,raw_embeddings_file))
         postprocessed = np.concatenate((postprocessed,post_processed_embed_file))
@@ -89,7 +87,7 @@ for i in range(0,len(temp),file_per_epoch):
 
     ##### step - inference
     for input_file in epoch_files:
-        mp3_file_path,segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,output_folder,abs_input_path)
+        segments_folder,embeddings_file_name,pre_processed_folder=preb_names(input_file,OUTPUT_DIR,INPUT_DIR_PARENT)
         if os.path.exists(embeddings_file_name):
             continue
         pre_processed_npy_files=[pre_processed_folder+file for file in os.listdir(pre_processed_folder)]

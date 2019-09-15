@@ -15,3 +15,19 @@ LABELS="assets/class_labels_indices.csv"
     # output will be saved to  Path(output_dir) / "d/sound.npy"
 INPUT_DIR_PARENT = "/home/data/nna/stinchcomb/NUI_DATA/"
 OUTPUT_DIR = "/scratch/enis/data/nna/NUI_DATA/"
+
+logs_folder="./job_logs/"
+
+#RESOURCES CHECK
+ram_memory=100 #GB
+segment_length=1 #hour
+cpu_count=50
+file_per_epoch=70
+
+#1 hour is 0.04
+memory_usage=(0.04*30*segment_length*cpu_count)
+disk_space=500 #gb
+disk_usage= file_per_epoch*2 #gb
+
+
+### tests
