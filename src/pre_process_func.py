@@ -323,4 +323,4 @@ def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
     sys.stdout.flush()
     sys.stderr.flush()
 
-    # tmp_input_file.unlink()
+    tmp_input_file.unlink()

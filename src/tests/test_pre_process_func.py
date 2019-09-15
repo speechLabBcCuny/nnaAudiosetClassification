@@ -108,6 +108,7 @@ def test_iterate_for_waveform_to_examples():
     assert(np.count_nonzero(sound)==sound.size)
 
 def test_parallel_pre_process():
+    #TODO get this with os.cwd
     root_dir="/Users/berk/Documents/workspace/speech_audio_understanding/src/"
     input_path_list=[root_dir+"tests/data/3hours30min.mp3",]
     pre_process_func.parallel_pre_process(input_path_list,
@@ -116,5 +117,11 @@ def test_parallel_pre_process():
                                             cpu_count=2,segment_len="01:00:00",
                                             logs_file_path="logs.txt")
 
-
-    pass
+    expected_file3="tests/data/output/tests/data/3hours30min_preprocessed/output003_preprocessed.npy"
+    expected_file2="tests/data/output/tests/data/3hours30min_preprocessed/output002_preprocessed.npy"
+    last_part=np.load(expected_file3)
+    second_part=np.load(expected_file2)
+    assert(last_part.shape==(3600, 96, 64))
+    assert(second_part.shape==(1800, 96, 64))
+    assert(np.count_nonzero(second_part)==second_part.size)
+    assert(np.count_nonzero(last_part)==last_part.size)
