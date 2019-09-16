@@ -294,30 +294,26 @@ def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
         for mp3_file_path in input_path_list:
             relative2output_dir = relative2outputdir(mp3_file_path,
                                                     output_dir,input_dir_parent)
-            line="{} {}\n".format(mp3_file_path,relative2output_dir)
+            line="{}\t{}\n".format(mp3_file_path,relative2output_dir)
             k=f.write(line)
 
-    command_text="conda run -n {} ".format(conda_env_name)
-    command_text+="cat {} | ".format(tmp_input_file)
-    command_text+=("parallel "
-                  + "--colsep ' ' "
-                  + "-P {} ".format(cpu_count)
-                  + "-n 1 "
-                  + "-q " )
+    # # #DO NOT put new line python code
+    python_code=("from pre_process_func import pre_process_big_file;"
+                + "pre_process_big_file('{}'.split('\t')[0],"#{} for GNU parallel
+                + "output_dir='{}'.split('\t')[1],"
+                + "segment_len='{}');print('test')".format(segment_len))
 
-    #DO NOT put space in python code
-    python_code=("\"from pre_process_func import pre_process_big_file;"
-                + "pre_process_big_file(\'{1}\',"#{} for GNU parallel
-                + "output_dir=\'{2}\',"
-                + "segment_len=\'{}\')\" ".format(segment_len))
+    command_list=[]
+    # command_text=""
+    command_list.extend(["conda","run","-n",conda_env_name])
+    command_list.extend(["cat",str(tmp_input_file),"|"])
+    command_list.extend(["parallel","-P",str(cpu_count),"-n","1","-q"])
 
-    command_text+=("python -c {}".format(python_code)
-                 +"&>> {}".format(logs_file_path))
+    # command_list.extend(["echo","{}"])
+    # command_list.extend(["python", "call2func.py", "{1}", "{2}","2>>","logs.txt"])
+    command_list.extend(["python", "-c", python_code])
 
-    command_list=command_text.split(" ")
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
-    print(command_text)
-    print(command_list)
     stdout, stderr = process.communicate()
     print(stdout, stderr)
     sys.stdout.flush()
