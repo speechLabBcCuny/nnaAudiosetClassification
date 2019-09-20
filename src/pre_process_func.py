@@ -206,7 +206,7 @@ def pre_process(mp3_file_path,output_dir="./", saveAsFile=False):
             sr (int): sampling rate of the audio
 
         Returns:
-            Returns pre_processed sound (numpy.array) if file does not exists
+            Returns pre_processed sound (numpy.array,np.float32) if file does not exists
     """
     mp3_file_path = Path(mp3_file_path)
     output_dir = Path(output_dir)

@@ -2,14 +2,21 @@
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.backend import set_session
+
 import os,requests
 
-from models.audioset import vggish_input
-from models.audioset import vggish_params
-from models.audioset import vggish_postprocess
-from models.audioset import vggish_slim
+import sys
+# sys.path.insert(0, '/Users/berk/Documents/workspace/speech_audio_understanding/src/models/audioset')
+sys.path.insert(0, './models/audioset')
+
+import vggish_input
+import vggish_params
+import vggish_postprocess
+import vggish_slim
 
 from params import *
+import pre_process_func
 
 class VggishModelWrapper:
     """
@@ -17,11 +24,12 @@ class VggishModelWrapper:
     Also contains any helper function required.
     """
 
-    def __init__(self, embedding_checkpoint=VGGish_EMBEDDING_CHECKPOINT,
+    def __init__(self,
+                embedding_checkpoint=VGGish_EMBEDDING_CHECKPOINT, #MODEL
                 pca_params= PCA_PARAMS,
                 # classifier_model="assets/classifier_model.h5",
                 labels_path=LABELS,
-                sess_config=tf.ConfigProto()
+                sess_config=tf.ConfigProto(),
                 model_loaded=True):
 
         # # Initialize the classifier model
@@ -38,9 +46,12 @@ class VggishModelWrapper:
         self.labels = self.load_labels(labels_path)
 
     def load_pre_trained_model(self,
+            embedding_checkpoint=None,
+            pca_params=None):
+        if embedding_checkpoint==None:
             embedding_checkpoint=self.embedding_checkpoint,
-            pca_params=self.pca_params):
-
+        if pca_params==None:
+            pca_params=self.pca_params
         # Initialize the vgg-ish embedding model
         self.graph_embedding = tf.Graph()
         with self.graph_embedding.as_default():
@@ -63,7 +74,7 @@ class VggishModelWrapper:
         Generates embeddings as per the Audioset VGG-ish model.
         Post processes embeddings with PCA Quantization
         Input args:
-            sound (numpy.ndarray) : samples from mp3file_to_examples
+            sound (numpy.ndarray) : samples from pre_process_func.pre_process
             batch_size (int) : batch size of input to vgg inference
         Returns:
                 list : list of numpy arrays
@@ -86,17 +97,30 @@ class VggishModelWrapper:
 
         return raw_embeddings,post_processed_embeddings
 
+    #THIS COULD BE IN audioset.classify
+    def inference(self,mp3_file):
+        """
+        Driver function that performs all core tasks in memory.
+        Input args:
+            mp3_file = /path/to/mp3_file.mp3
+        Returns:
+            preds = numpy array of shape (527,) containing class probabilities.
+        """
+        sound=pre_process_func.pre_process(mp3_file)
+        raw_embed,post_processed_embed = self.generate_embeddings(sound)
+
+        # ATTENTION MDDEL
+        preds=audioset.classify(post_processed_embed)
+        return preds
+
+
+
     # def pre_process(self,)
-
-
-
-
-
-
 
 
     # returns an array with label strings, index of array corresponding to class index
     def load_labels(self,csv_file="assets/class_labels_indices.csv"):
+        import csv
         if os.path.exists(csv_file):
             csvfile=open(csv_file, newline='')
             csv_lines=csvfile.readlines()
@@ -113,3 +137,114 @@ class VggishModelWrapper:
         for row in reader:
           labels.append(row[2])
         return labels
+
+class AudioSet():
+    def __init__(self,
+                classifier_model_path="assets/classifier_model.h5",
+                labels_path=LABELS,
+                sess_config=tf.ConfigProto(),
+                model_loaded=True,
+                vggish_model=None):
+
+        # # Initialize the classifier model
+        # self.session_classify = tf.keras.backend.get_session()
+        # self.classify_model = tf.keras.models.load_model(classifier_model, compile=False)
+        self.session_classification=None
+        self.classifier_model_path = classifier_model_path
+        self.model_loaded = model_loaded
+        self.sess_config = sess_config
+        self.vggish_model=vggish_model
+
+        # Initialize the vgg-ish embedding model and load post-Processsing
+        if model_loaded:
+            self.load_pre_trained_model()
+        # Metadata
+        self.labels = self.load_labels(labels_path)
+
+    def load_pre_trained_model(self,
+                classifier_model_path=None):
+        if classifier_model_path==None:
+            classifier_model_path=self.classifier_model_path
+        # Initialize the Audioset classification model
+        sess = tf.Session(config=self.sess_config)
+        set_session(sess)
+        self.session_classification = tf.keras.backend.get_session()
+        self.classifier_model = tf.keras.models.load_model(classifier_model_path,
+                                                            compile=False)
+
+        self.model_loaded=True
+
+    def classify_embeddings(self, processed_embeddings):
+        """
+        Performs classification on PCA Quantized Embeddings.
+        Input args:
+            processed_embeddings = numpy array of shape (N,10,128), dtype=float32
+        Returns:
+            class_scores = Output probabilities for the 527 classes - numpy array of shape (N,527).
+        """
+        if not self.model_loaded:
+            self.load_pre_trained_model()
+        output_tensor = self.classifier_model.output
+        input_tensor = self.classifier_model.input
+        class_scores = output_tensor.eval(feed_dict={input_tensor: processed_embeddings}, session=self.session_classification)
+
+        return class_scores
+
+    def classify_sound(self,mp3_file,vggish_model=None):
+        """
+        Performs classification on mp3 files.
+        Input args:
+            mp3_file (Path/str) = path to mp3 files
+        Returns:
+            class_scores = Output probabilities for the 527 classes -
+                            numpy array of shape (N,527).
+                            N = (mp3 length in seconds) / 10
+        """
+        if (vggish_model is None) and (self.vggish_model is None):
+            self.vggish_model = VggishModelWrapper()
+        elif (vggish_model is None):
+            vggish_model = self.vggish_model
+        else:
+            pass
+
+        sound = pre_process_func.pre_process(mp3_file)
+        raw_embeddings,post_processed_embed = vggish_model.generate_embeddings(sound)
+        post_processed_embed=post_processed_embed.reshape([-1,10,128])
+        post_processed_embed=self.uint8_to_float32(post_processed_embed)
+        class_probabilities = self.classify_embeddings(post_processed_embed)
+        return class_probabilities
+
+    def prob2labels(self,class_probabilities,first_k=1):
+        class_prob, class_index  = tf.nn.top_k(class_probabilities, first_k, sorted=True)
+        # Torch version is same, but precision is lower. (4 to 8 after .)
+        # class_prob, class_index = torch.topk(class_probabilities, first_k,
+        #                                     dim=1, largest=True, sorted=True)
+        with self.session_classification.as_default():
+            class_index = class_index.eval()
+            class_prob = class_prob.eval()
+        class_labels = [[self.labels[i] for i in sample] for sample in class_index]
+        return class_labels,class_prob
+
+
+    # returns an array with label strings, index of array corresponding to class index
+    def load_labels(self,csv_file="assets/class_labels_indices.csv"):
+        import csv
+        if os.path.exists(csv_file):
+            csvfile=open(csv_file, newline='')
+            csv_lines=csvfile.readlines()
+            csvfile.close()
+        else:
+            url="https://raw.githubusercontent.com/qiuqiangkong/audioset_classification/master/metadata/class_labels_indices.csv"
+            with requests.Session() as s:
+                download = s.get(url)
+                decoded_content = download.content.decode('utf-8')
+                csv_lines=decoded_content.splitlines()
+        labels=[]
+        reader = csv.reader(csv_lines, delimiter=',')
+        headers=next(reader)
+        for row in reader:
+          labels.append(row[2])
+        return labels
+
+    def uint8_to_float32(self,x):
+        return (np.float32(x) - 128.) / 128.
