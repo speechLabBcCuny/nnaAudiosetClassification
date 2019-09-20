@@ -168,7 +168,7 @@ class AudioSet():
             pass
 
         sound = pre_process_func.pre_process(mp3_file)
-        embeds = vggish_model.generate_embeddings(sound,batch_size=batch_size)
+        embeds = self.vggish_model.generate_embeddings(sound,batch_size=batch_size)
         raw_embeddings,post_processed_embed = embeds
         post_processed_embed=post_processed_embed.reshape([-1,10,128])
         post_processed_embed=self.uint8_to_float32(post_processed_embed)
