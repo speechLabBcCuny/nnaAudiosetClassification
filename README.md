@@ -9,7 +9,7 @@ import tensorflow as tf
 from models_api import AudioSet
 
 classifier = AudioSet()
-class_prob = classifier.classify_sound("./tests/data/10seconds.mp3")
+class_prob = classifier.classify_sound("./assets/10seconds.mp3")
 
 # sort probabilities(scores) and get corresponding labels for first 5 class
 labels,prob = audioset_classifier.prob2labels(class_probabilities,first_k=5)
@@ -40,4 +40,4 @@ python -m ipykernel install --user --name "$envName" --display-name "Python3-$en
 ```
 
 
-[Project Logs.md](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project_Logs.md)
+[Project Logs.md](https://github.com/speechLabBcCuny/nnaAudiosetClassification/blob/master/Project_logs.md)

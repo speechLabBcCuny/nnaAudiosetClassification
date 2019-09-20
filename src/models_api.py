@@ -43,7 +43,6 @@ class VggishModelWrapper:
         if model_loaded:
             self.load_pre_trained_model(embedding_checkpoint,pca_params)
         # Metadata
-        self.labels = self.load_labels(labels_path)
 
     def load_pre_trained_model(self,
             embedding_checkpoint=None,
@@ -97,46 +96,8 @@ class VggishModelWrapper:
 
         return raw_embeddings,post_processed_embeddings
 
-    #THIS COULD BE IN audioset.classify
-    def inference(self,mp3_file):
-        """
-        Driver function that performs all core tasks in memory.
-        Input args:
-            mp3_file = /path/to/mp3_file.mp3
-        Returns:
-            preds = numpy array of shape (527,) containing class probabilities.
-        """
-        sound=pre_process_func.pre_process(mp3_file)
-        raw_embed,post_processed_embed = self.generate_embeddings(sound)
-
-        # ATTENTION MDDEL
-        preds=audioset.classify(post_processed_embed)
-        return preds
 
 
-
-    # def pre_process(self,)
-
-
-    # returns an array with label strings, index of array corresponding to class index
-    def load_labels(self,csv_file="assets/class_labels_indices.csv"):
-        import csv
-        if os.path.exists(csv_file):
-            csvfile=open(csv_file, newline='')
-            csv_lines=csvfile.readlines()
-            csvfile.close()
-        else:
-            url="https://raw.githubusercontent.com/qiuqiangkong/audioset_classification/master/metadata/class_labels_indices.csv"
-            with requests.Session() as s:
-                download = s.get(url)
-                decoded_content = download.content.decode('utf-8')
-                csv_lines=decoded_content.splitlines()
-        labels=[]
-        reader = csv.reader(csv_lines, delimiter=',')
-        headers=next(reader)
-        for row in reader:
-          labels.append(row[2])
-        return labels
 
 class AudioSet():
     def __init__(self,
@@ -146,9 +107,6 @@ class AudioSet():
                 model_loaded=True,
                 vggish_model=None):
 
-        # # Initialize the classifier model
-        # self.session_classify = tf.keras.backend.get_session()
-        # self.classify_model = tf.keras.models.load_model(classifier_model, compile=False)
         self.session_classification=None
         self.classifier_model_path = classifier_model_path
         self.model_loaded = model_loaded
@@ -186,11 +144,13 @@ class AudioSet():
             self.load_pre_trained_model()
         output_tensor = self.classifier_model.output
         input_tensor = self.classifier_model.input
-        class_scores = output_tensor.eval(feed_dict={input_tensor: processed_embeddings}, session=self.session_classification)
+        class_scores = output_tensor.eval(
+                            feed_dict={input_tensor: processed_embeddings},
+                                        session=self.session_classification)
 
         return class_scores
 
-    def classify_sound(self,mp3_file,vggish_model=None):
+    def classify_sound(self,mp3_file,vggish_model=None,batch_size=256):
         """
         Performs classification on mp3 files.
         Input args:
@@ -202,13 +162,14 @@ class AudioSet():
         """
         if (vggish_model is None) and (self.vggish_model is None):
             self.vggish_model = VggishModelWrapper()
-        elif (vggish_model is None):
-            vggish_model = self.vggish_model
+        elif (vggish_model is not None):
+            self.vggish_model = vggish_model
         else:
             pass
 
         sound = pre_process_func.pre_process(mp3_file)
-        raw_embeddings,post_processed_embed = vggish_model.generate_embeddings(sound)
+        embeds = vggish_model.generate_embeddings(sound,batch_size=batch_size)
+        raw_embeddings,post_processed_embed = embeds
         post_processed_embed=post_processed_embed.reshape([-1,10,128])
         post_processed_embed=self.uint8_to_float32(post_processed_embed)
         class_probabilities = self.classify_embeddings(post_processed_embed)
