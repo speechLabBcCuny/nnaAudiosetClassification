@@ -3,16 +3,19 @@
 This repository contains code to instantiate and deploy an audio classification model.
 
 ### Example usage
-
+##### Requires model files 
 ```python
 import tensorflow as tf
 from models_api import AudioSet
 
-classifier = AudioSet()
+vgg = VggishModelWrapper()
+
+classifier=AudioSet(vggish_model=vgg)
+
 class_prob = classifier.classify_sound("./assets/10seconds.mp3")
 
 # sort probabilities(scores) and get corresponding labels for first 5 class
-labels,prob = audioset_classifier.prob2labels(class_probabilities,first_k=5)
+labels,prob = audioset_classifier.prob2labels(class_prob,first_k=5)
 
 #print results
 for sample_labels,sample_probabilities in zip(labels,prob):
@@ -20,6 +23,8 @@ for sample_labels,sample_probabilities in zip(labels,prob):
         print(a_label,a_prob)
 
 ```
+
+### Model files
 
 ### Suggested virtual env usage with conda
 Assumes Python3.7
