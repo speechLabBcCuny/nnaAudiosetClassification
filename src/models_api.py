@@ -161,7 +161,7 @@ class AudioSet():
                             N = (mp3 length in seconds) / 10
         """
         if (vggish_model is None) and (self.vggish_model is None):
-            self.vggish_model = VggishModelWrapper()
+            self.vggish_model = VggishModelWrapper(sess_config=self.sess_config )
         elif (vggish_model is not None):
             self.vggish_model = vggish_model
         else:
