@@ -3,19 +3,19 @@
 This repository contains code to instantiate and deploy an audio classification model.
 
 ### Example usage
-##### Requires model files 
+! Requires model files
 ```python
 import tensorflow as tf
 from models_api import AudioSet
 
-vgg = VggishModelWrapper()
+# create and instance of Audioset classifier
+classifier=AudioSet()
 
-classifier=AudioSet(vggish_model=vgg)
-
+#classify mp3 file
 class_prob = classifier.classify_sound("./assets/10seconds.mp3")
 
 # sort probabilities(scores) and get corresponding labels for first 5 class
-labels,prob = audioset_classifier.prob2labels(class_prob,first_k=5)
+labels,prob = classifier.prob2labels(class_prob,first_k=5)
 
 #print results
 for sample_labels,sample_probabilities in zip(labels,prob):
@@ -25,6 +25,13 @@ for sample_labels,sample_probabilities in zip(labels,prob):
 ```
 
 ### Model files
+```bash
+wget https://max-assets-prod.s3.us-south.cloud-object-storage.appdomain.cloud/max-audio-classifier/1.0.0/assets.tar.gz
+tar -xzvf assets.tar.gz
+mv classifier_model.h5 ./assets/
+mv vggish_pca_params.npz ./assets/
+mv vggish_model.ckpt ./assets/
+```
 
 ### Suggested virtual env usage with conda
 Assumes Python3.7
