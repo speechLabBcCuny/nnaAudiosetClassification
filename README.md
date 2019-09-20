@@ -1,49 +1,43 @@
 # Nature Sound Processing Project
 
-[Project Logs.md](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project_Logs.md)
+This repository contains code to instantiate and deploy an audio classification model.
 
+### Example usage
 
-Assumes Python3.7
+```python
+import tensorflow as tf
+from models_api import AudioSet
+
+classifier = AudioSet()
+class_prob = classifier.classify_sound("./tests/data/10seconds.mp3")
+
+# sort probabilities(scores) and get corresponding labels for first 5 class
+labels,prob = audioset_classifier.prob2labels(class_probabilities,first_k=5)
+
+#print results
+for sample_labels,sample_probabilities in zip(labels,prob):
+    for a_label,a_prob in zip(sample_labels,sample_probabilities):
+        print(a_label,a_prob)
+
 ```
-#Conda cheatsheet:  
-envName="speechEnv"  
+
+### Suggested virtual env usage with conda
+Assumes Python3.7
+```bash
+#Conda cheatsheet:
+envName="soundEnv"  
 conda create --name $envName python=3.7
 conda activate speechEnv  
-conda config --add channels anaconda  
-conda confic --add channels pytorch  
-conda install --file req.txt  
+conda config --add channels anaconda,conda-forge
+conda install --file Requirements.txt  
 conda clean --yes --all  
 ```
 
-
-
-
 Add kernel to jupyter kernels (use python that have ipython installed):  
-```
+```bash
 conda install ipykernel
 python -m ipykernel install --user --name "$envName" --display-name "Python3-$envName"  
 ```
 
 
-kaggle uses 7zip with dataset:  
-sudo apt-get update  
-sudo apt install p7zip-full  
-```
-# for Getting data from cloud on unix with credentials
-curl https://sdk.cloud.google.com | bash
-exec -l $SHELL
-gcloud init
-
-```
-np_0=np.random.rand(122,128)
-tr_0=torch.tensor(np_0)
-np_1=np.array(tr_0)
-tr_0_numbers,tr_0_index=torch.topk(tr_0, 128, dim=1, largest=True, sorted=True)
-np_0_numbers=np.argsort(np_0,axis=1)
-
-```
-echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt && python sendmail.py -s -m "all files 0.96" || python sendmail.py -m "all files 0.96" &
-
-cat "/home/enis/projects/nna/mp3file.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4-2.py --input_files {} &>> logs_run_last.txt && python sendmail.py -s -m "audioset inf" || python sendmail.py -m "audioset inference" &
-
-```
+[Project Logs.md](https://github.com/EnisBerk/speech_audio_understanding/blob/master/Project_Logs.md)
