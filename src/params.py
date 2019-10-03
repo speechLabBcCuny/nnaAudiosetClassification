@@ -1,3 +1,4 @@
+from pathlib import Path
 
 EXCERPT_LENGTH=10 #seconds
 
@@ -16,18 +17,39 @@ LABELS="assets/class_labels_indices.csv"
 INPUT_DIR_PARENT = "/home/data/nna/stinchcomb/NUI_DATA/"
 OUTPUT_DIR = "/scratch/enis/data/nna/NUI_DATA/"
 
-logs_folder="./job_logs/"
+LOGS_FOLDER="./job_logs/"
+LOGS_FILE = LOGS_FOLDER + "logs.txt"
+if not Path(LOGS_FOLDER).exists():
+    # os.mkdir(segments_folder)
+    Path(LOGS_FOLDER).mkdir(parents=True, exist_ok=True)
+
+
+# output of Pre process, input for VGG
+PRE_PROCESSED_queue = LOGS_FOLDER + "pre_processed_queue.csv"
+# currently being run on a VGG
+VGGISH_processing_queue = LOGS_FOLDER + "VGGISH_processing_queue.csv"
+# output of VGGISH, input for Audioset classifier
+VGGISH_EMBEDDINGS_queue = LOGS_FOLDER + "vggish_embeddings_queue.csv"
 
 #RESOURCES CHECK
+# available resources:
 ram_memory=100 #GB
-segment_length=1 #hour
-cpu_count=50
-file_per_epoch=70
-
-#1 hour is 0.04
-memory_usage=(0.04*30*segment_length*cpu_count)
 disk_space=500 #gb
-disk_usage= file_per_epoch*2 #gb
 
+segment_length=1 #hour
+# CPU count determines, how many file is processed in parallel
+# each CPU processes as 49 hour file in, 1 hour at a time in memory
+cpu_count=40
+#1 hour is 0.04
+#30x for mp3 to wav
+memory_usage=(0.04*30*segment_length*cpu_count)
+assert( memory_usage<ram_memory)
 
-### tests
+#1.62 mb per minute for preprocessed.npy
+#(4.74GB for 50 hours of 2gb mp3)
+# we delete preprocessed.npy after VGGish,
+# we run VGGish after all CPUs done with single 50 hour file
+disk_usage = 4.74 * cpu_count
+assert( disk_usage<=disk_space)
+
+# after VGGish, raw_embeddings+ embeedings is 28x smaller than original mp3

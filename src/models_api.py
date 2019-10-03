@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.backend import set_session
 
-import os,requests
+import os
 
 import sys
 # sys.path.insert(0, '/Users/berk/Documents/workspace/speech_audio_understanding/src/models/audioset')
@@ -17,6 +17,8 @@ import vggish_slim
 
 from params import *
 import pre_process_func
+
+from params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
 
 class VggishModelWrapper:
     """
@@ -95,8 +97,36 @@ class VggishModelWrapper:
         post_processed_embeddings = self.pproc.postprocess(raw_embeddings)
 
         return raw_embeddings,post_processed_embeddings
+    def inference_file(self,pre_processed_npy_file,batch_size=256):
+        """
+        Calls vgg.generate_embeddings per file from pre_processed_npy_files.
+        Saves embeddings and raw_embeddings into two different files.
+
+        Input args:
+            pre_processed_npy_files (list) : list of paths to file storing sound
+            vgg (VggishModelWrapper) : vgg model wrapper instance
+            embeddings_file_name (str) : file name to save generated embeddings
+        Returns:
 
 
+        """
+        # for npy_file in pre_processed_npy_files:
+        sound=np.load(pre_processed_npy_file)
+        raw_embeddings,postprocessed = self.generate_embeddings(sound,batch_size)
+
+        npy_file=Path(pre_processed_npy_file)
+        file_index = npy_file.stem.replace("_preprocessed","").replace("output","")
+        original_file_stem = npy_file.parent.stem.replace("_preprocessed","")
+        vgg_folder = npy_file.parent.parent / npy_file.parent.stem.replace("_preprocessed","_vgg")
+        raw_embeddings_file_path = vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+        embeddings_file_path =  vgg_folder / (str(original_file_stem) + "_embeddings"+file_index+".npy")
+
+        Path(vgg_folder).mkdir(parents=True, exist_ok=True)
+        np.save(raw_embeddings_file_path,raw_embeddings)
+        np.save(embeddings_file_path,postprocessed)
+
+        npy_file.unlink()
+        return embeddings_file_path
 
 
 class AudioSet():
@@ -195,6 +225,7 @@ class AudioSet():
             csv_lines=csvfile.readlines()
             csvfile.close()
         else:
+            import requests
             url="https://raw.githubusercontent.com/qiuqiangkong/audioset_classification/master/metadata/class_labels_indices.csv"
             with requests.Session() as s:
                 download = s.get(url)
