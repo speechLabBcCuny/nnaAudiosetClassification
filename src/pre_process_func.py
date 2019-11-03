@@ -18,7 +18,7 @@ import subprocess
 from params import EXCERPT_LENGTH,INPUT_DIR_PARENT,OUTPUT_DIR
 from params import PRE_PROCESSED_queue,PRE_PROCESSING_queue,VGGISH_processing_queue
 from params import VGGISH_EMBEDDINGS_queue
-
+import math
 import csv
 
 def save_to_csv(file_name,lines):
@@ -154,23 +154,24 @@ def cal_sample_size(wav_data,sr):
             [int,int,int]
     """
     assert (EXAMPLE_HOP_SECONDS==0.96)
+
+    sampling_ratio=16000/sr
+    lower_limit=((sr*0.96*1)+(240))/sampling_ratio
+#     excerpt_limit=((sr*0.96*EXCERPT_LENGTH)+(240))/sampling_ratio
+
     offset=sr*EXCERPT_LENGTH
     #EXPECTED sample size, after processing
     sample_size=(len(wav_data)//offset)*EXCERPT_LENGTH
     remainder_wav_data=len(wav_data)%offset
     # if remainder will generate more than any samples (requires 42998 numbers)
-    if remainder_wav_data<42998:
+    if remainder_wav_data<lower_limit:
         pass
-    elif remainder_wav_data>=42998 and remainder_wav_data<85334:
-        sample_size+=1
-    # elif remainder_wav_data>=85334:
     else:
-        # sample size increases for each:
-            #20286 is for 0.46 hop_size, 42336 is for hop_size 0.96
-        # sample_size+=((remainder_wav_data-22712)//42336)
-        sample_size+=((remainder_wav_data - 85334)//42336) + 2
+        seconds=math.floor(((remainder_wav_data*sampling_ratio)-(240))/(16000*0.96))
+        sample_size+=seconds
 
-    return sample_size,offset,remainder_wav_data
+    return sample_size,offset,remainder_wav_data,lower_limit
+
 
 def iterate_for_waveform_to_examples(wav_data,sr):
     """Wrapper for waveform_to_examples from models/audioset/vggish_input.py
@@ -186,7 +187,7 @@ def iterate_for_waveform_to_examples(wav_data,sr):
         Returns:
             See waveform_to_examples.
     """
-    sample_size,offset,remainder_wav_data=cal_sample_size(wav_data,sr)
+    sample_size,offset,remainder_wav_data,lower_limit=cal_sample_size(wav_data,sr)
     # in this loop wav_data jumps offset elements and sound jumps EXCERPT_LENGTH*2
     # because offset number of raw data turns into EXCERPT_LENGTH*2 pre-processed
     sound=np.zeros((sample_size,96,64),dtype=np.float32)
@@ -196,7 +197,7 @@ def iterate_for_waveform_to_examples(wav_data,sr):
         # numpy indexing handles bigger indexes
         # i+offset>len(wav_data) means that we are on the last loop
         # then if there is enough remaind data, process it otherwise not
-        if i+offset>len(wav_data) and remainder_wav_data<42998:
+        if i+offset>len(wav_data) and remainder_wav_data<lower_limit:
             continue
         # left data is smaller than 22712, we cannot pre-process
         # if smaller than 42998, will be 0 anyway
