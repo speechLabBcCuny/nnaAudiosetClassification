@@ -1,4 +1,4 @@
-# Nature Sound Processing Project
+## Nature Sounds Processing Project
 
 This repository contains code to instantiate and deploy an audio classification model.
 

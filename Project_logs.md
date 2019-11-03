@@ -38,7 +38,8 @@
         elif left<42998:
           print("result of 'waveform_to_examples' func will be emtpy")
         else:
-           print("extra samples:", ((left-22712)//20286))
+          # following equation is true for hop_seconds=0,46
+           print("extra samples: for hop_seconds=0,46", ((left-22712)//20286))
       ```
 
 
