@@ -15,7 +15,7 @@ import csv
 
 def read_file_properties(mp3_files_path_list):
     if type(mp3_files_path_list) is not list:
-        with open(mp3_files_path_list) as f:
+        with open(str(mp3_files_path_list)) as f:
             lines=f.readlines()
             mp3_files_path_list=[line.strip() for line in lines]
 
@@ -141,7 +141,7 @@ def play_html_modify(mp3file,items):
 
 def save_to_csv(file_name,lines):
     file_name=Path(file_name).with_suffix('.csv')
-    with open(file_name, mode='a') as labels_file:
+    with open(str(file_name), mode='a') as labels_file:
         label_writer = csv.writer(labels_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for line in lines:
             label_writer.writerow(line)
@@ -149,7 +149,7 @@ def save_to_csv(file_name,lines):
 def load_labels(csv_file="assets/class_labels_indices.csv"):
     import csv
     if os.path.exists(csv_file):
-        csvfile=open(csv_file, newline='')
+        csvfile=open(str(csv_file), newline='')
         csv_lines=csvfile.readlines()
         csvfile.close()
     else:
