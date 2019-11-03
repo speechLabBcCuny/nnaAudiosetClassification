@@ -33,37 +33,7 @@ if not os.path.exists(OUTPUT_DIR):
     shutil.copytree(SRC, DEST, ignore=ig_f)
 
 
-def inference(pre_processed_npy_files,vgg,embeddings_file_name,batch_size=256):
-    """
-    Calls vgg.generate_embeddings per file from pre_processed_npy_files.
-    Saves embeddings and raw_embeddings into two different files.
 
-    Input args:
-        pre_processed_npy_files (list) : list of paths to file storing sound
-        vgg (VggishModelWrapper) : vgg model wrapper instance
-        embeddings_file_name (str) : file name to save generated embeddings
-    Returns:
-            str : embeddings_file_name
-
-    """
-    embeddings = np.array([], dtype=np.int16).reshape(0,128)
-    postprocessed = np.array([], dtype=np.uint8).reshape(0,128)
-    for npy_file in pre_processed_npy_files:
-        sound=np.load(npy_file)
-
-        raw_embeddings_file,post_processed_embed_file = vgg.generate_embeddings(sound,batch_size)
-
-        embeddings = np.concatenate((embeddings,raw_embeddings_file))
-        postprocessed = np.concatenate((postprocessed,post_processed_embed_file))
-
-    raw_embeddings_file_name=embeddings_file_name[:-15]+"_rawembeddings.npy"
-    np.save(raw_embeddings_file_name,embeddings)
-    # postprocessed_batch = pproc.postprocess(embeddings)
-    # del embeddings
-    # print("saving")
-    np.save(embeddings_file_name,postprocessed)
-    # del postprocessed_batch
-    return embeddings_file_name
 
 
 ########################main.py
@@ -98,3 +68,9 @@ for i in range(0,len(temp),file_per_epoch):
 # this one does VGGish inference
 # echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt &
 #cat "/home/enis/projects/nna/mp3files.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4.py --input_files {} &>> logs_run_last.txt &
+# python pre_process.py &>> job_logs/logs.txt; python slack_message.py -t cpu_job &
+# python watch_VGGish.py &>> job_logs/logs.txt; python slack_message.py &
+
+# cat job_logs/pre_processing_queue.csv | wc -l; cat job_logs/pre_processed_queue.csv | wc -l; cat job_logs/VGGISH_processing_queue.csv | wc -l; cat job_logs/vggish_embeddings_queue.csv | wc -l; du -hs /scratch/enis/data/
+# total segment count is 18908
+# tar cf - /scratch/enis/data/nna/backup/NUI_DATA/ -P | pv -s $(du -sb /scratch/enis/data/nna/backup/NUI_DATA/ | awk '{print $1}') | gzip > embeddings_backup.tar.gz
