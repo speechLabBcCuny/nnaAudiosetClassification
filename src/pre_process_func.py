@@ -16,6 +16,26 @@ import shutil
 import numpy as np
 import subprocess
 from params import EXCERPT_LENGTH,INPUT_DIR_PARENT,OUTPUT_DIR
+from params import PRE_PROCESSED_queue,PRE_PROCESSING_queue,VGGISH_processing_queue
+from params import VGGISH_EMBEDDINGS_queue
+
+import csv
+
+def save_to_csv(file_name,lines):
+    file_name=Path(file_name).with_suffix('.csv')
+    with open(file_name, mode='a') as labels_file:
+        label_writer = csv.writer(labels_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for line in lines:
+            label_writer.writerow(line)
+
+def read_queue(queue_csv):
+    files_in_queue=[]
+    if Path(queue_csv).exists():
+        with open(queue_csv, newline='') as f:
+            reader=csv.reader(f)
+            for row in reader:
+                files_in_queue.append(row[0])
+    return files_in_queue
 
 def rmv_folder(folder):
     try:
@@ -115,6 +135,13 @@ def load_mp3(input_file_path):
     wav_data=wav_data.reshape(-1,2)
     return wav_data,sr
 
+# this is complicated rather than formulated is that
+# 41000/16000 is not an integer, but can be formulated TODO
+# here is the calculation: given input size, calculates output seconds
+# input_size=39975.0
+# original_sr=41000
+# sampling_ratio=16000/original_sr
+# seconds=((input_size*sample_ratio)-(240))/(16000*0.96)
 def cal_sample_size(wav_data,sr):
     """Cal. sample size from log mel spectogram for a given wav_file
         read **(16/06/2019)** at Project_logs.md for explanations.
@@ -166,6 +193,9 @@ def iterate_for_waveform_to_examples(wav_data,sr):
     count=0
     for i in range(0,len(wav_data),offset):
     #this is when wav_data%offset!=0
+        # numpy indexing handles bigger indexes
+        # i+offset>len(wav_data) means that we are on the last loop
+        # then if there is enough remaind data, process it otherwise not
         if i+offset>len(wav_data) and remainder_wav_data<42998:
             continue
         # left data is smaller than 22712, we cannot pre-process
@@ -211,12 +241,12 @@ def pre_process(mp3_file_path,output_dir="./", saveAsFile=False):
     mp3_file_path = Path(mp3_file_path)
     output_dir = Path(output_dir)
 
-    if not os.path.exists(output_dir):
+    if not output_dir.exists():
         os.mkdir(output_dir)
 
     npy_file_path = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
 
-    if os.path.exists(npy_file_path):
+    if npy_file_path.exists():
         return None
 
     sound = mp3file_to_examples(mp3_file_path)
@@ -224,6 +254,7 @@ def pre_process(mp3_file_path,output_dir="./", saveAsFile=False):
 
     if saveAsFile:
         np.save(npy_file_path,sound)
+        save_to_csv(PRE_PROCESSED_queue,[[str(npy_file_path)]])
 
     return sound
 
@@ -246,24 +277,50 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         None
     """
     mp3_file_path = Path(mp3_file_path)
+    already_PRE_PROCESSING=read_queue(PRE_PROCESSING_queue)
+    if str(mp3_file_path) in already_PRE_PROCESSING:
+        return 2
+    else:
+        save_to_csv(PRE_PROCESSING_queue,[[str(mp3_file_path)]])
+
     # divide files ! should end with "/"
     segments_folder = Path(output_dir) / (mp3_file_path.stem + "_segments/")
+    pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed")
+
+    # we cannot do that because maybe process is stopped while creating segments
+    # we do not now total segments from beginning since we do not know how long the file is
+    # if not Path(segments_folder).exists():
+    #     if pre_processed_dir.exists():
+    #         # files are pre-processed and segments are deleted
+    #         return 1
+    #     # files are
     mp3_segments=divide_mp3(mp3_file_path,segments_folder,
                             segment_len=segment_len)
     # pre-process each segment
-    pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed")
-    if not os.path.exists(pre_processed_dir):
+
+    if not pre_processed_dir.exists():
         pre_processed_dir.mkdir(parents=True, exist_ok=True)
 
+
+
     for mp3_segment in mp3_segments:
-        # # if pre-processed
+        files_in_vggprocessing=set(read_queue(VGGISH_processing_queue))
+        files_done_vgg=set(read_queue(VGGISH_EMBEDDINGS_queue))
+        ##check if VGGish already run or running this
         mp3_segment_path=segments_folder / mp3_segment
-        pre_process(mp3_segment_path,output_dir=pre_processed_dir,
-                    saveAsFile=True)
+        npy_file_path = Path(pre_processed_dir) / (str(mp3_segment_path.stem) + "_preprocessed.npy")
+        npy_file_path = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
+
+        if (str(npy_file_path) not in files_in_vggprocessing) and  (str(npy_file_path) not in files_done_vgg):
+            pre_process(mp3_segment_path,output_dir=pre_processed_dir,
+                        saveAsFile=True)
+
+        mp3_segment_path.unlink()
     rmv_folder(segments_folder)
 
 
-def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
+def parallel_pre_process(input_path_list,
+                        output_dir=OUTPUT_DIR,
                         input_dir_parent=INPUT_DIR_PARENT,
                         cpu_count=50,segment_len="01:00:00",
                         logs_file_path="logs.txt"):
@@ -285,7 +342,7 @@ def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
     output_dir=Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     uuid_time=strftime("%Y-%m-%d_%H:%M:%S", gmtime())
-    uuid_time="test"
+    # uuid_time="test_2" #TODO
     tmp_input_file = output_dir / ("input_" + uuid_time + ".txt")
     tmp_input_file=Path(tmp_input_file)
     tmp_input_file.touch(exist_ok=True)
@@ -301,7 +358,7 @@ def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
     python_code=("from pre_process_func import pre_process_big_file;"
                 + "pre_process_big_file('{}'.split('\t')[0],"#{} for GNU parallel
                 + "output_dir='{}'.split('\t')[1],"
-                + "segment_len='{}');print('test')".format(segment_len))
+                + "segment_len='{}')".format(segment_len))
 
     command_list=[]
     # command_text=""
@@ -315,7 +372,10 @@ def parallel_pre_process(input_path_list,output_dir=OUTPUT_DIR,
 
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
-    print(stdout, stderr)
+
+    if process.returncode!=0:
+        print('Output: ' + stdout.decode('ascii'))
+        print('Error: '  + stderr.decode('ascii'))
     sys.stdout.flush()
     sys.stderr.flush()
 

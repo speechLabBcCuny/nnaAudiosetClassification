@@ -6,6 +6,7 @@ import tensorflow as tf
 from params import PRE_PROCESSED_queue,VGGISH_processing_queue,VGGISH_EMBEDDINGS_queue
 
 import pre_process_func
+from pre_process_func import read_queue
 
 import random
 import csv
@@ -23,18 +24,8 @@ config.gpu_options.allow_growth = True
 
 vgg = VggishModelWrapper(sess_config=config,model_loaded=True)
 
-def read_queue(queue_csv):
-    files_in_queue=[]
-    if Path(queue_csv).exists():
-        with open(queue_csv, newline='') as f:
-            reader=csv.reader(f)
-            for row in reader:
-                files_in_queue.append(row[0])
-    return files_in_queue
-
 
 while True:
-    pre_processed_npy_files=[]
     files_in_pre_queu=read_queue(PRE_PROCESSED_queue)
     files_in_processing=read_queue(VGGISH_processing_queue)
     files_done=read_queue(VGGISH_EMBEDDINGS_queue)

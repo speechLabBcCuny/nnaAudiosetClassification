@@ -23,18 +23,24 @@ if not Path(LOGS_FOLDER).exists():
     # os.mkdir(segments_folder)
     Path(LOGS_FOLDER).mkdir(parents=True, exist_ok=True)
 
-
-# output of Pre process, input for VGG
+# currently being run on a pre-process, (original big file)
+PRE_PROCESSING_queue = LOGS_FOLDER + "pre_processing_queue.csv"
+# output of Pre process, input for VGG (segmented small file)
 PRE_PROCESSED_queue = LOGS_FOLDER + "pre_processed_queue.csv"
-# currently being run on a VGG
+# currently being run on a VGG (segmented small file)
 VGGISH_processing_queue = LOGS_FOLDER + "VGGISH_processing_queue.csv"
-# output of VGGISH, input for Audioset classifier
+# output of VGGISH, input for Audioset classifier (segmented small file)
 VGGISH_EMBEDDINGS_queue = LOGS_FOLDER + "vggish_embeddings_queue.csv"
+# currently being run on a audioset (segmented small file)
+Audioset_processing_queue = LOGS_FOLDER + "Audioset_processing_queue.csv"
+# output of audioset (segmented small file)
+Audioset_output_queue = LOGS_FOLDER + "Audioset_output_queue.csv"
+
 
 #RESOURCES CHECK
 # available resources:
 ram_memory=100 #GB
-disk_space=500 #gb
+disk_space=300 #gb
 
 segment_length=1 #hour
 # CPU count determines, how many file is processed in parallel
