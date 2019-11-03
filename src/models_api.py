@@ -19,7 +19,7 @@ from params import *
 import pre_process_func
 
 from params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
-
+from params import EXCERPT_LENGTH
 class VggishModelWrapper:
     """
     Contains core functions to generate embeddings and classify them.
@@ -103,11 +103,8 @@ class VggishModelWrapper:
         Saves embeddings and raw_embeddings into two different files.
 
         Input args:
-            pre_processed_npy_files (list) : list of paths to file storing sound
-            vgg (VggishModelWrapper) : vgg model wrapper instance
-            embeddings_file_name (str) : file name to save generated embeddings
+            pre_processed_npy_file : paths to file storing sound
         Returns:
-
 
         """
         # for npy_file in pre_processed_npy_files:
@@ -180,6 +177,92 @@ class AudioSet():
 
         return class_scores
 
+    def classify_embeddings_batch(self, vgg_embeddings,batch_size=500):
+        """
+        Performs classification on PCA Quantized Embeddings.
+        Does batching for memory usage and performance reasons.
+
+        Input args:
+            vgg_embeddings = numpy array of shape (N,10,128), dtype=float32
+        Returns:
+            class_scores = Output probabilities for the 527 classes - numpy array of shape (N,527).
+        """
+        assert(batch_size%EXCERPT_LENGTH==0)
+
+        left_excerpt_length = vgg_embeddings.shape[0]%EXCERPT_LENGTH
+        # if total seconds is not divisible by EXCERPT_LENGTH
+        # create a second array with few seconds to be processed
+        # ! TF version cannot handle segments smaller than 10 seconds
+        if ( left_excerpt_length) != 0:
+            vgg_embeddings_left = vgg_embeddings[-left_excerpt_length:]
+            vgg_embeddings = vgg_embeddings[:-left_excerpt_length]
+            # PyTorch
+            # vgg_embeddings_left = vgg_embeddings_left.reshape(1,left_excerpt_length,128)
+            # TF
+            while left_excerpt_length < 10:
+                vgg_embeddings_left = np.stack((vgg_embeddings_left, vgg_embeddings_left))
+                left_excerpt_length = vgg_embeddings_left.size / 128
+            vgg_embeddings_left = vgg_embeddings_left.reshape((int(left_excerpt_length), 128))
+            vgg_embeddings_left = vgg_embeddings_left[0:EXCERPT_LENGTH, :].reshape([1, EXCERPT_LENGTH, 128])
+
+
+        vgg_embeddings = vgg_embeddings.reshape(-1,EXCERPT_LENGTH,128)
+
+
+        #batch process embeddings
+        input_len = vgg_embeddings.shape[0]
+        class_scores = np.array([], dtype=np.float32).reshape(0,527)
+        for batch_index in range(0,input_len,batch_size):
+            a_batch_embeddings=vgg_embeddings[batch_index:batch_index+batch_size]
+            a_batch_class_score=self.classify_embeddings(a_batch_embeddings)
+            class_scores = np.concatenate((class_scores,a_batch_class_score))
+
+        # classify left embeddings
+        if ( left_excerpt_length) != 0:
+            a_batch_class_score=self.classify_embeddings(vgg_embeddings_left)
+            class_scores = np.concatenate((class_scores,a_batch_class_score))
+
+        return class_scores
+
+    def classify_file(self,pre_processed_npy_file,batch_size=500):
+        """
+        Calls audioset.classify_embeddings_batch per file from vgg_npy_files.
+        Saves classification scores into a file.
+
+        Input args:
+            vgg_npy_file : a path to file storing vgg embeddings
+        Returns:
+
+        """
+        # pre_processed_npy_file:"/scratch/enis/data/nna/NUI_DATA/12 Anaktuvuk/June 2016/ANKTVK_20160621_051133_preprocessed/output026_preprocessed.npy"
+        npy_file=Path(pre_processed_npy_file)
+        file_index = npy_file.stem.replace("_preprocessed","").replace("output","")
+        original_file_stem = npy_file.parent.stem.replace("_preprocessed","")
+        vgg_folder = npy_file.parent.parent / npy_file.parent.stem.replace("_preprocessed","_vgg")
+        # raw_embeddings_file_path = vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+        embeddings_file_path =  vgg_folder / (str(original_file_stem) + "_embeddings"+file_index+".npy")
+
+        audioset_folder = Path(str(vgg_folder).replace("_vgg","_audioset"))
+        audioset_file_path =  audioset_folder / (str(original_file_stem) + "_audioset"+file_index+".npy")
+
+
+        # for npy_file in pre_processed_npy_files:
+        vgg_embeddings=np.load(embeddings_file_path)
+        vgg_embeddings=self.uint8_to_float32(vgg_embeddings)
+        classified=self.classify_embeddings_batch(vgg_embeddings,batch_size=batch_size)
+
+        Path(audioset_folder).mkdir(parents=True, exist_ok=True)
+        np.save(audioset_file_path,classified)
+
+        # do not delete original vgg file
+        # npy_file.unlink()
+        return audioset_file_path
+
+
+
+
+
+
     def classify_sound(self,mp3_file,vggish_model=None,batch_size=256):
         """
         Performs classification on mp3 files.
@@ -200,7 +283,7 @@ class AudioSet():
         sound = pre_process_func.pre_process(mp3_file)
         embeds = self.vggish_model.generate_embeddings(sound,batch_size=batch_size)
         raw_embeddings,post_processed_embed = embeds
-        post_processed_embed=post_processed_embed.reshape([-1,10,128])
+        post_processed_embed=post_processed_embed.reshape([-1,EXCERPT_LENGTH,128])
         post_processed_embed=self.uint8_to_float32(post_processed_embed)
         class_probabilities = self.classify_embeddings(post_processed_embed)
         return class_probabilities
