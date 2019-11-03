@@ -32,7 +32,7 @@ MEL_MIN_HZ = 125
 MEL_MAX_HZ = 7500
 LOG_OFFSET = 0.01  # Offset used for stabilized log of input mel-spectrogram.
 EXAMPLE_WINDOW_SECONDS = 0.96  # Each example contains 96 10ms frames
-EXAMPLE_HOP_SECONDS = 0.96     # with zero overlap. # 10 second, 20 samples.
+EXAMPLE_HOP_SECONDS = 0.96     # with zero overlap. # 10 second, 10 samples.
 
 
 # Parameters used for embedding postprocessing.

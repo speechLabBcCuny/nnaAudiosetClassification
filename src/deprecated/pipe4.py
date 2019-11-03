@@ -27,20 +27,27 @@ def inference(input_x,batch_size=500,first_k=1):
   predicted_labels=[]
   y_preds=np.empty((0,first_k),dtype=np.float32)
   y_pred_indexs=np.empty((0,first_k),dtype=np.long)
+
   start=0
   end=input_x.shape[0]-batch_size
   left=input_x.shape[0]%batch_size
   loop_count=10 # number of inputs for single output
+
   # print(input_x.shape)
   # print(left)
   i=0
   for i in range(0,end,batch_size):
+      #inference
     y_pred=model(input_x[i:i+batch_size].reshape(int(batch_size/loop_count),loop_count,128))
+      #topk
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
+      # concat results
     y_preds=np.concatenate((y_preds,y_pred.detach().numpy()),0)
     y_pred_indexs=np.concatenate((y_pred_indexs,y_pred_index.detach().numpy()),0)
+
   left_loop_count=left%loop_count
   left-=left_loop_count
+  # smaller than batch size
   if left>0:
 #   for i in range(input_x.shape[0]-left,input_x.shape[0]):
 #     print(i)
@@ -49,6 +56,7 @@ def inference(input_x,batch_size=500,first_k=1):
     y_pred, y_pred_index = torch.topk(y_pred, first_k, dim=1, largest=True, sorted=True)
     y_preds=np.concatenate((y_preds,y_pred.detach().numpy()),0)
     y_pred_indexs=np.concatenate((y_pred_indexs,y_pred_index.detach().numpy()),0)
+  # smaller than loop length (10 seconds,unit of prediction)
   if left_loop_count>0:
     y_pred=model(input_x[-left_loop_count:].reshape(1,left_loop_count,128))
 #     y_pred=model(input_x[i:i+1].reshape(1,10,128))
