@@ -1,5 +1,7 @@
 data/
 backup/
+results/
+src/slack_message.py
 tmp*
 # Byte-compiled / optimized / DLL files
 __pycache__/
