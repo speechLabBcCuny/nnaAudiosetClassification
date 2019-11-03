@@ -2,6 +2,10 @@ data/
 backup/
 results/
 src/slack_message.py
+install_commands.md
+src/visualizations/side.py
+src/visualizations/simple_agg.py
+test.txt
 tmp*
 # Byte-compiled / optimized / DLL files
 __pycache__/
