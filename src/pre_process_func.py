@@ -1,5 +1,7 @@
 import os
 from pydub import AudioSegment
+import soundfile as sf
+
 import sys
 from pathlib import Path
 from time import gmtime, strftime
@@ -17,9 +19,10 @@ import numpy as np
 import subprocess
 from params import EXCERPT_LENGTH,INPUT_DIR_PARENT,OUTPUT_DIR
 from params import PRE_PROCESSED_queue,PRE_PROCESSING_queue,VGGISH_processing_queue
-from params import VGGISH_EMBEDDINGS_queue
+from params import VGGISH_EMBEDDINGS_queue,cpu_count,LOGS_FILE
 import math
 import csv
+
 
 def save_to_csv(file_name,lines):
     file_name=Path(file_name).with_suffix('.csv')
@@ -100,9 +103,19 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
         # os.mkdir(segments_folder)
         Path(segments_folder).mkdir(parents=True, exist_ok=True)
     #TODO handle stderror
-    sp = subprocess.run(['ffmpeg','-y','-i',mp3_file_path,"-c","copy","-map","0",
+    # -y (global)
+    #     Overwrite output files without asking
+    # -i url (input)
+    #     input file url
+    # -c[:stream_specifier] copy (output only) to indicate that the stream is not to be re-encoded.
+    # -map 0 map all streams from input to output.
+    file_extension=str(Path(mp3_file_path).suffix)
+    print(file_extension)
+    command_list=['ffmpeg','-y','-i',str(mp3_file_path),"-c","copy","-map","0",
                                 "-segment_time", segment_len, "-f", "segment",
-                                str(segments_folder)+"/output%03d.mp3"],
+                                str(segments_folder)+"/output%03d"+file_extension]
+    print(command_list)
+    sp = subprocess.run(command_list,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.STDOUT)
     mp3_segments=os.listdir(segments_folder)
@@ -134,6 +147,22 @@ def load_mp3(input_file_path):
     wav_data = np.array(wav_data)
     wav_data=wav_data.reshape(-1,2)
     return wav_data,sr
+
+def load_flac(input_file_path):
+    """ Loads mp3 and returns an array within wav data format
+
+    waveform_to_examples is expecting `np.int16`,
+
+    Args:
+        input_file_path (str/Path): Path to the file is assumed to contain
+            mp3 audio data.
+    Returns:
+        A tuple (wav_data, sampling_rate)
+    """
+    wav_data, sr = sf.read(input_file_path,dtype='int16')
+    print("wac_dat",wav_data.shape)
+    return wav_data,sr
+
 
 # this is complicated rather than formulated is that
 # 41000/16000 is not an integer, but can be formulated TODO
@@ -216,7 +245,18 @@ def mp3file_to_examples(mp3_file_path):
     Returns:
         See iterate_for_waveform_to_examples.
     """
-    wav_data,sr=load_mp3(mp3_file_path)
+    extension=Path(mp3_file_path).suffix
+
+    if extension==".mp3":
+        wav_data,sr=load_mp3(mp3_file_path)
+    elif extension==".flac":
+        wav_data,sr=load_flac(mp3_file_path)
+    else:
+        print("ERROR file extension {} is not supported.".format(extension))
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
     samples = wav_data / 32768.0  # Convert to [-1.0, +1.0]
     #######iterate over 10 seconds#########
@@ -249,7 +289,6 @@ def pre_process(mp3_file_path,output_dir="./", saveAsFile=False):
 
     if npy_file_path.exists():
         return None
-
     sound = mp3file_to_examples(mp3_file_path)
     sound = sound.astype(np.float32)
 
@@ -303,7 +342,6 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         pre_processed_dir.mkdir(parents=True, exist_ok=True)
 
 
-
     for mp3_segment in mp3_segments:
         files_in_vggprocessing=set(read_queue(VGGISH_processing_queue))
         files_done_vgg=set(read_queue(VGGISH_EMBEDDINGS_queue))
@@ -313,7 +351,8 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         npy_file_path = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
 
         if (str(npy_file_path) not in files_in_vggprocessing) and  (str(npy_file_path) not in files_done_vgg):
-            pre_process(mp3_segment_path,output_dir=pre_processed_dir,
+            pre_process(mp3_segment_path,
+                        output_dir=pre_processed_dir,
                         saveAsFile=True)
 
         mp3_segment_path.unlink()
@@ -323,8 +362,9 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
 def parallel_pre_process(input_path_list,
                         output_dir=OUTPUT_DIR,
                         input_dir_parent=INPUT_DIR_PARENT,
-                        cpu_count=50,segment_len="01:00:00",
-                        logs_file_path="logs.txt"):
+                        cpu_count=cpu_count,
+                        segment_len="01:00:00",
+                        logs_file_path=LOGS_FILE):
     """Call pre_process with a seperate cpu process per file
 
     This function calls pre_process_big_file for each file within a new process
@@ -351,7 +391,8 @@ def parallel_pre_process(input_path_list,
     with open(tmp_input_file, 'w') as f:
         for mp3_file_path in input_path_list:
             relative2output_dir = relative2outputdir(mp3_file_path,
-                                                    output_dir,input_dir_parent)
+                                                    output_dir,
+                                                    input_dir_parent)
             line="{}\t{}\n".format(mp3_file_path,relative2output_dir)
             k=f.write(line)
 
@@ -370,7 +411,6 @@ def parallel_pre_process(input_path_list,
     # command_list.extend(["echo","{}"])
     # command_list.extend(["python", "call2func.py", "{1}", "{2}","2>>","logs.txt"])
     command_list.extend(["python", "-c", python_code])
-
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
 
