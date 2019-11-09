@@ -1,17 +1,154 @@
 import subprocess
 import ipywidgets as widgets
-from IPython.display import Audio,display,HTML
+from IPython.display import Audio,display,HTML,clear_output
 import random
 from pathlib import Path
 
 import time,datetime
 from ipywidgets import Output
-from IPython.display import clear_output
 
 from os import listdir
 import os
 import re
 import csv
+import audioread
+
+# start_time='01-07-2016_18:33:00' # or datetime object
+def find_files(location,start_time,end_time,length,file_properties_df):
+    import pandas as pd
+
+    file_properties_df=file_properties_df.sort_values(by=['timestamp'])
+    if location in file_properties_df["site_id"].values:
+        loc_key="site_id"
+    elif location in  file_properties_df["site_name"].values :
+        loc_key="site_name"
+    else:
+        print("Location not found")
+        print("Possible names and ids:")
+        for site_name,site_id in set(zip(file_properties_df.site_name, file_properties_df.site_id)):
+            print(site_name,"---",site_id)
+
+    start_time=datetime.datetime.strptime(start_time, '%d-%m-%Y_%H:%M:%S')
+    site_filtered=file_properties_df[file_properties_df[loc_key]==location]
+    # print(site_filtered)
+    if length!=0:
+        end_time = start_time + datetime.timedelta(seconds=length)
+    else:
+        end_time=datetime.datetime.strptime(end_time, '%d-%m-%Y_%H:%M:%S')
+
+    if not(start_time) or not(end_time):
+        print("time values should be given")
+
+    first,last=site_filtered["timestamp"][0],site_filtered["timestamp"][-1]
+    beginning,end=max(start_time,first),min(end_time,last)
+
+    start_file=site_filtered[site_filtered["timestamp"]<=beginning].iloc[-1:]
+
+    time_site_filtered=site_filtered[site_filtered["timestamp"]>beginning]
+
+    time_site_filtered=time_site_filtered[time_site_filtered["timestamp"]<end]
+
+    time_site_filtered=pd.concat([time_site_filtered,start_file])
+
+    sorted_filtered=time_site_filtered.sort_values(by=['timestamp'])
+    # print(time_site_filtered)
+    if len(sorted_filtered.index)==0:
+        print("No records for these times at {} ".format(location))
+        print("Earliest {}  and latest {}".format(first,last))
+
+    return sorted_filtered,start_time,end_time
+
+# mp3_file_path=f[0]
+def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/"):
+    from pathlib import Path
+    import subprocess
+    import sys
+    tmpfolder=Path(tmpfolder)
+    tmpfolder.mkdir(parents=True, exist_ok=True)
+
+    #TODO handle stderror
+    # -y (global)
+    #     Overwrite output files without asking
+    # -i url (input)
+    #     input file url
+    # -c[:stream_specifier] copy (output only) to indicate that the stream is not to be re-encoded.
+    # -map 0 map all streams from input to output.
+    file_extension=str(Path(mp3_file_path).suffix)
+    # print(file_extension)
+    out_file_path=str(tmpfolder / ("output"+file_extension))
+    command_list=['ffmpeg','-y','-i',"{}".format(str(mp3_file_path)),
+                                  "-ss",str(ss),"-to", str(to),
+                                  "-map","0","-c","copy",
+                                  out_file_path]
+#     print(command_list)
+    sp = subprocess.run(command_list,
+                            capture_output=True)
+    # print(" ".join(command_list))
+#     mp3_segments=os.listdir(segments_folder)
+
+    if sp.returncode!=0:
+        print('Error: '  + sp.stderr.decode('ascii'))
+        print('Output: ' + sp.stdout.decode('ascii'))
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+def mp3_split(mp3_path,start_second=10,end_second=20):
+    sample_count=0
+    with audioread.audio_open(mp3_path) as f:
+        print(f.channels, f.samplerate, f.duration)
+        #               sample_rate,channel, 2 bits
+        bits_persecond= f.samplerate * f.channels * 2
+        start_segment = start_second * bits_persecond
+        end_segment = ((end_second-1) * bits_persecond )
+        mp3array=[]
+        print(start_segment,end_segment)
+        for buf in f:
+            start_buf=sample_count
+            end_buf=sample_count+len(buf)
+            indexes=(max(start_buf, start_segment), min(end_buf, end_segment))
+            # buffer did not reach to segment
+            if end_buf < start_segment:
+                # print(end_buf,start_segment)
+                pass
+            # buffer passed segment stop
+            elif end_segment<start_buf:
+                break
+            # print(indexes,sample_count)
+            # print(indexes[0]-sample_count,indexes[1]-sample_count)
+            len_buf=len(buf)
+            start=indexes[0]-sample_count
+            end=indexes[1]-sample_count
+            start = 0 if start<0 else start
+            end = 0 if end<0 else end
+            buf=buf[start:end]
+            sample_count+=len_buf
+            mp3array.append(buf)
+    mp3_string=b"".join(mp3array)
+    return mp3_string,f.channels, f.samplerate, f.duration
+
+
+def stem_set(files):
+    if type(files)==list:
+        mp3files=files[:]
+    else:
+        files=Path(files)
+        with open(files,"r") as mp3files:
+            mp3files=mp3files.readlines()
+            mp3files=[i.strip() for i in mp3files]
+
+    ignored=[]
+    mp3filesset=list()
+    mp3filestemset=[]
+    for file in mp3files:
+        if Path(file).stem not in mp3filestemset:
+            mp3filestemset.append(Path(file).stem)
+            mp3filesset.append(file)
+        else:
+            ignored.append(file)
+    mp3files=mp3filesset[:]
+
+    return mp3files,ignored
 
 def read_file_properties(mp3_files_path_list):
     if type(mp3_files_path_list) is not list:
@@ -65,18 +202,23 @@ def read_file_properties(mp3_files_path_list):
         # files with names that does not have fixed rule
         else:
             exceptions.append(apath)
-    #     if apath not in exceptions :
-    #         if "2013" in (site_id,",",site_name,",",hour_min_sec,year,month,day):
-    #             print((site_id,",",site_name,",",hour_min_sec,year,month,day))
-    #             print(apath)
-    #         print("year",year,"month",month,day)
-    #         print(site_id,",",site_name,",",hour_min_sec,year,month,day)
-
         file_properties[apath]={"site_id":site_id,"site_name":site_name,
                                 "hour_min_sec":hour_min_sec,"year":year,"month":month,"day":day}
+        str2timestamp(file_properties[apath])
     return file_properties,exceptions
 
+def str2timestamp(fileinfo_dict):
+    # x=file_properties[file]
+#         print(x)
+    hour_min_sec=fileinfo_dict["hour_min_sec"]
+    hour=int(hour_min_sec[:2])
+    minute=int(hour_min_sec[2:4])
+    second=int(hour_min_sec[4:6])
+    year = int(fileinfo_dict["year"])
 
+    timestamp=datetime.datetime(year, int(fileinfo_dict["month"]), int(fileinfo_dict["day"]),
+                hour=hour, minute=minute, second=second, microsecond=0)
+    fileinfo_dict["timestamp"]=timestamp
 
 
 
