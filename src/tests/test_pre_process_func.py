@@ -109,16 +109,24 @@ def test_iterate_for_waveform_to_examples():
 
 def test_parallel_pre_process():
     #TODO get this with os.cwd
-    from params import LOGS_FILE
+
+    TEST_DIR=Path("tests/")
+    EXAMPLE_MODELS_DIR=TEST_DIR / "example_models/"
+    EXAMPLE_OUTPUT_DIR= TEST_DIR / "example_outputs"
+    OUTPUT_DIR=Path("aggregates")
 
     root_dir="/Users/berk/Documents/workspace/speech_audio_understanding/src/"
-    input_path_list=[root_dir+"tests/data/3hours30min.mp3",]
+    # input_path_list=[root_dir+"tests/data/3hours30min.mp3",]
+
+    input_path_list=[root_dir+"tests/data/1hour20min.flac",]
+
     pre_process_func.parallel_pre_process(input_path_list,
                                             output_dir="./tests/data/output",
                                             input_dir_parent=root_dir,
                                             cpu_count=2,
-                                            segment_len="01:00:00",
+                                            segment_len="02:00:00",
                                             logs_file_path=LOGS_FILE)
+
     expected_file3="tests/data/output/tests/data/3hours30min_preprocessed/output003_preprocessed.npy"
     expected_file2="tests/data/output/tests/data/3hours30min_preprocessed/output002_preprocessed.npy"
     last_part=np.load(expected_file3)
