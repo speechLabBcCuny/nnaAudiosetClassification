@@ -35,3 +35,15 @@ cat job_logs/pre_processing_queue.csv | wc -l; cat job_logs/pre_processed_queue.
 total segment count is 18908
 tar cf - /scratch/enis/data/nna/backup/NUI_DATA/ -P | pv -s $(du -sb /scratch/enis/data/nna/backup/NUI_DATA/ | awk '{print $1}') | gzip > embeddings_backup.tar.gz
 ```
+
+-1) rsync server
+```bash
+rsync -uzarv  --prune-empty-dirs --include "*/"  \
+--include="*.ipynb" --include="*.py" --include="*.md" --exclude="*" \
+/Users/berk/Documents/workspace/speech_audio_understanding/ \
+enis@crescent:/home/enis/projects/nna/ && \
+rsync -uzarv  --prune-empty-dirs --include "*/"  \
+--include="*.ipynb" --include="*.py" --include="*.md" --exclude="*" \
+enis@crescent:/home/enis/projects/nna/ \
+/Users/berk/Documents/workspace/speech_audio_understanding/ \
+```

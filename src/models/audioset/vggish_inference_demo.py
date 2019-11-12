@@ -51,10 +51,10 @@ from scipy.io import wavfile
 import six
 import tensorflow as tf
 
-import vggish_input
-import vggish_params
-import vggish_postprocess
-import vggish_slim
+from . import vggish_input
+from . import vggish_params
+from . import vggish_postprocess
+from . import vggish_slim
 
 flags = tf.app.flags
 

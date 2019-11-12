@@ -14,8 +14,9 @@ LABELS="assets/class_labels_indices.csv"
 # example :
     # if MAIN_INPUT_DIR="a/b/c" and mp3_path ="a/b/c/d/sound.mp3"
     # output will be saved to  Path(output_dir) / "d/sound.npy"
-INPUT_DIR_PARENT = "/home/data/nna/stinchcomb/NUI_DATA/"
-OUTPUT_DIR = "/scratch/enis/data/nna/NUI_DATA/"
+INPUT_DIR_PARENT = "/tank/data/nna/real/"
+OUTPUT_DIR = "/scratch/enis/data/nna/real/"
+
 
 LOGS_FOLDER="./job_logs/"
 LOGS_FILE = LOGS_FOLDER + "logs.txt"
@@ -45,7 +46,9 @@ disk_space=300 #gb
 segment_length=1 #hour
 # CPU count determines, how many file is processed in parallel
 # each CPU processes as 49 hour file in, 1 hour at a time in memory
-cpu_count=40
+cpu_count=7
+# cpu_count=10
+
 #1 hour is 0.04
 #30x for mp3 to wav
 memory_usage=(0.04*30*segment_length*cpu_count)
