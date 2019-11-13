@@ -7,7 +7,7 @@ import pre_process_func
 
 
 # create a list of paths for input
-with open("/home/enis/projects/nna/flacfiles.txt","r+") as my_file:
+with open("/home/enis/projects/nna/data/flacfiles_left.txt","r+") as my_file:
     input_path_list = my_file.read().splitlines()
 
     # process each mp3 file to generate input for VVGish and save them locally

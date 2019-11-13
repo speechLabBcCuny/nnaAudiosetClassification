@@ -29,6 +29,7 @@ python watch_VGGish.py &>> job_logs/logs.txt; python slack_message.py &
 4) re-run
 `rsync -av --recursive --update /Users/berk/Documents/workspace/speech_audio_understanding/src/ enis@crescent:/home/enis/projects/nna/`
 `find /scratch/enis/data/nna/real/ -iname "*flac"  -delete`
+also remove `job_logs/pre_processing_queue.csv` if jobs left unfinished
 5) tracking progress and backup
 ```
 cat job_logs/pre_processing_queue.csv | wc -l; cat job_logs/pre_processed_queue.csv | wc -l; cat job_logs/VGGISH_processing_queue.csv | wc -l; cat job_logs/vggish_embeddings_queue.csv | wc -l; du -hs /scratch/enis/data/

@@ -68,9 +68,3 @@ for i in range(0,len(temp),file_per_epoch):
 # this one does VGGish inference
 # echo "10:00/09/July\n" &>> logs_run0.96.txt &&  python main.py &>> logs_run0.96.txt &
 #cat "/home/enis/projects/nna/mp3files.txt" | parallel --xargs CUDA_VISIBLE_DEVICES=1 python  pipe4.py --input_files {} &>> logs_run_last.txt &
-# python pre_process.py &>> job_logs/logs.txt; python slack_message.py -t cpu_job &
-# python watch_VGGish.py &>> job_logs/logs.txt; python slack_message.py &
-
-# cat job_logs/pre_processing_queue.csv | wc -l; cat job_logs/pre_processed_queue.csv | wc -l; cat job_logs/VGGISH_processing_queue.csv | wc -l; cat job_logs/vggish_embeddings_queue.csv | wc -l; du -hs /scratch/enis/data/
-# total segment count is 18908
-# tar cf - /scratch/enis/data/nna/backup/NUI_DATA/ -P | pv -s $(du -sb /scratch/enis/data/nna/backup/NUI_DATA/ | awk '{print $1}') | gzip > embeddings_backup.tar.gz

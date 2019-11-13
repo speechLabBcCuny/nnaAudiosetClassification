@@ -10,7 +10,7 @@ from subprocess import Popen, PIPE
 
 # sys.path.insert(0, './models/audioset')
 from models.audioset.vggish_params import EXAMPLE_HOP_SECONDS
-import models.audioset.vggish_input
+from models.audioset import vggish_input
 # import vggish_postprocess
 
 import shutil

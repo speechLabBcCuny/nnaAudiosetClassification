@@ -8,12 +8,12 @@ import os
 
 import sys
 # sys.path.insert(0, '/Users/berk/Documents/workspace/speech_audio_understanding/src/models/audioset')
-sys.path.insert(0, './models/audioset')
+# sys.path.insert(0, './models/audioset')
 
-import vggish_input
-import vggish_params
-import vggish_postprocess
-import vggish_slim
+from models.audioset import vggish_input
+from models.audioset import vggish_params
+from models.audioset import vggish_postprocess
+from models.audioset import vggish_slim
 
 from params import *
 import pre_process_func
