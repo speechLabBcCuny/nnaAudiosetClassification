@@ -1,6 +1,8 @@
 # Api(wrapper) for models
 
 import numpy as np
+import torch
+
 import tensorflow as tf
 from tensorflow.keras.backend import set_session
 
@@ -323,3 +325,154 @@ class AudioSet():
 
     def uint8_to_float32(self,x):
         return (np.float32(x) - 128.) / 128.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class FC_embed():
+    def __init__(self,
+                classifier_model_path="assets/mlp_models/bird_FC_089valid_20191122-131739.pth",
+                device=None,
+                model_loaded=True,
+                vggish_model=None):
+
+
+        if device!=None:
+            self.device=torch.device(device)
+        else:
+            self.device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.session_classification=None
+        self.classifier_model_path = classifier_model_path
+        self.model_loaded = model_loaded
+        # self.sess_config = sess_config
+        self.vggish_model=vggish_model
+
+        # Initialize the vgg-ish embedding model and load post-Processsing
+        if model_loaded:
+            self.load_pre_trained_model()
+        # Metadata
+        # self.labels = self.load_labels(labels_path)
+
+    def load_pre_trained_model(self,
+                classifier_model_path=None):
+        if classifier_model_path==None:
+            classifier_model_path=self.classifier_model_path
+        # Initialize the Audioset classification model
+        from models.FCmodel.mlp_pytorch import MlpNet
+
+        self.classifier_model = MlpNet()
+        self.classifier_model.load_state_dict(torch.load(self.classifier_model_path))
+        self.classifier_model.eval()
+        self.classifier_model.to(self.device)
+
+        # sess = tf.Session(config=self.sess_config)
+        # set_session(sess)
+        # self.session_classification = tf.keras.backend.get_session()
+        # self.classifier_model = tf.keras.models.load_model(classifier_model_path,
+                                                            # compile=False)
+
+        self.model_loaded=True
+
+    def classify_embeddings(self, raw_embeddings):
+        # """
+        # Performs classification on PCA Quantized Embeddings.
+        # Input args:
+        #     processed_embeddings = numpy array of shape (N,10,128), dtype=float32
+        # Returns:
+        #     class_scores = Output probabilities for the 527 classes - numpy array of shape (N,527).
+        # """
+        if not self.model_loaded:
+            self.load_pre_trained_model()
+
+        # X_infer=afile[:]
+        with torch.no_grad():
+            y_pred = self.classifier_model(raw_embeddings)
+            y_pred=torch.exp(y_pred[:,1])
+
+        return y_pred
+
+
+    def classify_file(self,pre_processed_npy_file,batch_size=500):
+        # """
+        # Calls audioset.classify_embeddings_batch per file from vgg_npy_files.
+        # Saves classification scores into a file.
+        #
+        # Input args:
+        #     vgg_npy_file : a path to file storing vgg embeddings
+        # Returns:
+        #
+        # """
+        # pre_processed_npy_file:"/scratch/enis/data/nna/NUI_DATA/12 Anaktuvuk/June 2016/ANKTVK_20160621_051133_preprocessed/output026_preprocessed.npy"
+        npy_file=Path(pre_processed_npy_file)
+        file_index = npy_file.stem.replace("_preprocessed","").replace("output","")
+        original_file_stem = npy_file.parent.stem.replace("_preprocessed","")
+        vgg_folder = npy_file.parent.parent / npy_file.parent.stem.replace("_preprocessed","_vgg")
+        # raw_embeddings_file_path = vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+        embeddings_file_path =  vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+
+        audioset_folder = Path(str(vgg_folder).replace("_vgg","_FCmodel"))
+        audioset_file_path =  audioset_folder / (str(original_file_stem) + "_FCmodel"+file_index+".npy")
+
+
+        # for npy_file in pre_processed_npy_files:
+        vgg_embeddings=np.load(embeddings_file_path)
+        # vgg_embeddings=self.uint8_to_float32(vgg_embeddings)
+        raw_embeddings=torch.from_numpy(vgg_embeddings).to(self.device)
+
+        classified=self.classify_embeddings(raw_embeddings)
+        classified=classified.cpu().numpy()
+
+        Path(audioset_folder).mkdir(parents=True, exist_ok=True)
+        np.save(audioset_file_path,classified)
+
+        # do not delete original vgg file
+        # npy_file.unlink()
+        return audioset_file_path
+
+
+
+
+    def classify_sound(self,mp3_file,vggish_model=None,batch_size=256):
+        """
+        Performs classification on mp3 files.
+        Input args:
+            mp3_file (Path/str) = path to mp3 files
+        Returns:
+            class_scores = Output probabilities for the 527 classes -
+                            numpy array of shape (N,527).
+                            N = (mp3 length in seconds) / 10
+        """
+        if (vggish_model is None) and (self.vggish_model is None):
+            self.vggish_model = VggishModelWrapper(sess_config=self.sess_config )
+        elif (vggish_model is not None):
+            self.vggish_model = vggish_model
+        else:
+            pass
+
+        sound = pre_process_func.pre_process(mp3_file)
+        embeds = self.vggish_model.generate_embeddings(sound,batch_size=batch_size)
+        raw_embeddings,post_processed_embed = embeds
+        # post_processed_embed=post_processed_embed.reshape([-1,EXCERPT_LENGTH,128])
+        # post_processed_embed=self.uint8_to_float32(post_processed_embed)
+        class_probabilities = self.classify_embeddings(raw_embeddings)
+        return class_probabilities
