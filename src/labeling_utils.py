@@ -28,18 +28,22 @@ def find_files(location,start_time,end_time,length,file_properties_df):
         for site_name,site_id in set(zip(file_properties_df.site_name, file_properties_df.site_id)):
             print(site_name,"---",site_id)
 
-    start_time=datetime.datetime.strptime(start_time, '%d-%m-%Y_%H:%M:%S')
-    site_filtered=file_properties_df[file_properties_df[loc_key]==location]
+    if not(start_time) or not(end_time):
+        print("time values should be given")
+
+    if type(start_time)==str:
+        start_time = datetime.datetime.strptime(start_time, '%d-%m-%Y_%H:%M:%S')
+        
+    site_filtered = file_properties_df[file_properties_df[loc_key]==location]
     # print(site_filtered)
     if length!=0:
         end_time = start_time + datetime.timedelta(seconds=length)
     else:
         end_time=datetime.datetime.strptime(end_time, '%d-%m-%Y_%H:%M:%S')
 
-    if not(start_time) or not(end_time):
-        print("time values should be given")
-
+    # first and last recordings from selected site
     first,last=site_filtered["timestamp"][0],site_filtered["timestamp"][-1]
+    # make sure start or end time time are withing possible range
     beginning,end=max(start_time,first),min(end_time,last)
 
     start_file=site_filtered[site_filtered["timestamp"]<=beginning].iloc[-1:]
@@ -150,6 +154,7 @@ def stem_set(files):
 
     return mp3files,ignored
 
+# TODO ,work with relative paths not absolute
 def read_file_properties(mp3_files_path_list):
     if type(mp3_files_path_list) is not list:
         with open(str(mp3_files_path_list)) as f:
@@ -163,13 +168,21 @@ def read_file_properties(mp3_files_path_list):
     for apath in mp3_files_path_list:
         apath=Path(apath)
         name=apath.stem
-        site_name=" ".join(apath.parent.parent.stem.split(" ")[1:])
+        if len(apath.parents)==6:
+            site_name=apath.parent.stem
+        else:
+            site_name=" ".join(apath.parent.parent.stem.split(" ")[1:])
     #     print(site_name)
         file_id=name
         name=name.split("_")
         #ones without date folder
         if len(apath.parents)==7 and len(name)==3:
-            site_name=" ".join(apath.parent.stem.split(" ")[1:])
+            site_name_tmp=apath.parent.stem.split(" ")
+            if len(site_name_tmp)==1:
+                site_name=site_name_tmp[0]
+            else:
+#                 print("2")
+                site_name=" ".join(site_name_tmp[1:])
     #         print(site_name)
     #         print(apath)
             site_id=name[-3]
@@ -207,6 +220,46 @@ def read_file_properties(mp3_files_path_list):
         str2timestamp(file_properties[apath])
     return file_properties,exceptions
 
+# TODO ,work with relative paths not absolute
+def read_file_properties_v2(mp3_files_path_list):
+    if type(mp3_files_path_list) is str:
+        with open(str(mp3_files_path_list)) as f:
+            lines=f.readlines()
+            mp3_files_path_list=[line.strip() for line in lines]
+
+    exceptions=[]
+    file_properties={}
+    for apath in mp3_files_path_list:
+        apath=Path(apath)
+        #usual ones
+        if len(apath.parents)==8:
+            recorderId_startDateTime=apath.stem
+
+            recorderId_startDateTime=recorderId_startDateTime.split("_")
+            recorderId=recorderId_startDateTime[0]
+
+            date=recorderId_startDateTime[1]
+            year,month,day=date[0:4],date[4:6],date[6:8]
+
+            hour_min_sec=recorderId_startDateTime[2]
+            if hour_min_sec==None:
+                print(apath)
+            hour=hour_min_sec[0:2]
+            locationId = apath.parts[6]
+            region= apath.parts[5]
+
+            site_name=""
+
+            file_properties[apath]=str2timestamp({"site_id":locationId,"locationId":locationId,
+                                                  "site_name":site_name,"recorderId":recorderId,
+                                "hour_min_sec":hour_min_sec,"year":year,"month":month,"day":day
+                               ,"region":region})
+
+        else:
+            exceptions.append(apath)
+
+    return file_properties,exceptions
+
 def str2timestamp(fileinfo_dict):
     # x=file_properties[file]
 #         print(x)
@@ -219,13 +272,12 @@ def str2timestamp(fileinfo_dict):
     timestamp=datetime.datetime(year, int(fileinfo_dict["month"]), int(fileinfo_dict["day"]),
                 hour=hour, minute=minute, second=second, microsecond=0)
     fileinfo_dict["timestamp"]=timestamp
+    return fileinfo_dict
 
 
+def cut_random_file(input_mp3_file,length=10,split_folder="./splits",total_minute=49*60,depth=0,backend="ffmpeg"):
 
-def cut_random_file(mp3_files_path_list,length=10,split_folder="./splits",longest_minute=49*60,depth=0):
-    input_mp3_file=random.choice(mp3_files_path_list)
-
-    start_minute=random.randint(0,longest_minute)
+    start_minute=random.randint(0,total_minute)
     start_second=random.randint(0,59)
 
     extra_minute=(start_second+10)//60
@@ -237,25 +289,35 @@ def cut_random_file(mp3_files_path_list,length=10,split_folder="./splits",longes
     end_time = "{}.{}".format(end_minute,end_second)
 #     print(input_mp3_file,start_time,end_time)
 
-    result=splitmp3(str(input_mp3_file),split_folder,start_time,end_time)
+    result=splitmp3(str(input_mp3_file),split_folder,start_time,end_time,backend=backend)
 
     if result==0 and depth<3:
         print(input_mp3_file,start_time,end_time)
-        cut_random_file(mp3_files_path_list,length=length,split_folder=split_folder,
-                        longest_minute=longest_minute,depth=depth+1)
+        # cut_random_file(mp3_files_path_list,length=length,split_folder=split_folder,
+                        # longest_minute=longest_minute,depth=depth+1)
 
     else:
         return result
 
-def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5):
+def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ffmpeg"):
     # -f increases precision (ONLY mp3)
     # -t
     # -d folder
     # input
     #end time minute.seconds
     # start_time
-    cmd = ['mp3splt','-f','-d', split_folder, input_mp3_file, start_time, end_time]
-
+    if backend=="mp3splt":
+        cmd = ['mp3splt','-f','-d', split_folder, input_mp3_file, start_time, end_time]
+    elif backend=="ffmpeg":
+        start_minute,start_second = start_time.split(".")
+        start_time=(int(start_minute) * 60)+int(start_second)
+        end_minute,end_second = end_time.split(".")
+        end_time=(int(end_minute) * 60)+int(end_second)
+        wholepath=Path(input_mp3_file)
+        output_file= Path(split_folder) / (wholepath.stem+"_"+start_minute+"m_"+start_second+"s__"+end_minute+"m_"+end_second+"s"+wholepath.suffix)
+        cmd = ['ffmpeg','-ss',str(start_time),'-t',str(end_time-start_time),"-i",str(input_mp3_file),str(output_file)]
+    else:
+        print("{} is not supported as backend, available ones are mp3splt and ffmpeg".format(backend))
     # custom name (@f_@n+@m:@s+@M:@S)
     #cmd+=["-o","temp"+str(file_index)]
 
@@ -270,9 +332,16 @@ def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5):
         return 0
     else:
 #         print('Output: ' + o.decode('ascii'))
-        split_file=re.search('File "(.*)"',o.decode('ascii') ).group(1)
+        if backend=="mp3splt":
+            split_file=re.search('File "(.*)"',o.decode('ascii') ).group(1)
+            split_file=Path(split_file)
+        elif backend=="ffmpeg":
+            split_file=None
+        else:
+            split_file=None
+
 #         print(split_file)
-        return Path(split_file)
+        return split_file
 
 def play_html_modify(mp3file,items):
     out=items["mp3_output"]
