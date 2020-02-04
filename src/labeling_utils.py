@@ -13,59 +13,12 @@ import re
 import csv
 import audioread
 
-# start_time='01-07-2016_18:33:00' # or datetime object
-def find_files(location,start_time,end_time,length,file_properties_df):
-    import pandas as pd
 
-    file_properties_df=file_properties_df.sort_values(by=['timestamp'])
-    if location in file_properties_df["site_id"].values:
-        loc_key="site_id"
-    elif location in  file_properties_df["site_name"].values :
-        loc_key="site_name"
-    else:
-        print("Location not found")
-        print("Possible names and ids:")
-        for site_name,site_id in set(zip(file_properties_df.site_name, file_properties_df.site_id)):
-            print(site_name,"---",site_id)
 
-    if not(start_time) or not(end_time):
-        print("time values should be given")
-
-    if type(start_time)==str:
-        start_time = datetime.datetime.strptime(start_time, '%d-%m-%Y_%H:%M:%S')
-        
-    site_filtered = file_properties_df[file_properties_df[loc_key]==location]
-    # print(site_filtered)
-    if length!=0:
-        end_time = start_time + datetime.timedelta(seconds=length)
-    else:
-        end_time=datetime.datetime.strptime(end_time, '%d-%m-%Y_%H:%M:%S')
-
-    # first and last recordings from selected site
-    first,last=site_filtered["timestamp"][0],site_filtered["timestamp"][-1]
-    # make sure start or end time time are withing possible range
-    beginning,end=max(start_time,first),min(end_time,last)
-
-    start_file=site_filtered[site_filtered["timestamp"]<=beginning].iloc[-1:]
-
-    time_site_filtered=site_filtered[site_filtered["timestamp"]>beginning]
-
-    time_site_filtered=time_site_filtered[time_site_filtered["timestamp"]<end]
-
-    time_site_filtered=pd.concat([time_site_filtered,start_file])
-
-    sorted_filtered=time_site_filtered.sort_values(by=['timestamp'])
-    # print(time_site_filtered)
-    if len(sorted_filtered.index)==0:
-        print("No records for these times at {} ".format(location))
-        print("Earliest {}  and latest {}".format(first,last))
-
-    return sorted_filtered,start_time,end_time
 
 # mp3_file_path=f[0]
 def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/"):
     from pathlib import Path
-    import subprocess
     import sys
     tmpfolder=Path(tmpfolder)
     tmpfolder.mkdir(parents=True, exist_ok=True)
@@ -154,125 +107,7 @@ def stem_set(files):
 
     return mp3files,ignored
 
-# TODO ,work with relative paths not absolute
-def read_file_properties(mp3_files_path_list):
-    if type(mp3_files_path_list) is not list:
-        with open(str(mp3_files_path_list)) as f:
-            lines=f.readlines()
-            mp3_files_path_list=[line.strip() for line in lines]
 
-    site_names=[]
-    hours=[]
-    exceptions=[]
-    file_properties={}
-    for apath in mp3_files_path_list:
-        apath=Path(apath)
-        name=apath.stem
-        if len(apath.parents)==6:
-            site_name=apath.parent.stem
-        else:
-            site_name=" ".join(apath.parent.parent.stem.split(" ")[1:])
-    #     print(site_name)
-        file_id=name
-        name=name.split("_")
-        #ones without date folder
-        if len(apath.parents)==7 and len(name)==3:
-            site_name_tmp=apath.parent.stem.split(" ")
-            if len(site_name_tmp)==1:
-                site_name=site_name_tmp[0]
-            else:
-#                 print("2")
-                site_name=" ".join(site_name_tmp[1:])
-    #         print(site_name)
-    #         print(apath)
-            site_id=name[-3]
-            site_names.append(site_name)
-            date=name[-2]
-            hour_min_sec=name[-1]
-            hour=hour_min_sec[0:2]
-            hours.append(hour)
-            year,month,day=date[0:4],date[4:6],date[6:8]
-        #usual ones
-        elif len(name)==3:
-            site_id=name[-3]
-            site_names.append(site_name)
-            date=name[-2]
-            hour_min_sec=name[-1]
-            hour=hour_min_sec[0:2]
-            hours.append(hour)
-            year,month,day=date[0:4],date[4:6],date[6:8]
-        # stem does not have site_id in it
-        elif len(name)==2:
-            site_id="USGS"
-            site_names.append(site_name)
-            date=name[-2]
-            hour_min_sec=name[-1]
-            hour=hour_min_sec[0:2]
-            hours.append(hour)
-            month,day=date[0:2],date[2:4]
-    #         year=Path(apath).parent.stem.split(" ")[0]
-
-        # files with names that does not have fixed rule
-        else:
-            exceptions.append(apath)
-        file_properties[apath]={"site_id":site_id,"site_name":site_name,
-                                "hour_min_sec":hour_min_sec,"year":year,"month":month,"day":day}
-        str2timestamp(file_properties[apath])
-    return file_properties,exceptions
-
-# TODO ,work with relative paths not absolute
-def read_file_properties_v2(mp3_files_path_list):
-    if type(mp3_files_path_list) is str:
-        with open(str(mp3_files_path_list)) as f:
-            lines=f.readlines()
-            mp3_files_path_list=[line.strip() for line in lines]
-
-    exceptions=[]
-    file_properties={}
-    for apath in mp3_files_path_list:
-        apath=Path(apath)
-        #usual ones
-        if len(apath.parents)==8:
-            recorderId_startDateTime=apath.stem
-
-            recorderId_startDateTime=recorderId_startDateTime.split("_")
-            recorderId=recorderId_startDateTime[0]
-
-            date=recorderId_startDateTime[1]
-            year,month,day=date[0:4],date[4:6],date[6:8]
-
-            hour_min_sec=recorderId_startDateTime[2]
-            if hour_min_sec==None:
-                print(apath)
-            hour=hour_min_sec[0:2]
-            locationId = apath.parts[6]
-            region= apath.parts[5]
-
-            site_name=""
-
-            file_properties[apath]=str2timestamp({"site_id":locationId,"locationId":locationId,
-                                                  "site_name":site_name,"recorderId":recorderId,
-                                "hour_min_sec":hour_min_sec,"year":year,"month":month,"day":day
-                               ,"region":region})
-
-        else:
-            exceptions.append(apath)
-
-    return file_properties,exceptions
-
-def str2timestamp(fileinfo_dict):
-    # x=file_properties[file]
-#         print(x)
-    hour_min_sec=fileinfo_dict["hour_min_sec"]
-    hour=int(hour_min_sec[:2])
-    minute=int(hour_min_sec[2:4])
-    second=int(hour_min_sec[4:6])
-    year = int(fileinfo_dict["year"])
-
-    timestamp=datetime.datetime(year, int(fileinfo_dict["month"]), int(fileinfo_dict["day"]),
-                hour=hour, minute=minute, second=second, microsecond=0)
-    fileinfo_dict["timestamp"]=timestamp
-    return fileinfo_dict
 
 
 def cut_random_file(input_mp3_file,length=10,split_folder="./splits",total_minute=49*60,depth=0,backend="ffmpeg"):
