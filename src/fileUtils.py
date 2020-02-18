@@ -97,7 +97,8 @@ def read_file_properties(mp3_files_path_list):
         str2timestamp(file_properties[apath])
     return file_properties,exceptions
 
-# TODO ,work with relative paths not absolute
+# TODO ,work with relative paths not absolute IMPORTANT fix that
+# then update
 def read_file_properties_v2(mp3_files_path_list):
     if type(mp3_files_path_list) is str:
         with open(str(mp3_files_path_list)) as f:
@@ -138,7 +139,7 @@ def read_file_properties_v2(mp3_files_path_list):
     return file_properties,exceptions
 
 
-# example usage in ../notebooks/save_file_properties.ipynb
+# example usage in ../notebooks/Labeling/save_file_properties.ipynb
 def getLength(input_video):
     cmd=['ffprobe', '-i', '{}'.format(input_video), '-show_entries' ,'format=duration', '-v', 'quiet' ]
     result = subprocess.Popen(cmd, stdout=subprocess.PIPE,stderr=subprocess.PIPE,)

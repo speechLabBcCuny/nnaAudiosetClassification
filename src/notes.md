@@ -26,10 +26,12 @@ find /home/data/nna/stinchcomb/ -name "*.*3" | parallel -P 20 -n 20 'python proc
 python pre_process.py &>> job_logs/logs.txt; python slack_message.py -t cpu_job &
 python watch_VGGish.py &>> job_logs/logs.txt; python slack_message.py &
 ```
-4) re-run
+4) to re-run, update the code and remove temporary flac files
 `rsync -av --recursive --update /Users/berk/Documents/workspace/speech_audio_understanding/src/ enis@crescent:/home/enis/projects/nna/`
 `find /scratch/enis/data/nna/real/ -iname "*flac"  -delete`
+
 also remove `job_logs/pre_processing_queue.csv` if jobs left unfinished
+
 5) tracking progress and backup
 ```
 cat job_logs/pre_processing_queue.csv | wc -l; cat job_logs/pre_processed_queue.csv | wc -l; cat job_logs/VGGISH_processing_queue.csv | wc -l; cat job_logs/vggish_embeddings_queue.csv | wc -l; du -hs /scratch/enis/data/
@@ -37,7 +39,7 @@ total segment count is 18908
 tar cf - /scratch/enis/data/nna/backup/NUI_DATA/ -P | pv -s $(du -sb /scratch/enis/data/nna/backup/NUI_DATA/ | awk '{print $1}') | gzip > embeddings_backup.tar.gz
 ```
 
--1) rsync server
+1) rsync server
 ```bash
 rsync -uzarv  --prune-empty-dirs --include "*/"  \
 --include="*.ipynb" --include="*.py" --include="*.md" --exclude="*" \
