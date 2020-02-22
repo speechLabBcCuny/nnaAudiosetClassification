@@ -2,6 +2,7 @@ data/
 backup/
 results/
 src/slack_message.py
+notebooks/unsupervised/slack.ipynb
 install_commands.md
 src/visualizations/side.py
 src/visualizations/simple_agg.py
