@@ -67,9 +67,11 @@ def createTimeIndex(selected_areas,file_properties_df,freq):
         number_hours=3600
         count=int(freq[:-1])
         extra=math.ceil(3/count)
-        globalindex = pd.date_range(all_start, periods=((all_end-all_start).total_seconds()//(number_hours*count)+48), freq=freq)
+        periods=((all_end-all_start).total_seconds()//(number_hours*count)+48)
+        globalindex = pd.date_range(all_start, periods=periods, freq=freq)
     elif "D" in freq:
-        globalindex = pd.date_range(all_start, periods=(all_end-all_start).days+3, freq=freq)
+        periods=(all_end-all_start).days+3
+        globalindex = pd.date_range(all_start, periods=periods, freq=freq)
     elif "T" in freq:
         globalindex = pd.date_range(all_start,all_end, freq=freq)
 
@@ -108,7 +110,8 @@ def prob2binary(result,threshold=0.5,channel=1):
 #             # source, destination
 #     pickle.dump(df_dict, dffile)
 def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
-                    file_properties_df,freq,dataFreq="10S",dataThreshold=0.5,channel=1,gathered_results_perTag=None,result_path=None):
+                    file_properties_df,freq,dataFreq="10S",dataThreshold=0.5,
+                    channel=1,gathered_results_perTag=None,result_path=None):
 
 
 

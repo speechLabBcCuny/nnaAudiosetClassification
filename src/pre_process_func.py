@@ -110,11 +110,11 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
     # -c[:stream_specifier] copy (output only) to indicate that the stream is not to be re-encoded.
     # -map 0 map all streams from input to output.
     file_extension=str(Path(mp3_file_path).suffix)
-    print(file_extension)
+    # print(file_extension)
     command_list=['ffmpeg','-y','-i',str(mp3_file_path),"-c","copy","-map","0",
                                 "-segment_time", segment_len, "-f", "segment",
                                 str(segments_folder)+"/output%03d"+file_extension]
-    print(command_list)
+    # print(command_list)
     sp = subprocess.run(command_list,
                             stdout=subprocess.DEVNULL,
                             stderr=subprocess.STDOUT)
@@ -160,7 +160,7 @@ def load_flac(input_file_path):
         A tuple (wav_data, sampling_rate)
     """
     wav_data, sr = sf.read(input_file_path,dtype='int16')
-    print("wac_dat",wav_data.shape)
+    # print("wac_dat",wav_data.shape)
     return wav_data,sr
 
 

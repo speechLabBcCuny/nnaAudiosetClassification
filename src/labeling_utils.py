@@ -17,7 +17,7 @@ import audioread
 
 
 # mp3_file_path=f[0]
-def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/"):
+def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/",):
     from pathlib import Path
     import sys
     tmpfolder=Path(tmpfolder)
@@ -53,13 +53,13 @@ def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/"):
 def mp3_split(mp3_path,start_second=10,end_second=20):
     sample_count=0
     with audioread.audio_open(mp3_path) as f:
-        print(f.channels, f.samplerate, f.duration)
+        # print(f.channels, f.samplerate, f.duration)
         #               sample_rate,channel, 2 bits
         bits_persecond= f.samplerate * f.channels * 2
         start_segment = start_second * bits_persecond
         end_segment = ((end_second-1) * bits_persecond )
         mp3array=[]
-        print(start_segment,end_segment)
+        # print(start_segment,end_segment)
         for buf in f:
             start_buf=sample_count
             end_buf=sample_count+len(buf)
@@ -134,7 +134,7 @@ def cut_random_file(input_mp3_file,length=10,split_folder="./splits",total_minut
     else:
         return result
 
-def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ffmpeg"):
+def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ffmpeg",outputSuffix=None):
     # -f increases precision (ONLY mp3)
     # -t
     # -d folder
@@ -149,7 +149,9 @@ def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ff
         end_minute,end_second = end_time.split(".")
         end_time=(int(end_minute) * 60)+int(end_second)
         wholepath=Path(input_mp3_file)
-        output_file= Path(split_folder) / (wholepath.stem+"_"+start_minute+"m_"+start_second+"s__"+end_minute+"m_"+end_second+"s"+wholepath.suffix)
+        if outputSuffix==None:
+            outputSuffix=wholepath.suffix
+        output_file= Path(split_folder) / (wholepath.stem+"_"+start_minute+"m_"+start_second+"s__"+end_minute+"m_"+end_second+"s"+outputSuffix)
         cmd = ['ffmpeg','-ss',str(start_time),'-t',str(end_time-start_time),"-i",str(input_mp3_file),str(output_file)]
     else:
         print("{} is not supported as backend, available ones are mp3splt and ffmpeg".format(backend))
@@ -171,7 +173,7 @@ def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ff
             split_file=re.search('File "(.*)"',o.decode('ascii') ).group(1)
             split_file=Path(split_file)
         elif backend=="ffmpeg":
-            split_file=None
+            split_file=output_file
         else:
             split_file=None
 
