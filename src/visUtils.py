@@ -111,9 +111,12 @@ def prob2binary(result,threshold=0.5,channel=1):
 #     pickle.dump(df_dict, dffile)
 def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                     file_properties_df,freq,dataFreq="10S",dataThreshold=0.5,
-                    channel=1,gathered_results_perTag=None,result_path=None):
+                    channel=1,gathered_results_perTag=None,result_path=None,prob2binary=True):
+    # using gathered_results_perTag dictionary or  result_path to create
+    # a pandas dataframe for visualizations
 
-
+    # dataFreq is sampling frequency of the data,
+    #most of the time we have predictions for each 10 second
 
     df_dict={key: None for (key) in selected_areas}
     no_result_paths=[]
@@ -121,7 +124,7 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
     #we need to load it from files
     if gathered_results_perTag==None and result_path==None:
         print("ERROR: gathered_results_perTag or result_path should be defined")
-        return None
+        return (None,None)
 
     for i,area in enumerate(selected_areas):
         df_sums = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
@@ -141,23 +144,25 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                     data=loadResults(filename,threshold=dataThreshold,channel=channel)
                         # gathered_results[file]=result[:]
                 else:
-                    data=gathered_results_perTag[tag_name].get(afile,[])[:]
-                    data=prob2binary(data,threshold=0.5,channel=1)
+                    data=gathered_results_perTag[tag_name].get(afile,np.empty(0))[:]
+                    if data.size!=0 and prob2binary==True:
+                        data=prob2binary(data,threshold=0.5,channel=channel)
 
-                if type(data)==list:
+                if data.size!=0:
                     no_result_paths.append(afile)
                     pass
 
                 start=file_properties_df.loc[afile]["timestamp"]
-                index = pd.date_range(start,start+timedelta(seconds=(10*(len(data)-1))), freq=dataFreq)
+                end =start+timedelta(seconds=(10*(len(data)-1)))
+                index = pd.date_range(start,end, freq=dataFreq)
 
                 df_afile=pd.DataFrame(data,index=index,columns=[tag_name])
 
                 df_afile_grouped = df_afile.groupby([pd.Grouper(freq=freq)])
                 counts=df_afile_grouped.count()
                 sums=df_afile_grouped.sum()
-                df_count.update(counts)
-                df_sums.update(sums)
+                df_count=df_count.add(counts, fill_value=0) #df_count.update(counts)
+                df_sums=df_sums.add(sums, fill_value=0) #df_sums.update(sums)
 
         df_dict[area]=(df_count.copy(),df_sums.copy())
 
