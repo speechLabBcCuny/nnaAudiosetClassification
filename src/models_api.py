@@ -12,11 +12,6 @@ import sys
 # sys.path.insert(0, '/Users/berk/Documents/workspace/speech_audio_understanding/src/models/audioset')
 # sys.path.insert(0, './models/audioset')
 
-from models.audioset import vggish_input
-from models.audioset import vggish_params
-from models.audioset import vggish_postprocess
-from models.audioset import vggish_slim
-
 from params import *
 import pre_process_func
 
@@ -36,6 +31,10 @@ class VggishModelWrapper:
                 sess_config=tf.ConfigProto(),
                 model_loaded=True):
 
+        from models.audioset import vggish_input
+        from models.audioset import vggish_params
+        from models.audioset import vggish_postprocess
+        from models.audioset import vggish_slim
         # # Initialize the classifier model
         # self.session_classify = tf.keras.backend.get_session()
         # self.classify_model = tf.keras.models.load_model(classifier_model, compile=False)
@@ -135,6 +134,11 @@ class AudioSet():
                 sess_config=tf.ConfigProto(),
                 model_loaded=True,
                 vggish_model=None):
+
+        from models.audioset import vggish_input
+        from models.audioset import vggish_params
+        from models.audioset import vggish_postprocess
+        from models.audioset import vggish_slim
 
         self.session_classification=None
         self.classifier_model_path = classifier_model_path
@@ -472,12 +476,25 @@ class classicML():
                 model_loaded=True,
                 vggish_model=None):
 
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.gaussian_process import GaussianProcessClassifier
+        from sklearn.gaussian_process.kernels import RBF
+        from sklearn.naive_bayes import GaussianNB
+        from sklearn.svm import SVC
+        from sklearn.ensemble import AdaBoostClassifier
 
         self.session_classification=None
         self.classifier_model_path = classifier_model_path
         self.model_loaded = model_loaded
         # self.sess_config = sess_config
         self.vggish_model=vggish_model
+        output_tuple=self.classifier_model_path.split("/")[-1].split("_")
+        tag,classifierName,embed_type,map_reduce_type,timestampStr=output_tuple
+        self.tag=tag
+        self.classifierName=classifierName
+        self.embed_type=embed_type
+        self.map_reduce_type=map_reduce_type
+        self.timestampStr=timestampStr
 
         # Initialize the vgg-ish embedding model and load post-Processsing
         if model_loaded:
@@ -487,43 +504,63 @@ class classicML():
 
     def load_pre_trained_model(self,
                 classifier_model_path=None):
+        import joblib
+
         if classifier_model_path==None:
             classifier_model_path=self.classifier_model_path
         # Initialize the Audioset classification model
-        with open(classifier_model_path, 'rb') as f:
-            self.classifier_model=pickle.load(f)
+
+        self.classifier_model=joblib.load(classifier_model_path)
 
 
         self.model_loaded=True
 
-    def classify_embeddings(self, raw_embeddings,many2one=False):
+    def classify_embeddings(self, raw_embeddings):
+
         def many2one_predict(X,clf):
-            result_count=(X.shape[0]//10) if X.shape[0]%10==0 else (X.shape[0]//10)+1
-            results=np.empty(result_count)
-            for i in range(0,X.shape[0],10):
-                result10=clf.predict(X[i:i+10,:])
-                results[(i//10)] = np.max(result10)
-            return results
-        # """
-        # Performs classification on PCA Quantized Embeddings.
-        # Input args:
-        #     processed_embeddings = numpy array of shape (N,10,128), dtype=float32
-        # Returns:
-        #     class_scores = Output probabilities for the 527 classes - numpy array of shape (N,527).
-        # """
+            res=clf.predict(X)
+            res=np.append(res,[0]*(-res.size%10)) if res.size%10!=0 else res
+            res=res.reshape(-1,10)
+            res=np.max(res,axis=1)
+            return res
+
+        def map_predict(X,clf,func_type):
+
+            if func_type=="Average":
+                remainder=[]
+                if X.shape[0]%10!=0:
+                    remainder=X[-(X.shape[0]%10):,:]
+                    X=X[:-(X.shape[0]%10),:]
+                    remainder=np.mean(remainder,axis=0).reshape(1,128)
+                X=np.reshape(X,(-1,10,128))
+
+                X=np.mean(X,axis=1)
+                if type(remainder)!=list:
+                    X=np.concatenate([X,remainder])
+            elif func_type=="Concat":
+                if X.shape[0]%10!=0:
+                    X=X[:-(X.shape[0]%10),:]
+                X=np.reshape(X,(-1,1280))
+            elif func_type=="many2one":
+                return many2one_predict(X,clf)
+            else:
+                X=X
+            if X.size!=0:
+                res=clf.predict(X)
+                return res
+            else:
+                return X
+
         if not self.model_loaded:
             self.load_pre_trained_model()
 
-        if many2one:
-            y_pred=many2one_predict(raw_embeddings,self.classifier_model)
-        else:
-            y_pred = self.classifier_model.predict(raw_embeddings)
 
+        y_pred=map_predict(raw_embeddings,self.classifier_model,self.map_reduce_type)
 
         return y_pred
 
 
-    def classify_file(self,pre_processed_npy_file,ModelName="_NameOfTheModel",many2one=False):
+    def classify_file(self,pre_processed_npy_file,ModelName="_NameOfTheModel"):
         # """
         # Calls audioset.classify_embeddings_batch per file from vgg_npy_files.
         # Saves classification scores into a file.
@@ -534,23 +571,34 @@ class classicML():
         #
         # """
         # pre_processed_npy_file:"/scratch/enis/data/nna/NUI_DATA/12 Anaktuvuk/June 2016/ANKTVK_20160621_051133_preprocessed/output026_preprocessed.npy"
-        npy_file=Path(pre_processed_npy_file)
-        file_index = npy_file.stem.replace("_preprocessed","").replace("output","")
-        original_file_stem = npy_file.parent.stem.replace("_preprocessed","")
-        vgg_folder = npy_file.parent.parent / npy_file.parent.stem.replace("_preprocessed","_vgg")
-        # raw_embeddings_file_path = vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
-        embeddings_file_path =  vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+        if "_vgg" in pre_processed_npy_file:
+            npy_file=Path(pre_processed_npy_file)
+            file_index = npy_file.stem.replace("rawembeddings","").split("_")[-1]
+            vgg_folder = npy_file.parent
+            original_file_stem=vgg_folder.stem.replace("_vgg","")
 
-        audioset_folder = Path(str(vgg_folder).replace("_vgg",ModelName))
-        audioset_file_path =  audioset_folder / (str(original_file_stem) + ModelName+file_index+".npy")
+            embeddings_file_path = npy_file
+
+            audioset_folder = Path(str(vgg_folder).replace("_vgg",ModelName))
+            audioset_file_path =  audioset_folder / (str(original_file_stem) + ModelName+file_index+".npy")
+        else:
+            npy_file=Path(pre_processed_npy_file)
+            file_index = npy_file.stem.replace("_preprocessed","").replace("output","")
+            original_file_stem = npy_file.parent.stem.replace("_preprocessed","")
+            vgg_folder = npy_file.parent.parent / npy_file.parent.stem.replace("_preprocessed","_vgg")
+            # raw_embeddings_file_path = vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+            embeddings_file_path =  vgg_folder / (str(original_file_stem) + "_rawembeddings"+file_index+".npy")
+
+            audioset_folder = Path(str(vgg_folder).replace("_vgg",ModelName))
+            audioset_file_path =  audioset_folder / (str(original_file_stem) + ModelName+file_index+".npy")
 
 
         # for npy_file in pre_processed_npy_files:
-        vgg_embeddings=np.load(embeddings_file_path)
+        raw_embeddings=np.load(embeddings_file_path)
         # vgg_embeddings=self.uint8_to_float32(vgg_embeddings)
-        raw_embeddings=torch.from_numpy(vgg_embeddings)
+        # raw_embeddings=torch.from_numpy(vgg_embeddings)
 
-        classified=self.classify_embeddings(raw_embeddings,many2one)
+        classified=self.classify_embeddings(raw_embeddings)
 
         Path(audioset_folder).mkdir(parents=True, exist_ok=True)
         np.save(audioset_file_path,classified)
@@ -562,7 +610,7 @@ class classicML():
 
 
 
-    def classify_sound(self,mp3_file,vggish_model=None,batch_size=256,many2one=False):
+    def classify_sound(self,mp3_file,vggish_model=None,batch_size=256):
         """
         Performs classification on mp3 files.
         Input args:
@@ -584,5 +632,5 @@ class classicML():
         raw_embeddings,post_processed_embed = embeds
         # post_processed_embed=post_processed_embed.reshape([-1,EXCERPT_LENGTH,128])
         # post_processed_embed=self.uint8_to_float32(post_processed_embed)
-        class_probabilities = self.classify_embeddings(raw_embeddings,many2one=many2one)
+        class_probabilities = self.classify_embeddings(raw_embeddings)
         return class_probabilities
