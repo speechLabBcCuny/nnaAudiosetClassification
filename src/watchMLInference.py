@@ -29,18 +29,18 @@ if __name__ == "__main__":
 
     parser.add_argument("-m","--modelPath", help="classifier model path")
     parser.add_argument("-n","--modelName", help="ModelName to use with file and folder names")
-    parser.add_argument("--many2one", help="set True if model producing 1 predict per 10 second",action="store_true")
-
+    parser.add_argument("-i","--inputCsv", help="csv file of list to process")
     args = parser.parse_args()
-
 
     if args.modelPath==None or args.modelName==None:
         print("--modelPath and --modelName is required")
-        return -1
+        quit()
+    if args.inputCsv!=None:
+        VGGISH_EMBEDDINGS_queue=args.inputCsv
 
-    Audioset_processing_queue='./job_logs/'+args.modelPath+'_processing_queue.csv'
-    Audioset_output_queue='./job_logs/'+args.modelPath+'_output_queue.csv'
-    
+    Audioset_processing_queue='./job_logs/'+args.modelName+'_processing_queue.csv'
+    Audioset_output_queue='./job_logs/'+args.modelName+'_output_queue.csv'
+
     classifier=classicML(classifier_model_path=args.modelPath)
 
     while True:
@@ -57,7 +57,7 @@ if __name__ == "__main__":
             # save to processing queue
             pre_process_func.save_to_csv(Audioset_processing_queue,[[str(afile)] for afile in files_to_do])
             for vgg_npy_file in files_to_do:
-                classifier.classify_file(vgg_npy_file,ModelName=args.modelName,many2one=args.many2one)
+                classifier.classify_file(vgg_npy_file,ModelName=args.modelName)
                 pre_process_func.save_to_csv(Audioset_output_queue,[[str(vgg_npy_file)]])
 
             time.sleep(random.randint(0,5))
