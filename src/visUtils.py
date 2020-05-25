@@ -9,6 +9,7 @@ from matplotlib import pyplot
 
 from datetime import datetime,timedelta
 
+from fileUtils import standardPathStyle,list_files
 
 
 #https://stackoverflow.com/questions/30079590/use-matplotlib-color-map-for-color-cycle
@@ -74,28 +75,31 @@ def createTimeIndex(selected_areas,file_properties_df,freq):
         globalindex = pd.date_range(all_start, periods=periods, freq=freq)
     elif "T" in freq:
         globalindex = pd.date_range(all_start,all_end, freq=freq)
+    else:
+        globalindex = pd.date_range(all_start,all_end, freq=freq)
 
     return globalindex,all_start,all_end
 
-def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
-    src=Path(parentPath) / row.region /row.locationId/ row.year
-    if subDirectoryAddon or fileNameAddon:
-        fileName=Path(row.name)
-    if subDirectoryAddon:
-        src = src / (fileName.stem +subDirectoryAddon)
-    if fileNameAddon:
-        src= src / (fileName.stem +fileNameAddon)
-    return src
+
 
 # result_path="/scratch/enis/data/nna/real/"
-def loadResults(filename,threshold=0.5,channel=1):
+def loadResults(allSegments,prob2binaryFlag,threshold=0.5,channel=1):
     # try:
-    if not filename.exists():
-        return []
-    result=np.load(filename)
-    prob2binary(result,threshold=0.5,channel=channel)
+    if type(allSegments)!=list:
+        allSegments=[allSegments]
 
-    return result
+    results=[]
+    for filename in allSegments:
+        filename = Path(filename)
+        if not filename.exists():
+            data = []
+        data = np.load(filename)
+        if prob2binaryFlag==True:
+            data=prob2binary(data,threshold=threshold,channel=channel)
+        results.append(data)
+
+    results=np.concatenate(results)
+    return results
 
 def prob2binary(result,threshold=0.5,channel=1):
     if channel==2:
@@ -111,7 +115,8 @@ def prob2binary(result,threshold=0.5,channel=1):
 #     pickle.dump(df_dict, dffile)
 def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                     file_properties_df,freq,dataFreq="10S",dataThreshold=0.5,
-                    channel=1,gathered_results_perTag=None,result_path=None,prob2binary=True):
+                    channel=1,gathered_results_perTag=None,
+                    result_path=None,fileNameAddon="",prob2binaryFlag=True):
     # using gathered_results_perTag dictionary or  result_path to create
     # a pandas dataframe for visualizations
 
@@ -122,15 +127,16 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
     no_result_paths=[]
 
     #we need to load it from files
-    if gathered_results_perTag==None and result_path==None:
-        print("ERROR: gathered_results_perTag or result_path should be defined")
+    if gathered_results_perTag==None and (result_path==None):
+        print("ERROR: gathered_results_perTag or (result_path and subDirectoryAddon )should be defined")
         return (None,None)
+
 
     for i,area in enumerate(selected_areas):
         df_sums = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
         df_count = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
 
-        for tag_name in model_tag_names:
+        for modelTagName in model_tag_names:
     #         for afile in selected_areas_dict[area]:
             area_filtered=file_properties_df[file_properties_df.site_id==area]
             for afile,row in area_filtered.iterrows():
@@ -139,28 +145,34 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                 # we either load data from multiple files or from single one
                 if gathered_results_perTag==None:
                     # TODO, make _FCmodel variable
-                    filename=standardPathStyle(result_path,row,subDirectoryAddon="_FCmodel"
-                                        ,fileNameAddon="_FCmodel000.npy")
-                    data=loadResults(filename,threshold=dataThreshold,channel=channel)
+                    checkFolder=standardPathStyle(result_path,row,subDirectoryAddon=modelTagName
+                                        ,fileNameAddon=fileNameAddon)
+                    allSegments = list_files(str(checkFolder)+"/")
+                    allSegments.sort()
+                    if not allSegments:
+                        data=np.empty(0)
+                    else:
+                        data=loadResults(allSegments,prob2binaryFlag=prob2binaryFlag,
+                                        threshold=dataThreshold,channel=channel)
                         # gathered_results[file]=result[:]
                 else:
-                    data=gathered_results_perTag[tag_name].get(afile,np.empty(0))[:]
-                    if data.size!=0 and prob2binary==True:
+                    data=gathered_results_perTag[modelTagName].get(afile,np.empty(0))[:]
+                    if data.size!=0 and prob2binaryFlag==True:
                         data=prob2binary(data,threshold=0.5,channel=channel)
 
-                if data.size!=0:
+                if data.size==0:
                     no_result_paths.append(afile)
-                    pass
+                    continue
 
                 start=file_properties_df.loc[afile]["timestamp"]
                 end =start+timedelta(seconds=(10*(len(data)-1)))
                 index = pd.date_range(start,end, freq=dataFreq)
-
-                df_afile=pd.DataFrame(data,index=index,columns=[tag_name])
+                df_afile=pd.DataFrame(data,index=index,columns=[modelTagName])
 
                 df_afile_grouped = df_afile.groupby([pd.Grouper(freq=freq)])
                 counts=df_afile_grouped.count()
                 sums=df_afile_grouped.sum()
+
                 df_count=df_count.add(counts, fill_value=0) #df_count.update(counts)
                 df_sums=df_sums.add(sums, fill_value=0) #df_sums.update(sums)
 
@@ -188,3 +200,71 @@ def reverseTableDict(selected_areas,df_dict,model_tag_names):
         df_dict_reverse[tagname]=df_count,df_sums
 
     return df_dict_reverse
+
+def rawFile2Csv(csvPath,selected_areas,model_tag_names,globalindex,globalcolumns,
+                    file_properties_df,freq,dataFreq="10S",dataThreshold=0.5,
+                    channel=1,gathered_results_perTag=None,
+                    result_path=None,fileNameAddon="",prob2binaryFlag=True):
+    # using gathered_results_perTag dictionary or  result_path to create
+    # a pandas dataframe for visualizations
+
+    # dataFreq is sampling frequency of the data,
+    #most of the time we have predictions for each 10 second
+    if dataFreq!="10S":
+        print("ERROR: this function does not do aggregation, set dataFreq to 10S")
+        return None
+
+    csvFilesWritten=[]
+    no_result_paths=[]
+
+    #we need to load it from files
+    if gathered_results_perTag==None and (result_path==None):
+        print("ERROR: gathered_results_perTag or (result_path and subDirectoryAddon )should be defined")
+        return (None,None)
+
+
+    for i,area in enumerate(selected_areas):
+#         df_sums = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
+#         df_count = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
+
+        for modelTagName in model_tag_names:
+            dfRawList=[]
+    #         for afile in selected_areas_dict[area]:
+            area_filtered=file_properties_df[file_properties_df.site_id==area]
+            for afile,row in area_filtered.iterrows():
+    ####################
+                afile=Path(afile)
+                # we either load data from multiple files or from single one
+                if gathered_results_perTag==None:
+                    checkFolder=standardPathStyle(result_path,row,subDirectoryAddon=modelTagName
+                                        ,fileNameAddon=fileNameAddon)
+                    allSegments = list_files(str(checkFolder)+"/")
+                    if not allSegments:
+                        data=np.empty(0)
+                    else:
+                        data=loadResults(allSegments,prob2binaryFlag=prob2binaryFlag,
+                                        threshold=dataThreshold,channel=channel)
+                        # gathered_results[file]=result[:]
+                else:
+                    data=gathered_results_perTag[modelTagName].get(afile,np.empty(0))[:]
+                    if data.size!=0 and prob2binaryFlag==True:
+                        data=prob2binary(data,threshold=0.5,channel=channel)
+
+                if data.size==0:
+                    no_result_paths.append(afile)
+                    continue
+
+                start=file_properties_df.loc[afile]["timestamp"]
+                end =start+timedelta(seconds=(10*(len(data)-1)))
+                index = pd.date_range(start,end, freq=dataFreq)
+                df_afile=pd.DataFrame(data,index=index,columns=[modelTagName])
+        ####################
+                dfRawList.append(df_afile)
+            if dfRawList:
+                dfRaw=pd.concat(dfRawList)
+                dfRaw=dfRaw.sort_index()
+                csvFilename="_".join([area,modelTagName[1:]+".csv"])
+                dfRaw.to_csv((csvPath/csvFilename),index_label="TimeStamp",header=[modelTagName[1:]])
+                csvFilesWritten.append((csvPath/csvFilename))
+
+    return csvFilesWritten,no_result_paths
