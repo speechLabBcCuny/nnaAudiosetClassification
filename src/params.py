@@ -16,6 +16,7 @@ LABELS="assets/class_labels_indices.csv"
     # output will be saved to  Path(output_dir) / "d/sound.npy"
 INPUT_DIR_PARENT = "/tank/data/nna/real/"
 OUTPUT_DIR = "/scratch/enis/data/nna/real/"
+INPUT_LIST = "/home/enis/projects/nna/data/ExperimentRunV6.txt"
 
 
 LOGS_FOLDER="./job_logs/"
@@ -46,8 +47,8 @@ disk_space=300 #gb
 segment_length=1 #hour
 # CPU count determines, how many file is processed in parallel
 # each CPU processes as 49 hour file in, 1 hour at a time in memory
-cpu_count=7
-# cpu_count=10
+# cpu_count=7
+cpu_count=5
 
 #1 hour is 0.04
 #30x for mp3 to wav
