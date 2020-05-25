@@ -229,7 +229,7 @@ class labeling_UI:
 
         self.mp3_splitted_files = listdir(str(self.samples_dir))
 
-        self.mp3_splitted_files = [Path(f) for f in self.mp3_splitted_files if ".mp3" in f[-4:].lower()]
+        self.mp3_splitted_files = [Path(f) for f in self.mp3_splitted_files if (".mp3" in f[-4:].lower() or ".flac" in f[-5:].lower())]
         if self.model_tags:
             self.mp3_splitted_files = [f for f in self.mp3_splitted_files if model_tags.get(f.name,None)!=None]
 

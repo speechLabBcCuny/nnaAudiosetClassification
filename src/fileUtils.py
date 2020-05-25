@@ -16,6 +16,18 @@ from pydub import AudioSegment
 
 from IPython.display import display
 
+
+def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
+    src=Path(parentPath) / row.region /row.locationId/ row.year
+    if subDirectoryAddon or fileNameAddon:
+        fileName=Path(row.name)
+    if subDirectoryAddon:
+        src = src / (fileName.stem +subDirectoryAddon)
+    if fileNameAddon:
+        src= src / (fileName.stem +fileNameAddon)
+    return src
+
+
 def get_labeled_exif(image_path):
     img = Image.open(image_path)
     img_exif = img.getexif()
@@ -148,14 +160,19 @@ def getLength(input_video):
 
 
 
-def list_files(search_path="/search_path/",ignore_folders=[]):
+def list_files(search_path="/search_path/",ignore_folders=None):
+    if ignore_folders==None:
+        ignore_folders=[]
+    if search_path[-1]!="/":
+        search_path+="/"
     all_path=glob.glob(search_path+"**/*.*",recursive=True)
 
     all_path=set(all_path)
     for folder in ignore_folders:
         ignore_paths = set( glob.glob(folder + "**/*.*",recursive=True) )
         all_path=all_path.difference(ignore_paths)
-    return list(all_path)
+    all_path=sorted(list(all_path))
+    return all_path
 
 
 def str2timestamp(fileinfo_dict):

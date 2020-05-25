@@ -23,6 +23,7 @@ class VggishModelWrapper:
     Also contains any helper function required.
     """
 
+
     def __init__(self,
                 embedding_checkpoint=VGGish_EMBEDDING_CHECKPOINT, #MODEL
                 pca_params= PCA_PARAMS,
@@ -31,10 +32,7 @@ class VggishModelWrapper:
                 sess_config=tf.ConfigProto(),
                 model_loaded=True):
 
-        from models.audioset import vggish_input
-        from models.audioset import vggish_params
-        from models.audioset import vggish_postprocess
-        from models.audioset import vggish_slim
+
         # # Initialize the classifier model
         # self.session_classify = tf.keras.backend.get_session()
         # self.classify_model = tf.keras.models.load_model(classifier_model, compile=False)
@@ -50,6 +48,12 @@ class VggishModelWrapper:
     def load_pre_trained_model(self,
             embedding_checkpoint=None,
             pca_params=None):
+
+        from models.audioset import vggish_input
+        from models.audioset import vggish_params
+        from models.audioset import vggish_postprocess
+        from models.audioset import vggish_slim
+
         if embedding_checkpoint==None:
             embedding_checkpoint=self.embedding_checkpoint,
         if pca_params==None:
@@ -135,10 +139,6 @@ class AudioSet():
                 model_loaded=True,
                 vggish_model=None):
 
-        from models.audioset import vggish_input
-        from models.audioset import vggish_params
-        from models.audioset import vggish_postprocess
-        from models.audioset import vggish_slim
 
         self.session_classification=None
         self.classifier_model_path = classifier_model_path
@@ -518,6 +518,8 @@ class classicML():
     def classify_embeddings(self, raw_embeddings):
 
         def many2one_predict(X,clf):
+            if X.size==0:
+                return X
             res=clf.predict(X)
             res=np.append(res,[0]*(-res.size%10)) if res.size%10!=0 else res
             res=res.reshape(-1,10)
@@ -597,6 +599,8 @@ class classicML():
         raw_embeddings=np.load(embeddings_file_path)
         # vgg_embeddings=self.uint8_to_float32(vgg_embeddings)
         # raw_embeddings=torch.from_numpy(vgg_embeddings)
+        if audioset_file_path.exists():
+            return audioset_file_path
 
         classified=self.classify_embeddings(raw_embeddings)
 

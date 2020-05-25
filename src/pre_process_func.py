@@ -37,7 +37,8 @@ def read_queue(queue_csv):
         with open(queue_csv, newline='') as f:
             reader=csv.reader(f)
             for row in reader:
-                files_in_queue.append(row[0])
+                if row:
+                    files_in_queue.append(row[0])
     return files_in_queue
 
 def rmv_folder(folder):
@@ -247,13 +248,13 @@ def mp3file_to_examples(mp3_file_path):
     """
     extension=Path(mp3_file_path).suffix
 
-    if extension==".mp3":
+    if extension.lower()==".mp3":
         wav_data,sr=load_mp3(mp3_file_path)
-    elif extension==".flac":
+    elif extension.lower()==".flac":
         wav_data,sr=load_flac(mp3_file_path)
     else:
         print("ERROR file extension {} is not supported.".format(extension))
-
+        return None
     sys.stdout.flush()
     sys.stderr.flush()
 
@@ -390,6 +391,7 @@ def parallel_pre_process(input_path_list,
     # write mp3 file path  and relative output path to a file
     with open(tmp_input_file, 'w') as f:
         for mp3_file_path in input_path_list:
+            print(mp3_file_path)
             relative2output_dir = relative2outputdir(mp3_file_path,
                                                     output_dir,
                                                     input_dir_parent)
