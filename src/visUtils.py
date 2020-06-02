@@ -169,9 +169,15 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                 index = pd.date_range(start,end, freq=dataFreq)
                 df_afile=pd.DataFrame(data,index=index,columns=[modelTagName])
 
-                df_afile_grouped = df_afile.groupby([pd.Grouper(freq=freq)])
-                counts=df_afile_grouped.count()
-                sums=df_afile_grouped.sum()
+                # df_afile_grouped = df_afile.groupby([pd.Grouper(freq=freq)])
+                # counts=df_afile_grouped.count()
+                # sums=df_afile_grouped.sum()
+                theBins=pd.cut(df_afile.index,globalindex)
+                df_afileGrouped=df_afile.groupby(theBins)
+                sums=df_afileGrouped.agg("sum")
+                counts=df_afileGrouped.agg("count")
+                sums.set_index(sums.index.categories.left,inplace=True)
+                counts.set_index(counts.index.categories.left,inplace=True)
 
                 df_count=df_count.add(counts, fill_value=0) #df_count.update(counts)
                 df_sums=df_sums.add(sums, fill_value=0) #df_sums.update(sums)
