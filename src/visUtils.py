@@ -174,6 +174,7 @@ def file2TableDict(selected_areas,model_tag_names,globalindex,globalcolumns,
                 globalindexStart=globalindex.searchsorted(df_afile.index[0])
                 globalindexStart= 0 if globalindexStart==0 else globalindexStart-1
                 globalindexEnd=globalindex.searchsorted(df_afile.index[-1])
+                globalindexEnd= globalindexEnd+1 if globalindexEnd==globalindexStart else globalindexEnd
                 theBins=pd.cut(df_afile.index,globalindex[globalindexStart:globalindexEnd+1])
                 # theBins=pd.cut(df_afile.index,globalindex)
                 df_afileGrouped=df_afile.groupby(theBins)
