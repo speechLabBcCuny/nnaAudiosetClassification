@@ -11,11 +11,17 @@ from datetime import timedelta
 import os
 import sys
 
-from labeling_utils import ffmpeg_split_mp3
 from pydub import AudioSegment
 
 from IPython.display import display
 
+import csv
+def save_to_csv(file_name,lines):
+    file_name=Path(file_name).with_suffix('.csv')
+    with open(str(file_name), mode='a') as labels_file:
+        label_writer = csv.writer(labels_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for line in lines:
+            label_writer.writerow(line)
 
 def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
     src=Path(parentPath) / row.region /row.locationId/ row.year
@@ -26,6 +32,28 @@ def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
     if fileNameAddon:
         src= src / (fileName.stem +fileNameAddon)
     return src
+
+def npy2originalFile(thePath,inputPath,outputPath,file_properties_df,
+                     subDirectoryAddon=None,fileNameAddon=None):
+#     thePath.parents[parentDistance]
+    relative2Main=thePath.relative_to(parentPath)
+    fileName=relative2Main.parents[0].stem
+
+    # find possible files in the file properties
+    region=relative2Main.parts[0]
+    locationId=relative2Main.parts[1]
+    year=relative2Main.parts[2]
+    isRegion=file_properties_df.region==region
+    islocationID=file_properties_df.locationId==locationId
+    isYear=file_properties_df.year==year
+    truthTable=isRegion &  islocationID &  isYear
+    filteredProperties=file_properties_df[truthTable]
+
+    timestamp="_".join(fileName.split("_")[1:3])
+    for row in filteredProperties.iterrows():
+        if timestamp in str(row[0]):
+            return row[0]
+    return -1
 
 
 def get_labeled_exif(image_path):
@@ -160,12 +188,12 @@ def getLength(input_video):
 
 
 
-def list_files(search_path="/search_path/",ignore_folders=None):
+def list_files(search_path="/search_path/",ignore_folders=None,filename="*.*"):
     if ignore_folders==None:
         ignore_folders=[]
     if search_path[-1]!="/":
         search_path+="/"
-    all_path=glob.glob(search_path+"**/*.*",recursive=True)
+    all_path=glob.glob(search_path+"**/"+filename,recursive=True)
 
     all_path=set(all_path)
     for folder in ignore_folders:
@@ -277,7 +305,10 @@ def find_filesfunc_inputs(location,start_time,end_time,length,buffer,file_proper
         start_time_org,end_time_org = start_time,end_time
 
     # print("start:",start_time,"end",end_time)
-    return start_time,end_time,loc_key,start_time_org,end_time_org
+    try:
+        return start_time,end_time,loc_key,start_time_org,end_time_org
+    except:
+        return None
 
 def find_filesv2(location,start_time,end_time,length,buffer,file_properties_df):
     import pandas as pd
@@ -353,12 +384,12 @@ def get_audio(sorted_filtered,start_t,end_t,display_flag=True,save=True,file_nam
         total_seconds+=excerpt_length
 
 def save_audiofile(mp3_file_path,file_extension,file_name,start_seconds,end_seconds,tmpfolder):
-    print(file_name)
+    from labeling_utils import ffmpeg_split_mp3
+
     # if end_seconds bigger than file, ffmpeg ignores it, if both out of order than output is emtpy
     ffmpeg_split_mp3(mp3_file_path,start_seconds,end_seconds,tmpfolder=tmpfolder)
 
     try:
-
         os.rename(tmpfolder+"output"+file_extension,tmpfolder+file_name+file_extension)
 
     except:
@@ -375,7 +406,9 @@ def display_audio(tmpfolder,file_name,file_extension):
     except:
         print("{}".format(sys.exc_info()[0]))
 
-def query_audio(location,start_time,end_time,length,buffer,file_properties_df,file_name,display_flag=True,save=True,tmp_folder="./tmp_audio_excerpt/"):
+def query_audio(location,start_time,end_time,length,buffer,
+                file_properties_df,file_name,display_flag=True,
+                save=True,tmp_folder="./tmp_audio_excerpt/"):
 
     output = find_filesv2(location,start_time,end_time,length,0,file_properties_df)
     sorted_filtered,start_time,end_time,start_time_org,end_time_org = output
@@ -409,5 +442,5 @@ def query_audio(location,start_time,end_time,length,buffer,file_properties_df,fi
         file_name+="_exact_"+start_time_org.strftime('%Y-%m-%d_%H:%M:%S')
         get_audio(sorted_filtered,start_time_org,end_time_org,
                   display_flag=display_flag,save=save,file_name=file_name,tmpfolder=tmp_folder)
-
+    print(file_name)
     return (sorted_filtered)
