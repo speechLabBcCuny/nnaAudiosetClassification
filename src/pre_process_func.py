@@ -23,13 +23,9 @@ from params import VGGISH_EMBEDDINGS_queue,cpu_count,LOGS_FILE
 import math
 import csv
 
+from fileUtils import save_to_csv
 
-def save_to_csv(file_name,lines):
-    file_name=Path(file_name).with_suffix('.csv')
-    with open(file_name, mode='a') as labels_file:
-        label_writer = csv.writer(labels_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        for line in lines:
-            label_writer.writerow(line)
+
 
 def read_queue(queue_csv):
     files_in_queue=[]

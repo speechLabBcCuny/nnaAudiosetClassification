@@ -11,14 +11,13 @@ from os import listdir
 import os
 import re
 import csv
-import audioread
 
+from fileUtils import save_to_csv
 
 
 
 # mp3_file_path=f[0]
 def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/",):
-    from pathlib import Path
     import sys
     tmpfolder=Path(tmpfolder)
     tmpfolder.mkdir(parents=True, exist_ok=True)
@@ -52,6 +51,7 @@ def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/",):
 
 def mp3_split(mp3_path,start_second=10,end_second=20):
     sample_count=0
+    import audioread
     with audioread.audio_open(mp3_path) as f:
         # print(f.channels, f.samplerate, f.duration)
         #               sample_rate,channel, 2 bits
@@ -110,7 +110,8 @@ def stem_set(files):
 
 
 
-def cut_random_file(input_mp3_file,length=10,split_folder="./splits",total_minute=49*60,depth=0,backend="ffmpeg"):
+def cut_random_file(input_mp3_file,length=10,split_folder="./splits",
+                        total_minute=49*60,depth=0,backend="ffmpeg"):
 
     start_minute=random.randint(0,total_minute)
     start_second=random.randint(0,59)
@@ -134,7 +135,8 @@ def cut_random_file(input_mp3_file,length=10,split_folder="./splits",total_minut
     else:
         return result
 
-def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,backend="ffmpeg",outputSuffix=None):
+def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,
+                backend="ffmpeg",outputSuffix=None):
     # -f increases precision (ONLY mp3)
     # -t
     # -d folder
@@ -184,15 +186,10 @@ def play_html_modify(mp3file,items):
     out=items["mp3_output"]
     with out:
         clear_output()
-        displayed=display(HTML("<audio controls  loop autoplay><source src={} type='audio/mpeg'></audio>".format(mp3file)))
+        # displayed=display(HTML("<audio controls  loop autoplay><source src={} type='audio/{}'></audio>".format(mp3file,mp3file.suffix[1:])))
+        displayed=display(HTML("<audio autoplay controls loop src={} preload=\"auto\"> </audio>".format(mp3file)))
 
 
-def save_to_csv(file_name,lines):
-    file_name=Path(file_name).with_suffix('.csv')
-    with open(str(file_name), mode='a') as labels_file:
-        label_writer = csv.writer(labels_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        for line in lines:
-            label_writer.writerow(line)
 
 def load_labels(csv_file="assets/class_labels_indices.csv"):
     import csv
@@ -215,7 +212,9 @@ def load_labels(csv_file="assets/class_labels_indices.csv"):
     return labels
 
 class labeling_UI:
-    def __init__ (self,tags,samples_dir="./",username="",RESULTS_DIR="./",TEST_MODE=False,model_tags={},tag_threshold=0.1):
+    def __init__ (self,tags,samples_dir="./",username="",RESULTS_DIR="./",
+                    TEST_MODE=False,model_tags={},tag_threshold=0.1,
+                    clippingFile=None):
         self.TEST_MODE=TEST_MODE
         self.tag_threshold = tag_threshold
         self.model_tags=model_tags
@@ -240,6 +239,10 @@ class labeling_UI:
         self.current_mp3=self.mp3_splitted_files.pop()
         self.labels=load_labels()
 
+        if clippingFile!=None:
+            self.clippingDict = self.loadClippingData(clippingFile)
+        else:
+            self.clippingDict = None
 
         suggested_tags=self.get_AI_tags()
         # debug_view = widgets.Output(layout={'border': '1px solid black'})
@@ -413,3 +416,8 @@ class labeling_UI:
             clear_output()
             display(self.predicted_explanation)
             display(predicted_grid)
+
+    def loadClippingData(self,clippingFile):
+        import numpy as np
+        clippingDict = np.load(clippingFile)
+        return clippingDict
