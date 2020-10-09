@@ -14,7 +14,10 @@ import csv
 
 from fileUtils import save_to_csv
 
-
+import librosa as librosa
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa.display
 
 # mp3_file_path=f[0]
 def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/",):
@@ -154,7 +157,7 @@ def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,
         if outputSuffix==None:
             outputSuffix=wholepath.suffix
         output_file= Path(split_folder) / (wholepath.stem+"_"+start_minute+"m_"+start_second+"s__"+end_minute+"m_"+end_second+"s"+outputSuffix)
-        cmd = ['ffmpeg','-ss',str(start_time),'-t',str(end_time-start_time),"-i",str(input_mp3_file),str(output_file)]
+        cmd = ['conda','run','-n','speechEnv','ffmpeg','-strict', '-2','-ss',str(start_time),'-t',str(end_time-start_time),"-i",str(input_mp3_file),str(output_file)]
     else:
         print("{} is not supported as backend, available ones are mp3splt and ffmpeg".format(backend))
     # custom name (@f_@n+@m:@s+@M:@S)
@@ -166,6 +169,8 @@ def splitmp3(input_mp3_file,split_folder,start_time,end_time,depth=5,
 
 
     if proc.returncode!=0:
+        print("---------")
+        print(cmd)
         print('Output: ' + o.decode('ascii'))
         print('Error: '  + e.decode('ascii'))
         return 0
@@ -187,7 +192,16 @@ def play_html_modify(mp3file,items):
     with out:
         clear_output()
         # displayed=display(HTML("<audio controls  loop autoplay><source src={} type='audio/{}'></audio>".format(mp3file,mp3file.suffix[1:])))
-        displayed=display(HTML("<audio autoplay controls loop src={} preload=\"auto\"> </audio>".format(mp3file)))
+        displayed=display(HTML("<audio autoplay controls loop src={} preload=\"auto\" width=100% style=\"width: 120%;\"> </audio>".format(mp3file)))
+        y, sr = librosa.load(str(mp3file))
+
+        S = librosa.feature.melspectrogram(y, sr=sr)
+        S_DB = librosa.power_to_db(S, ref=np.max)
+
+        fig, ax = plt.subplots(figsize=(32, 8))
+        img=librosa.display.specshow(S_DB, sr=sr, x_axis='time', y_axis='mel',ax=ax);
+        fig.colorbar(img,format='%+2.0f dB',ax=ax);
+
 
 
 
@@ -402,7 +416,6 @@ class labeling_UI:
                                                         disabled=False,
                                                         icon="square",
 #                                                         style={'description_width': 'initial'},
-
                                                         layout=widgets.Layout(width='auto')
                                                                     )
         for checkbox in self.items.keys():
