@@ -444,3 +444,68 @@ def query_audio(location,start_time,end_time,length,buffer,
                   display_flag=display_flag,save=save,file_name=file_name,tmpfolder=tmp_folder)
     print(file_name)
     return (sorted_filtered)
+
+
+
+
+def findPhoto(location,timestamp,imgOnlyDate,buffer=datetime.timedelta(seconds=1)):
+    """
+    Example
+    --------
+    import datetime
+
+    from IPython.display import display, Image
+    import pickle
+
+    # information about images
+    with open("../../data/imgOnlyDateV1.pkl", 'rb') as f:
+        imgOnlyDate=pickle.load(f)
+
+
+    # query
+    location="35"
+    start_time='2019-06-05_00:00:00' # YYYY-MM-DD_HH:MM:SS or datetime object
+    # if there is no recording in given timestamp, it searches before and after,
+    # buffer is how far to look in seconds
+    buffer=1800
+
+
+    timestamp=datetime.datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
+    end_time=None
+
+    imgTime,imgPath=findPhoto(location,timestamp,imgOnlyDate,buffer=buffer)
+
+
+    if imgTime!=-1:
+        display(Image(imgPath,width=600))
+    dataPoint="'{},{},{},{}',".format(location,start_time,imgPath)
+    print(dataPoint)
+    """
+    from bisect import bisect_left
+
+    index=bisect_left(imgOnlyDate[location], (timestamp,""))
+    if index==len(imgOnlyDate[location]):
+        index-=1
+
+    if index==-1:
+        index=1
+
+    left=imgOnlyDate[location][index-1]
+    right=imgOnlyDate[location][index]
+#     print(index)
+#     print(left[0],right[0])
+
+    if timestamp==left[0]:
+        return left
+    if timestamp==right[0]:
+        return right
+    leftDistance=abs(timestamp-left[0])
+    rightDistance=abs(right[0]-timestamp)
+#     print(leftDistance,rightDistance)
+    if leftDistance<=rightDistance and leftDistance<=buffer:
+        print(leftDistance)
+        return left
+    if rightDistance<=buffer:
+        print(rightDistance)
+        return right
+    return (-1,-1)
