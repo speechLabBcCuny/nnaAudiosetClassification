@@ -1,10 +1,10 @@
-from params import INPUT_DIR_PARENT,OUTPUT_DIR
-from params import cpu_count,LOGS_FOLDER,LOGS_FILE
-from params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
-from params import INPUT_LIST
+from .params import INPUT_DIR_PARENT,OUTPUT_DIR
+from .params import cpu_count,LOGS_FOLDER,LOGS_FILE
+from .params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
+from .params import INPUT_LIST
 from pathlib import Path
 
-import pre_process_func
+import .pre_process_func
 
 
 # create a list of paths for input

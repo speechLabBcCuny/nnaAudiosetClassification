@@ -2,16 +2,16 @@
 
 import tensorflow.python.util.deprecation as deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
-from models_api import FC_embed
+from .models_api import FC_embed
 import torch
 
-from params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
+from .params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
 
 Audioset_processing_queue='./job_logs/FCmodel_processing_queue.csv'
 Audioset_output_queue='./job_logs/FCmodel_output_queue.csv'
 
-import pre_process_func
-from pre_process_func import read_queue
+import .pre_process_func
+from .pre_process_func import read_queue
 
 import random
 import csv

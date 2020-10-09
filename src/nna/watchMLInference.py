@@ -1,13 +1,13 @@
 #### when this code is run, it runns VGG on files from PRE_PROCESSED_queue
 
-from models_api import classicML
+from .models_api import classicML
 
-from params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
+from .params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
 
 
 
-import pre_process_func
-from pre_process_func import read_queue
+import .pre_process_func
+from .pre_process_func import read_queue
 
 import random
 import csv

@@ -12,11 +12,11 @@ import sys
 # sys.path.insert(0, '/Users/berk/Documents/workspace/speech_audio_understanding/src/models/audioset')
 # sys.path.insert(0, './models/audioset')
 
-from params import *
-import pre_process_func
+from .params import *
+import .pre_process_func
 
-from params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
-from params import EXCERPT_LENGTH
+from .params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
+from .params import EXCERPT_LENGTH
 class VggishModelWrapper:
     """
     Contains core functions to generate embeddings and classify them.
@@ -49,10 +49,10 @@ class VggishModelWrapper:
             embedding_checkpoint=None,
             pca_params=None):
 
-        from models.audioset import vggish_input
-        from models.audioset import vggish_params
-        from models.audioset import vggish_postprocess
-        from models.audioset import vggish_slim
+        from .models.audioset import vggish_input
+        from .models.audioset import vggish_params
+        from .models.audioset import vggish_postprocess
+        from .models.audioset import vggish_slim
 
         if embedding_checkpoint==None:
             embedding_checkpoint=self.embedding_checkpoint,
@@ -369,7 +369,7 @@ class FC_embed():
         if classifier_model_path==None:
             classifier_model_path=self.classifier_model_path
         # Initialize the Audioset classification model
-        from models.FCmodel.mlp_pytorch import MlpNet
+        from .models.FCmodel.mlp_pytorch import MlpNet
 
         self.classifier_model = MlpNet()
         self.classifier_model.load_state_dict(torch.load(self.classifier_model_path))

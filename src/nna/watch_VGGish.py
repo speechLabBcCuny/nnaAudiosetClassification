@@ -1,12 +1,12 @@
 #### when this code is run, it runns VGG on files from PRE_PROCESSED_queue
 
-from models_api import VggishModelWrapper
+from .models_api import VggishModelWrapper
 import tensorflow as tf
 
-from params import PRE_PROCESSED_queue,VGGISH_processing_queue,VGGISH_EMBEDDINGS_queue
+from .params import PRE_PROCESSED_queue,VGGISH_processing_queue,VGGISH_EMBEDDINGS_queue
 
-import pre_process_func
-from pre_process_func import read_queue
+import .pre_process_func
+from .pre_process_func import read_queue
 
 import random
 import csv

@@ -384,8 +384,7 @@ def get_audio(sorted_filtered,start_t,end_t,display_flag=True,save=True,file_nam
         total_seconds+=excerpt_length
 
 def save_audiofile(mp3_file_path,file_extension,file_name,start_seconds,end_seconds,tmpfolder):
-    from labeling_utils import ffmpeg_split_mp3
-
+    from .labeling_utils import ffmpeg_split_mp3
     # if end_seconds bigger than file, ffmpeg ignores it, if both out of order than output is emtpy
     ffmpeg_split_mp3(mp3_file_path,start_seconds,end_seconds,tmpfolder=tmpfolder)
 

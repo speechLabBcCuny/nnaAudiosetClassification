@@ -9,7 +9,7 @@ from matplotlib import pyplot
 
 from datetime import datetime,timedelta
 
-from fileUtils import standardPathStyle,list_files
+from .fileUtils import standardPathStyle,list_files
 
 
 #https://stackoverflow.com/questions/30079590/use-matplotlib-color-map-for-color-cycle

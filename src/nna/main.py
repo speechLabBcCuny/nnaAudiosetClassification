@@ -10,17 +10,17 @@ import sys
 import numpy as np
 
 sys.path.insert(0, './audioset')
-import vggish_slim
-import vggish_params
-import vggish_input
-import vggish_postprocess
+import .vggish_slim
+import .vggish_params
+import .vggish_input
+import .vggish_postprocess
 # sp = subprocess.run(["conda","run","-n","speechEnv","python", "test_env.py"],stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 # print(sp.stdout)
 
 #async
-from params import INPUT_DIR_PARENT,OUTPUT_DIR
-from params import disk_usage,disk_space,memory_usage,ram_memory
-from models_api import VggishModelWrapper
+from .params import INPUT_DIR_PARENT,OUTPUT_DIR
+from .params import disk_usage,disk_space,memory_usage,ram_memory
+from .models_api import VggishModelWrapper
 
 
 assert disk_usage<=disk_space, "not enough disk space"

@@ -9,21 +9,21 @@ from subprocess import Popen, PIPE
 
 
 # sys.path.insert(0, './models/audioset')
-from models.audioset.vggish_params import EXAMPLE_HOP_SECONDS
-from models.audioset import vggish_input
+from .models.audioset.vggish_params import EXAMPLE_HOP_SECONDS
+from .models.audioset import vggish_input
 # import vggish_postprocess
 
 import shutil
 
 import numpy as np
 import subprocess
-from params import EXCERPT_LENGTH,INPUT_DIR_PARENT,OUTPUT_DIR
-from params import PRE_PROCESSED_queue,PRE_PROCESSING_queue,VGGISH_processing_queue
-from params import VGGISH_EMBEDDINGS_queue,cpu_count,LOGS_FILE
+from .params import EXCERPT_LENGTH,INPUT_DIR_PARENT,OUTPUT_DIR
+from .params import PRE_PROCESSED_queue,PRE_PROCESSING_queue,VGGISH_processing_queue
+from .params import VGGISH_EMBEDDINGS_queue,cpu_count,LOGS_FILE
 import math
 import csv
 
-from fileUtils import save_to_csv
+from .fileUtils import save_to_csv
 
 
 
@@ -395,7 +395,7 @@ def parallel_pre_process(input_path_list,
             k=f.write(line)
 
     # # #DO NOT put new line python code
-    python_code=("from pre_process_func import pre_process_big_file;"
+    python_code=("from .pre_process_func import pre_process_big_file;"
                 + "pre_process_big_file('{}'.split('\t')[0],"#{} for GNU parallel
                 + "output_dir='{}'.split('\t')[1],"
                 + "segment_len='{}')".format(segment_len))

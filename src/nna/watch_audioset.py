@@ -5,10 +5,10 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 from models_api import AudioSet
 import tensorflow as tf
 
-from params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
+from .params import VGGISH_EMBEDDINGS_queue,Audioset_processing_queue,Audioset_output_queue
 
-import pre_process_func
-from pre_process_func import read_queue
+import .pre_process_func
+from .pre_process_func import read_queue
 
 import random
 import csv
