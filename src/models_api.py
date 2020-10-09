@@ -474,7 +474,8 @@ class classicML():
     def __init__(self,
                 classifier_model_path="assets/mlp_models/bird_FC_089valid_20191122-131739.pth",
                 model_loaded=True,
-                vggish_model=None):
+                vggish_model=None,
+                predictProbFlag=False):
 
         from sklearn.neural_network import MLPClassifier
         from sklearn.gaussian_process import GaussianProcessClassifier
@@ -488,6 +489,8 @@ class classicML():
         self.model_loaded = model_loaded
         # self.sess_config = sess_config
         self.vggish_model=vggish_model
+        self.predictProbFlag=predictProbFlag
+
         output_tuple=self.classifier_model_path.split("/")[-1].split("_")
         tag,classifierName,embed_type,map_reduce_type,timestampStr=output_tuple
         self.tag=tag
@@ -520,7 +523,11 @@ class classicML():
         def many2one_predict(X,clf):
             if X.size==0:
                 return X
-            res=clf.predict(X)
+            if self.predictProbFlag:
+                res=clf.predict_proba(X)
+                res=res[:,1:]
+            else:
+                res=clf.predict(X)
             res=np.append(res,[0]*(-res.size%10)) if res.size%10!=0 else res
             res=res.reshape(-1,10)
             res=np.max(res,axis=1)
@@ -548,7 +555,11 @@ class classicML():
             else:
                 X=X
             if X.size!=0:
-                res=clf.predict(X)
+                if self.predictProbFlag:
+                    res=clf.predict_proba(X)
+                    res=res[:,1:]
+                else:
+                    res=clf.predict(X)
                 return res
             else:
                 return X
@@ -562,7 +573,7 @@ class classicML():
         return y_pred
 
 
-    def classify_file(self,pre_processed_npy_file,ModelName="_NameOfTheModel"):
+    def classify_file(self,pre_processed_npy_file,ModelName="_NameOfTheModel",saveAsFile=False):
         # """
         # Calls audioset.classify_embeddings_batch per file from vgg_npy_files.
         # Saves classification scores into a file.
@@ -603,13 +614,14 @@ class classicML():
             return audioset_file_path
 
         classified=self.classify_embeddings(raw_embeddings)
-
-        Path(audioset_folder).mkdir(parents=True, exist_ok=True)
-        np.save(audioset_file_path,classified)
-
-        # do not delete original vgg file
-        # npy_file.unlink()
-        return audioset_file_path
+        if saveAsFile==True:
+            Path(audioset_folder).mkdir(parents=True, exist_ok=True)
+            np.save(audioset_file_path,classified)
+            # do not delete original vgg file
+            # npy_file.unlink()
+            return audioset_file_path
+        else:
+            return classified
 
 
 
