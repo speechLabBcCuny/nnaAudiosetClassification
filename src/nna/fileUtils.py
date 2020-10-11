@@ -36,7 +36,7 @@ def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
 def npy2originalFile(thePath,inputPath,outputPath,file_properties_df,
                      subDirectoryAddon=None,fileNameAddon=None):
 #     thePath.parents[parentDistance]
-    relative2Main=thePath.relative_to(parentPath)
+    relative2Main=thePath.relative_to(outputPath)
     fileName=relative2Main.parents[0].stem
 
     # find possible files in the file properties
