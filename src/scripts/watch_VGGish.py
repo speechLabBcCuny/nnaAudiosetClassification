@@ -1,12 +1,12 @@
 #### when this code is run, it runns VGG on files from PRE_PROCESSED_queue
 
-from .models_api import VggishModelWrapper
+from nna.models_api import VggishModelWrapper
 import tensorflow as tf
 
-from .params import PRE_PROCESSED_queue,VGGISH_processing_queue,VGGISH_EMBEDDINGS_queue
+from nna.params import PRE_PROCESSED_queue,VGGISH_processing_queue,VGGISH_EMBEDDINGS_queue
 
-import .pre_process_func
-from .pre_process_func import read_queue
+from nna import pre_process_func
+from nna.pre_process_func import read_queue
 
 import random
 import csv
@@ -21,8 +21,12 @@ tf.reset_default_graph()
 config = tf.ConfigProto()
 config.gpu_options.visible_device_list = str(GPU_INDEX)
 config.gpu_options.allow_growth = True
+VGGish_embedding_checkpoint="/home/enis/projects/nna/src/nna/assets/vggish_model.ckpt"
+pca_params="/home/enis/projects/nna/src/nna/assets/vggish_pca_params.npz"
 
-vgg = VggishModelWrapper(sess_config=config,model_loaded=True)
+vgg = VggishModelWrapper(embedding_checkpoint=VGGish_embedding_checkpoint, #MODEL
+                            pca_params= pca_params,
+                            sess_config=config,model_loaded=True)
 
 
 while True:

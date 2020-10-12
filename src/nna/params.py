@@ -16,7 +16,7 @@ LABELS="assets/class_labels_indices.csv"
     # output will be saved to  Path(output_dir) / "d/sound.npy"
 INPUT_DIR_PARENT = "/tank/data/nna/real/"
 OUTPUT_DIR = "/scratch/enis/data/nna/real/"
-INPUT_LIST = "/home/enis/projects/nna/data/ExperimentRunV6.txt"
+INPUT_LIST = "/home/enis/projects/nna/data/ExperimentRunV7_20191012.txt"
 
 
 LOGS_FOLDER="./job_logs/"

@@ -108,9 +108,10 @@ def divide_mp3(mp3_file_path,segments_folder,segment_len="01:00:00"):
     # -map 0 map all streams from input to output.
     file_extension=str(Path(mp3_file_path).suffix)
     # print(file_extension)
-    command_list=['ffmpeg','-y','-i',str(mp3_file_path),"-c","copy","-map","0",
-                                "-segment_time", segment_len, "-f", "segment",
-                                str(segments_folder)+"/output%03d"+file_extension]
+    command_list=['conda','run','-n','speechEnv',
+                'ffmpeg','-y','-i',str(mp3_file_path),"-c","copy","-map","0",
+                "-segment_time", segment_len, "-f", "segment",
+                str(segments_folder)+"/output%03d"+file_extension]
     # print(command_list)
     sp = subprocess.run(command_list,
                             stdout=subprocess.DEVNULL,
@@ -156,7 +157,7 @@ def load_flac(input_file_path):
     Returns:
         A tuple (wav_data, sampling_rate)
     """
-    wav_data, sr = sf.read(input_file_path,dtype='int16')
+    wav_data, sr = sf.read(str(input_file_path),dtype='int16')
     # print("wac_dat",wav_data.shape)
     return wav_data,sr
 
@@ -322,7 +323,7 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
 
     # divide files ! should end with "/"
     segments_folder = Path(output_dir) / (mp3_file_path.stem + "_segments/")
-    pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed")
+    pre_processed_dir = Path(output_dir) / (mp3_file_path.stem + "_preprocessed/")
 
     # we cannot do that because maybe process is stopped while creating segments
     # we do not now total segments from beginning since we do not know how long the file is
@@ -345,8 +346,9 @@ def pre_process_big_file(mp3_file_path,output_dir="./",segment_len="01:00:00"):
         ##check if VGGish already run or running this
         mp3_segment_path=segments_folder / mp3_segment
         npy_file_path = Path(pre_processed_dir) / (str(mp3_segment_path.stem) + "_preprocessed.npy")
-        npy_file_path = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
+        # npy_file_path2 = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
 
+        print(mp3_segment_path,npy_file_path)
         if (str(npy_file_path) not in files_in_vggprocessing) and  (str(npy_file_path) not in files_done_vgg):
             pre_process(mp3_segment_path,
                         output_dir=pre_processed_dir,
@@ -395,7 +397,7 @@ def parallel_pre_process(input_path_list,
             k=f.write(line)
 
     # # #DO NOT put new line python code
-    python_code=("from .pre_process_func import pre_process_big_file;"
+    python_code=("from nna.pre_process_func import pre_process_big_file;"
                 + "pre_process_big_file('{}'.split('\t')[0],"#{} for GNU parallel
                 + "output_dir='{}'.split('\t')[1],"
                 + "segment_len='{}')".format(segment_len))

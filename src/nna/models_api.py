@@ -13,7 +13,7 @@ import sys
 # sys.path.insert(0, './models/audioset')
 
 from .params import *
-import .pre_process_func
+from . import pre_process_func
 
 from .params import PRE_PROCESSED_queue,VGGISH_EMBEDDINGS_queue
 from .params import EXCERPT_LENGTH
