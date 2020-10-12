@@ -34,25 +34,38 @@ def standardPathStyle(parentPath,row,subDirectoryAddon=None,fileNameAddon=None):
     return src
 
 def npy2originalFile(thePath,inputPath,outputPath,file_properties_df,
-                     subDirectoryAddon=None,fileNameAddon=None):
+                     subDirectoryAddon=None,fileNameAddon=None,debug=0):
 #     thePath.parents[parentDistance]
+    if debug>0: print("func: npy2originalFile, inputs:",thePath,inputPath,
+                     outputPath,"file_properties_df")
     relative2Main=thePath.relative_to(outputPath)
     fileName=relative2Main.parents[0].stem
 
     # find possible files in the file properties
     region=relative2Main.parts[0]
     locationId=relative2Main.parts[1]
-    year=relative2Main.parts[2]
+    # here [1:3] does not work for 0813_091810_embeddings025.npy
+    # [-3:-1] works for both S4A10327_20190531_060000_embeddings000.npy
+    timestamp = "_".join(fileName.split("_")[-3:-1])
+    yearFileName = timestamp.split("_")[0][0:4]
+    yearFolder = relative2Main.parts[2]
+    if yearFileName!=yearFolder and (region!="stinchcomb" and locationId!="20-Umiat"):
+        print("ERROR File is in the wrong year folder ",thePath)
+    if region=="stinchcomb" and locationId=="20-Umiat":
+        year = yearFileName
+    else:
+        year = yearFolder
     isRegion=file_properties_df.region==region
     islocationID=file_properties_df.locationId==locationId
     isYear=file_properties_df.year==year
+
     truthTable=isRegion &  islocationID &  isYear
     filteredProperties=file_properties_df[truthTable]
 
-    timestamp="_".join(fileName.split("_")[1:3])
     for row in filteredProperties.iterrows():
         if timestamp in str(row[0]):
             return row[0]
+    if debug>0: print(timestamp,filteredProperties)
     return -1
 
 
