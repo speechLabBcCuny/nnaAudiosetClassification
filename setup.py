@@ -11,3 +11,7 @@ setup(
     author_email='me@enisberk.com',
     description='NNA project tools'
 )
+
+install_requires=[
+   'ffmpeg>=4.3.1',
+]

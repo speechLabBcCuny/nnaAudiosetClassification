@@ -69,18 +69,7 @@ def npy2originalFile(thePath,inputPath,outputPath,file_properties_df,
     return -1
 
 
-def get_labeled_exif(image_path):
-    img = Image.open(image_path)
-    img_exif = img.getexif()
-    exifData = {}
 
-    if img_exif is None:
-        print("Sorry, image has no exif data.")
-    else:
-        for tag, value in img_exif.items():
-            decodedTag = ExifTags.TAGS.get(tag, tag)
-            exifData[decodedTag] = value
-    return exifData
 
 
 
@@ -152,15 +141,15 @@ def read_file_properties(mp3_files_path_list):
 
 # TODO ,work with relative paths not absolute IMPORTANT fix that
 # then update
-def read_file_properties_v2(mp3_files_path_list):
+def read_file_properties_v2(mp3_files_path_list,debug=0):
     if type(mp3_files_path_list) is str:
+        if debug>0:print("using txt file at {}".format(mp3_files_path_list))
         with open(str(mp3_files_path_list)) as f:
             lines=f.readlines()
             mp3_files_path_list=[line.strip() for line in lines]
 
-    exceptions=[]
-    file_properties={}
-    for apath in mp3_files_path_list:
+    def inner_loop(apath,exceptions):
+        if debug>0:print(apath)
         apath=Path(apath)
         #usual ones
         if len(apath.parents)==8:
@@ -168,8 +157,9 @@ def read_file_properties_v2(mp3_files_path_list):
 
             recorderId_startDateTime=recorderId_startDateTime.split("_")
             recorderId=recorderId_startDateTime[0]
-
+            if debug>0: print(recorderId_startDateTime)
             date=recorderId_startDateTime[1]
+            if debug>0: print(date)
             year,month,day=date[0:4],date[4:6],date[6:8]
 
             hour_min_sec=recorderId_startDateTime[2]
@@ -189,16 +179,35 @@ def read_file_properties_v2(mp3_files_path_list):
         else:
             exceptions.append(apath)
 
+    exceptions=[]
+    file_properties={}
+    for apath in mp3_files_path_list:
+        try:
+            inner_loop(apath,exceptions)
+        except:
+            exceptions.append(apath)
+
+
     return file_properties,exceptions
 
 
 # example usage in ../notebooks/Labeling/save_file_properties.ipynb
 def getLength(input_video):
-    cmd=['ffprobe', '-i', '{}'.format(input_video), '-show_entries' ,'format=duration', '-v', 'quiet' ]
+    input_video = str(input_video)
+    ffprobe_path = '/scratch/enis/conda/envs/speechEnv/bin/ffprobe'
+    cmd=[]
+    cmd.extend( [ffprobe_path, '-i', '{}'.format(input_video), '-show_entries' ,'format=duration', '-v', 'quiet' ])
     result = subprocess.Popen(cmd, stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
     output = result.communicate(b'\n')
-    return output[0].decode('ascii').split("\n")[1].split("=")[1]
-
+    output = [i.decode('ascii') for i in output]
+    if output[0]=="" or output[0]== "N/A":
+        length = -1
+        print("ERROR file is too short {}".format(input_video))
+        print("command run with ERROR: {}".format(cmd))
+    else:
+        length = output[0].split("\n")[1].split("=")[1]
+    length = float(length)
+    return length
 
 
 def list_files(search_path="/search_path/",ignore_folders=None,filename="*.*"):
@@ -521,3 +530,39 @@ def findPhoto(location,timestamp,imgOnlyDate,buffer=datetime.timedelta(seconds=1
         print(rightDistance)
         return right
     return (-1,-1)
+
+
+
+def QuickQuery_audio(location,start_time,length=30):
+
+    end_time=None  # or datetime object
+
+    #how to name the file
+    file_name="original2"
+
+    # if there is no recording in given timestamp, it searches before and after,
+    # buffer is how far to look in seconds
+    buffer=1800
+
+    # where to save audio files
+    tmp_folder="/home/enis/projects/nna/data/tmp/"
+
+    output=query_audio(location,start_time,end_time,length,buffer,file_properties_df,
+                       file_name,display_flag=True,save=True,tmp_folder=tmp_folder)
+    if len(output.index)==0:
+        print("No Audio")
+    else:
+        print(output.iloc[0].timestamp,"---",output.iloc[0].durationSec)
+
+    if type(start_time) == str:
+        timestamp = datetime.datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
+    else:
+        timestamp = start_time
+    buffer=datetime.timedelta(minutes=5)
+
+    imgTime,imgPath=findPhoto(location,timestamp,imgOnlyDate,buffer=buffer)
+
+    if imgTime!=-1:
+        display(Image(imgPath,width=600))
+    dataPoint="'{},{},{},{}',".format(location,start_time,length,imgPath)
+    print(dataPoint)
