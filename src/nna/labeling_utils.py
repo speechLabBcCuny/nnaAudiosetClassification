@@ -34,8 +34,10 @@ def ffmpeg_split_mp3(mp3_file_path,ss,to,tmpfolder="./tmp/",):
     # -map 0 map all streams from input to output.
     file_extension=str(Path(mp3_file_path).suffix)
     # print(file_extension)
+    # TODO make this a global variable
+    ffmpeg_path = '/scratch/enis/conda/envs/speechEnv/bin/ffmpeg'
     out_file_path=str(tmpfolder / ("output"+file_extension))
-    command_list=['ffmpeg','-y','-i',"{}".format(str(mp3_file_path)),
+    command_list=[ffmpeg_path,'-y','-i',"{}".format(str(mp3_file_path)),
                                   "-ss",str(ss),"-to", str(to),
                                   "-map","0","-c","copy",
                                   out_file_path]
