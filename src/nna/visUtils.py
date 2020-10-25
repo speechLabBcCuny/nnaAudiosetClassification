@@ -47,7 +47,7 @@ def createTimeIndex(selected_areas,file_properties_df,freq):
     for i,area in enumerate(selected_areas):
         # get timestamp values from file_properties
         area_filtered=file_properties_df[file_properties_df.site_id==area]
-        if area_filtered.size>0:
+        if len(area_filtered.index)>0:
             start=area_filtered.iloc[0]["timestamp"]
             end=area_filtered.iloc[-1]["timestamp"]
 
