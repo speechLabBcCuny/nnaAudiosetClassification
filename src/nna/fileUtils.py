@@ -332,8 +332,10 @@ def find_filesfunc_inputs(location,start_time,end_time,length,buffer,file_proper
     except:
         return None
 
+# from nna.fileUtils import find_filesv2
 def find_filesv2(location,start_time,end_time,length,buffer,file_properties_df):
     import pandas as pd
+#     print(start_time,end_time)
     start_time,end_time,loc_key,start_time_org,end_time_org=find_filesfunc_inputs(location,
                                                                     start_time,end_time,length,buffer,file_properties_df)
 
@@ -343,33 +345,50 @@ def find_filesv2(location,start_time,end_time,length,buffer,file_properties_df):
 
     site_filtered = file_properties_df[file_properties_df[loc_key]==location]
 
-
     # first and last recordings from selected site
-    first,last=site_filtered["timestamp"][0],site_filtered["timestamp"][-1]
+    first,last=site_filtered["timestamp"][0],site_filtered["timestampEnd"][-1]
+#     print("first,last",first,last)
+    #######
+    #if query before all recordings
+    if first>end_time:
+        return site_filtered[0:0],start_time,end_time,start_time_org,end_time_org
+#    if query all after recordings
+    elif last<start_time:
+        return site_filtered[0:0],start_time,end_time,start_time_org,end_time_org
+#if   TODO thing about this, if we wanna keep overlapping parts !
+    elif start_time<first:
+        return site_filtered[0:0],start_time,end_time,start_time_org,end_time_org
+    elif end_time>last:
+        return site_filtered[0:0],start_time,end_time,start_time_org,end_time_org
     # make sure start or end time time are withing possible range
-    # print("start time",start_time,"first",first)
     beginning,end=max(start_time,first),min(end_time,last)
-    # print(beginning,end)
     start_file=site_filtered[site_filtered["timestamp"]<=beginning].iloc[-1:]
-
     time_site_filtered=site_filtered[site_filtered["timestamp"]>beginning]
 
     time_site_filtered=time_site_filtered[time_site_filtered["timestamp"]<end]
-
     time_site_filtered=pd.concat([time_site_filtered,start_file])
 
     # remove ones that has an end before our start
-    # print("beginning",beginning)
     time_site_filtered=time_site_filtered[time_site_filtered["timestampEnd"]>=beginning]
 
     sorted_filtered=time_site_filtered.sort_values(by=['timestamp'])
-    # print(time_site_filtered)
-#     if len(sorted_filtered.index)==0:
-#         print("No records for these times at {} ".format(location))
-#         print("Earliest {}  and latest {}".format(first,last))
 
-    return sorted_filtered,start_time,end_time,start_time_org,end_time_org
+    #if   TODO thing about this, if we wanna keep overlapping parts !
+    if len(sorted_filtered.index) > 1:
 
+        timestamps,timestampEnds = site_filtered["timestamp"],site_filtered["timestampEnd"]
+        i=0
+        while i < len(sorted_filtered.index):
+            if timestamps[i+1]!=timestampEnds[i]:
+                return site_filtered[0:0],start_time,end_time,start_time_org,end_time_org
+            i+=1
+    if len(sorted_filtered.index) ==0:
+        return sorted_filtered[0:0],start_time,end_time,start_time_org,end_time_org
+    resultfirst,resultlast=sorted_filtered["timestamp"][0],sorted_filtered["timestampEnd"][-1]
+    if resultfirst<=start_time and resultlast>=end_time:
+        return sorted_filtered,start_time,end_time,start_time_org,end_time_org
+    else:
+        return sorted_filtered[0:0],start_time,end_time,start_time_org,end_time_org
 
 
 
@@ -463,7 +482,7 @@ def query_audio(location,start_time,end_time,length,buffer,
         file_name+="_exact_"+start_time_org.strftime('%Y-%m-%d_%H:%M:%S')
         get_audio(sorted_filtered,start_time_org,end_time_org,
                   display_flag=display_flag,save=save,file_name=file_name,tmpfolder=tmp_folder)
-    print(file_name)
+    # print(file_name)
     return (sorted_filtered)
 
 
