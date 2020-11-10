@@ -8,6 +8,7 @@ from subprocess import Popen, PIPE
 import numpy as np
 
 from nna import pre_process_func
+from nna.params import LOGS_FILE
 
 TEST_DIR = Path("tests/")
 EXAMPLE_MODELS_DIR = TEST_DIR / "example_models/"
@@ -105,7 +106,8 @@ def test_load_mp3():
     assert (wav_data.shape == (26459136, 2))
     assert (sr == 44100)
 
-also tests mp3file_to_examples
+
+# also tests mp3file_to_examples
 def test_iterate_for_waveform_to_examples():
     input_file_path = "tests/data/10minutes.mp3"
     # wav_data,sr=pre_process_func.load_mp3(input_file_path)
