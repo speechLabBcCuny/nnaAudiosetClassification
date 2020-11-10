@@ -8,7 +8,7 @@ requirements = [
     'pandas==1.0.3',
     'pydub==0.23.1',
     'pillow==7.1.1',
-    'tensorflow-gpu==1.14.0',
+    'tensorflow-gpu==1.15.4',
     'numpy==1.17.2',
     'scikit-learn==0.21.3',
     'scipy==1.3.1',
