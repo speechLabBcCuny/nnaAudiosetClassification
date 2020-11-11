@@ -136,24 +136,27 @@ def run_task_save(allfiles: List[str],
     files_w_errors = []
     all_results_dict = {}
     # CALCULATE RESULTS
-    for i, audio_file in enumerate(allfiles):
-        try:
-            y, sr = load_audio(audio_file,
-                               dtype=np.int16,
-                               backend=audio_load_backend)
-            results = []
-            for clip_i in range(0, y.shape[-1] - segment_len,
-                                segment_len * sr):
-                res = get_clipping_percent(y[:, clip_i:(clip_i +
-                                                        (segment_len * sr))],
-                                           threshold=clipping_threshold)
-                results.append(res)
-            resultsnp = np.array(results)
-            all_results_dict[audio_file] = resultsnp[:]
-        except Exception as e:  # pylint: disable=W0703
-            print(i, audio_file)
-            print(e)
-            files_w_errors.append((i, audio_file, e))
+    for _, audio_file in enumerate(allfiles):
+        # try:
+        y, sr = load_audio(audio_file,
+                           dtype=np.int16,
+                           backend=audio_load_backend)
+
+        assert sr == int(sr)
+        sr = int(sr)
+        results = []
+        for clip_i in range(0, int(y.shape[-1] - segment_len),
+                            int(segment_len * sr)):
+            res = get_clipping_percent(y[:,
+                                         clip_i:(clip_i + (segment_len * sr))],
+                                       threshold=clipping_threshold)
+            results.append(res)
+        resultsnp = np.array(results)
+        all_results_dict[audio_file] = resultsnp[:]
+        # except Exception as e:  # pylint: disable=W0703
+        # print(i, audio_file)
+        # print(e)
+        # files_w_errors.append((i, audio_file, e))
     # SAVE RESULTS
     clipping_threshold_str = str(clipping_threshold)
     clipping_threshold_str = clipping_threshold_str.replace(".", ",")

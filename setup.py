@@ -16,6 +16,7 @@ requirements = [
     'matplotlib==3.1.1',
     'pydub==0.23.1',
     'pillow==7.1.1',
+    'pyyaml==5.3.1',
 ]
 
 setup(

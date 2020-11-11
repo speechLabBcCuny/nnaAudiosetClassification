@@ -1,6 +1,6 @@
 """Operations around files by using unix style path."""
 
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Sequence
 import glob
 
 import subprocess
@@ -21,11 +21,12 @@ import IPython
 import pandas as pd
 
 
-def save_to_csv(file_name: Union[str, Path], lines: List[str]) -> None:
+def save_to_csv(file_name: Union[str, Path], lines: List[Sequence]) -> None:
     """Append list of lines to a file in csv format.
     Args:
         file_name: Name of the csv file to append.
-        lines: List of strings, one per line.
+        lines: List of iterables; one iterable per line.
+               do NOT seperate items by comma yourself for csv.
     """
     file_name = Path(file_name).with_suffix(".csv")
     with open(str(file_name), mode="a") as labels_file:

@@ -2,18 +2,25 @@
 
 import pytest
 
-import pandas as pd
 from pathlib import Path
 import numpy as np
 from nna import clippingutils
 from testparams import INPUTS_OUTPUTS_PATH
-
+from testparams import SOUND_EXAMPLES
 IO_clippingutils_path = INPUTS_OUTPUTS_PATH / "clippingutils/"
+
+
+def compare_exact(first, second):
+    """Return whether two dicts of arrays are exactly equal"""
+    if first.keys() != second.keys():
+        return False
+    return all(np.array_equal(first[key], second[key]) for key in first)
+
 
 # TODO: test with flac files
 test_data_load_audio = [
     (
-        "./data/sound_examples/10seconds.mp3",
+        SOUND_EXAMPLES / "10seconds.mp3",
         np.int16,
         "pydub",
         {
@@ -24,7 +31,7 @@ test_data_load_audio = [
         },
     ),
     (
-        "./data/sound_examples/10minutes.mp3",
+        SOUND_EXAMPLES / "10minutes.mp3",
         np.int16,
         "pydub",
         {
@@ -64,12 +71,14 @@ def test_load_audio(filepath, dtype, backend, expected_stats):
 # TODO: add a example with high clipping rate
 test_data_get_clipping_percent = [
     (
-        "./data/inputs/clippingutils/10minutes.mp3_sound_array.npy",
+        IO_clippingutils_path / "get_clipping_percent" / "inputs" /
+        "10minutes.mp3_sound_array.npy",
         1,
         [1.2887797999148574e-05, 0.0],
     ),
     (
-        "./data/inputs/clippingutils/10seoncds.mp3_sound_array.npy",
+        IO_clippingutils_path / "get_clipping_percent" / "inputs" /
+        "10seoncds.mp3_sound_array.npy",
         1,
         [0.0, 0.0],
     ),
@@ -98,22 +107,22 @@ test_data_run_task_save = [
             "./data/sound_examples/10minutes.mp3",
         ],
         "test_area_v1",
-        test_run_task_save_path,
+        test_run_task_save_path / "outputs",
         1.0,  #clipping_threshold
-        10.0,  #segment_len
+        10,  #segment_len
         "pydub",
         True,
         (
             (
-                test_run_task_save_path / "outputs" / "test_area_v1_1.pkl",
+                test_run_task_save_path / "outputs" / "test_area_v1_1,0.pkl",
                 test_run_task_save_path / "outputs_expected" /
-                "test_area_v1_1.pkl",
+                "test_area_v1_1,0.pkl",
             ),
             (
                 test_run_task_save_path / "outputs" /
-                "test_area_v1_1_error.pkl",
+                "test_area_v1_1,0_error.pkl",
                 test_run_task_save_path / "outputs_expected" /
-                "test_area_v1_1_error.pkl",
+                "test_area_v1_1,0.pkl_error.pkl",
             ),
         ),
     ),
@@ -127,19 +136,25 @@ def test_run_task_save(allfiles, area_id, results_folder, clipping_threshold,
                        segment_len, audio_load_backend, save, expected):
     """test clippingutils.run_task_save using expected values.
     """
+    assert isinstance(segment_len, int)
     # sound_array = np.load(sound_array_path)
     output = clippingutils.run_task_save(allfiles, area_id, results_folder,
                                          clipping_threshold, segment_len,
                                          audio_load_backend, save)
     assert len(output) == 2
     all_results_dict, files_w_errors = output
-    assert files_w_errors is False
+    assert len(files_w_errors) == 0
     all_results_dict_expected_path = expected[0][1]
     all_results_dict_output_path = expected[0][0]
-    all_results_dict_expected = np.load(all_results_dict_expected_path)
-    all_results_dict_output = np.load(all_results_dict_output_path)
+    all_results_dict_expected = np.load(all_results_dict_expected_path,
+                                        allow_pickle=True)[()]
+    all_results_dict_output = np.load(all_results_dict_output_path,
+                                      allow_pickle=True)[()]
 
-    assert all_results_dict_output == all_results_dict
-    assert all_results_dict_expected == all_results_dict_output
+    # assert all_results_dict_output == all_results_dict
+    # assert all_results_dict_expected == all_results_dict_output
+    assert compare_exact(all_results_dict_output, all_results_dict)
+    assert compare_exact(all_results_dict_expected, all_results_dict_output)
     error_file_expected_path = expected[1][1]
     assert Path(error_file_expected_path).exists() is False
+    all_results_dict_output_path.unlink()

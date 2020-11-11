@@ -1,11 +1,89 @@
 """Tests for fileUtils.py"""
 
+from typing import List, Sequence
+
 import pytest
+import csv
 
 import pandas as pd
 from pathlib import Path
 
 from nna import fileUtils
+from testparams import INPUTS_OUTPUTS_PATH
+
+IO_fileUtils_path = INPUTS_OUTPUTS_PATH / "fileUtils"
+
+test_data_save_to_csv = [
+    (
+        (IO_fileUtils_path / "save_to_csv" / "outputs" / "test"),
+        [
+            ("V1_firstLine-FirstItem", "firstLine-SecondItem"),
+            ("V1_secondLine-FirstItem", "secondLine-SecondItem"),
+        ],
+        [
+            ["V1_firstLine-FirstItem", "firstLine-SecondItem"],
+            ["V1_secondLine-FirstItem", "secondLine-SecondItem"],
+        ],  # result should be previous lines and this one
+    ),
+    (
+        (IO_fileUtils_path / "save_to_csv" / "outputs" / "test.csv"),
+        [
+            ("V2_firstLine-FirstItem", "firstLine-SecondItem"),
+            ("V2_secondLine-FirstItem", "secondLine-SecondItem"),
+        ],
+        [
+            ["V2_firstLine-FirstItem", "firstLine-SecondItem"],
+            ["V2_secondLine-FirstItem", "secondLine-SecondItem"],
+        ],  # result should be previous lines and this one
+    ),
+    (
+        (IO_fileUtils_path / "save_to_csv" / "outputs" / "test2"),
+        [
+            ("V3_firstLine-FirstItem", "firstLine-SecondItem"),
+            ("V3_secondLine-FirstItem", "secondLine-SecondItem"),
+        ],
+        [
+            ["V3_firstLine-FirstItem", "firstLine-SecondItem"],
+            ["V3_secondLine-FirstItem", "secondLine-SecondItem"],
+        ],  # result should be previous lines and this one
+    ),
+]
+
+
+@pytest.fixture(scope="function")
+def output_folder(request):
+    # print("setup")
+    file_name, lines, expected = request.param
+    # print(file_name.exists())
+    file_name = Path(file_name).with_suffix(".csv")
+    file_name.parent.mkdir(parents=True, exist_ok=True)
+    yield (file_name, lines, expected)
+    print("teardown")
+    print(file_name)
+    file_name.unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize(
+    "output_folder",
+    test_data_save_to_csv,
+    indirect=True,
+)
+def test_save_to_csv(
+        # file_name,
+        # lines,
+        # expected,
+    output_folder):  #pylint:disable=W0621
+    file_name, lines, expected = output_folder
+    fileUtils.save_to_csv(file_name, lines)
+
+    rows: List[Sequence] = []
+    with open(file_name, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            rows.append(row)
+
+    assert expected == rows
+
 
 test_data_standard_path_style = [
     ("/folder1/folder2/",

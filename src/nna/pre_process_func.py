@@ -2,7 +2,7 @@ import os
 import math
 import csv
 
-from typing import List, Set, Dict, Tuple, Optional, Union
+from typing import Union  #List, Set, Dict, Tuple, Optional,
 
 from pydub import AudioSegment
 import soundfile as sf
@@ -31,7 +31,7 @@ from .fileUtils import save_to_csv
 def read_queue(queue_csv):
     files_in_queue = []
     if Path(queue_csv).exists():
-        with open(queue_csv, newline='') as f:
+        with open(queue_csv, newline="") as f:
             reader = csv.reader(f)
             for row in reader:
                 if row:
@@ -46,9 +46,10 @@ def rmv_folder(folder):
         print("Error: %s - %s." % (e.filename, e.strerror))
 
 
-def relative2outputdir(mp3_file_path: Union[str, Path],
-                       output_dir=OUTPUT_DIR,
-                       input_dir_parent=INPUT_DIR_PARENT):
+def relative2outputdir(
+        mp3_file_path: Union[str, Path],
+        output_dir: Union[str, Path] = OUTPUT_DIR,
+        input_dir_parent: Union[str, Path] = INPUT_DIR_PARENT) -> Path:
     """Returns output directory for a given mp3 file.
 
   Given absolute mp3 file path, finds relative path to INPUT_DIR_PARENT
@@ -68,14 +69,14 @@ def relative2outputdir(mp3_file_path: Union[str, Path],
     relative_path = mp3_file_path.relative_to(input_dir_parent).parent
     # absolute_output_dir= '/output/directory/18 Fish Creek 4/July 2016/
     absolute_output_dir = output_dir / relative_path
-    return (absolute_output_dir)
+    return absolute_output_dir
 
 
 # create directories given set of file paths
 
 
-def ig_f(dir, files):
-    return [f for f in files if os.path.isfile(os.path.join(dir, f))]
+def ig_f(directory, files):
+    return [f for f in files if os.path.isfile(os.path.join(directory, f))]
 
 
 def preb_names(mp3_file_path,
@@ -123,28 +124,30 @@ def divide_mp3(mp3_file_path,
     #     Overwrite output files without asking
     # -i url (input)
     #     input file url
-    # -c[:stream_specifier] copy (output only) to indicate that the stream is not to be re-encoded.
+    # -c[:stream_specifier] copy (output only) to indicate that
+    #       the stream is not to be re-encoded.
     # -map 0 map all streams from input to output.
     file_extension = str(Path(mp3_file_path).suffix)
     # print(file_extension)
     command_list = [
-        'conda', 'run', '-n', conda_env_name, 'ffmpeg', '-y', '-i',
+        "conda", "run", "-n", conda_env_name, "ffmpeg", "-y", "-i",
         str(mp3_file_path), "-c", "copy", "-map", "0", "-segment_time",
         segment_len, "-f", "segment",
         str(segments_folder) + "/output%03d" + file_extension
     ]
     # print(command_list)
-    sp = subprocess.run(command_list, capture_output=True)
-    if sp.returncode != 0:
-        print('Output: ' + sp.stdout.decode('ascii'))
-        print('Error: ' + sp.stderr.decode('ascii'))
+    # sp = subprocess.run(command_list, capture_output=True )
+    process = Popen(command_list, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print("Output: " + stdout.decode("ascii"))
+        print("Error: " + stderr.decode("ascii"))
+        raise Exception(stderr.decode("ascii"))
 
     mp3_segments = os.listdir(segments_folder)
 
     return mp3_segments
 
-    # process = Popen(command_list, stdout=PIPE, stderr=PIPE)
-    # stdout, stderr = process.communicate()
     #
 
     # sys.stdout.flush()
@@ -189,7 +192,7 @@ def load_flac(input_file_path):
   Returns:
       A tuple (wav_data, sampling_rate)
   """
-    wav_data, sr = sf.read(str(input_file_path), dtype='int16')
+    wav_data, sr = sf.read(str(input_file_path), dtype="int16")
     # print("wac_dat",wav_data.shape)
     return wav_data, sr
 
@@ -212,7 +215,7 @@ def cal_sample_size(wav_data, sr):
       Returns:
           [int,int,int]
   """
-    assert (EXAMPLE_HOP_SECONDS == 0.96)
+    assert EXAMPLE_HOP_SECONDS == 0.96
 
     sampling_ratio = 16000 / sr
     lower_limit = ((sr * 0.96 * 1) + (240)) / sampling_ratio
@@ -236,8 +239,8 @@ def cal_sample_size(wav_data, sr):
 def iterate_for_waveform_to_examples(wav_data, sr):
     """Wrapper for waveform_to_examples from models/audioset/vggish_input.py
 
-      Iterate over data with 10 seconds batches, so waveform_to_examples produces
-      stable results (equal size)
+      Iterate over data with 10 seconds batches, so waveform_to_examples
+      produces stable results (equal size)
       read **(16/06/2019)** at Project_logs.md for explanations.
 
       Args:
@@ -249,8 +252,10 @@ def iterate_for_waveform_to_examples(wav_data, sr):
   """
     sample_size, offset, remainder_wav_data, lower_limit = cal_sample_size(
         wav_data, sr)
-    # in this loop wav_data jumps offset elements and sound jumps EXCERPT_LENGTH*2
-    # because offset number of raw data turns into EXCERPT_LENGTH*2 pre-processed
+    # in this loop wav_data jumps offset elements and
+    # sound jumps EXCERPT_LENGTH*2
+    # because offset number of raw data turns into
+    # EXCERPT_LENGTH*2 pre-processed
     sound = np.zeros((sample_size, 96, 64), dtype=np.float32)
     count = 0
     for i in range(0, len(wav_data), offset):
@@ -270,14 +275,14 @@ def iterate_for_waveform_to_examples(wav_data, sr):
 
 
 def mp3file_to_examples(mp3_file_path):
-    """Wrapper around iterate_for_waveform_to_examples() for a common mp3 format.
+    """Wrapper around iterate_for_waveform_to_examples() for mp3 format.
 
-  Args:
-      mp3_file_path (str/Path): String path to a file. The file is assumed to contain
-          mp3 audio data.
+        Args:
+          mp3_file_path (str/Path): String path to a file.
+                                    The file is assumed to contain mp3 audio data.
 
-  Returns:
-      See iterate_for_waveform_to_examples.
+        Returns:
+          See iterate_for_waveform_to_examples.
   """
     extension = Path(mp3_file_path).suffix
 
@@ -291,14 +296,14 @@ def mp3file_to_examples(mp3_file_path):
     sys.stdout.flush()
     sys.stderr.flush()
 
-    assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+    assert wav_data.dtype == np.int16, "Bad sample type: %r" % wav_data.dtype
     samples = wav_data / 32768.0  # Convert to [-1.0, +1.0]
     #######iterate over 10 seconds#########
     sound = iterate_for_waveform_to_examples(samples, sr)
     return sound
 
 
-def pre_process(mp3_file_path, output_dir="./", saveAsFile=False):
+def pre_process(mp3_file_path, output_dir="./", save_as_file=False):
     """Wrapper for mp3file_to_examples, handles input and output logic
 
       Saves as a file called mp3_file_name_preprocessed.npy in output_dir
@@ -307,7 +312,7 @@ def pre_process(mp3_file_path, output_dir="./", saveAsFile=False):
       Args:
           mp3_file_path (numpy.array): audio data in wav format
           output_dir (str/Path): output directory
-          saveAsFile (bool): save as file or not
+          save_as_file (bool): save as file or not
           sr (int): sampling rate of the audio
 
       Returns:
@@ -327,7 +332,7 @@ def pre_process(mp3_file_path, output_dir="./", saveAsFile=False):
     sound = mp3file_to_examples(mp3_file_path)
     sound = sound.astype(np.float32)
 
-    if saveAsFile:
+    if save_as_file:
         np.save(npy_file_path, sound)
         save_to_csv(PRE_PROCESSED_queue, [[str(npy_file_path)]])
 
@@ -339,11 +344,12 @@ def pre_process(mp3_file_path, output_dir="./", saveAsFile=False):
 
 def pre_process_big_file(mp3_file_path,
                          output_dir="./",
-                         segment_len="01:00:00"):
+                         segment_len="01:00:00",
+                         conda_env_name="speechEnv"):
     """Divides into segments and calls pre_process on each segment.
 
   This function divides mp3 files into segments (default: 1 hour)
-  Calls pre_process on each segment with saveAsFile=True
+  Calls pre_process on each segment with save_as_file=True
   saves each segment file into output_dir/mp3_file_name_preprocessed
   If resulting .npy files exists, does not re-compute them.
 
@@ -377,7 +383,8 @@ def pre_process_big_file(mp3_file_path,
     #     # files are
     mp3_segments = divide_mp3(mp3_file_path,
                               segments_folder,
-                              segment_len=segment_len)
+                              segment_len=segment_len,
+                              conda_env_name=conda_env_name)
     # pre-process each segment
 
     if not pre_processed_dir.exists():
@@ -390,7 +397,8 @@ def pre_process_big_file(mp3_file_path,
         mp3_segment_path = segments_folder / mp3_segment
         npy_file_path = Path(pre_processed_dir) / \
             (str(mp3_segment_path.stem) + "_preprocessed.npy")
-        # npy_file_path2 = Path(output_dir) / (str(mp3_file_path.stem) + "_preprocessed.npy")
+        # npy_file_path2 = Path(output_dir) / (str(mp3_file_path.stem) +
+        # "_preprocessed.npy")
 
         print(mp3_segment_path, npy_file_path)
         if (str(npy_file_path)
@@ -398,7 +406,7 @@ def pre_process_big_file(mp3_file_path,
                                                     not in files_done_vgg):
             pre_process(mp3_segment_path,
                         output_dir=pre_processed_dir,
-                        saveAsFile=True)
+                        save_as_file=True)
 
         mp3_segment_path.unlink()
     rmv_folder(segments_folder)
@@ -424,7 +432,7 @@ def parallel_pre_process(input_path_list,
   Returns:
       None
   """
-
+    del logs_file_path
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     uuid_time = strftime("%Y-%m-%d_%H:%M:%S", gmtime())
@@ -433,21 +441,23 @@ def parallel_pre_process(input_path_list,
     tmp_input_file = Path(tmp_input_file)
     tmp_input_file.touch(exist_ok=True)
     # write mp3 file path  and relative output path to a file
-    with open(tmp_input_file, 'w') as f:
+    with open(tmp_input_file, "w") as f:
         for mp3_file_path in input_path_list:
             print(mp3_file_path)
             relative2output_dir = relative2outputdir(mp3_file_path, output_dir,
                                                      input_dir_parent)
             line = "{}\t{}\n".format(mp3_file_path, relative2output_dir)
-            k = f.write(line)
+            f.write(line)
 
     # # #DO NOT put new line python code
-    python_code = (
+    python_code: str = (
         "from nna.pre_process_func import pre_process_big_file;"
         # {} for GNU parallel
         + "pre_process_big_file('{}'.split('\t')[0]," +
         "output_dir='{}'.split('\t')[1]," +
-        "segment_len='{}')".format(segment_len))
+        f"conda_env_name='{conda_env_name}'," +
+        f"segment_len='{segment_len}')")
+    assert isinstance(python_code, str)
 
     command_list = []
     # command_text=""
@@ -456,15 +466,19 @@ def parallel_pre_process(input_path_list,
     command_list.extend(["parallel", "-P", str(cpu_count), "-n", "1", "-q"])
 
     # command_list.extend(["echo","{}"])
-    # command_list.extend(["python", "call2func.py", "{1}", "{2}","2>>","logs.txt"])
+    # command_list.extend(["python", "call2func.py",
+    # "{1}", "{2}","2>>","logs.txt"])
     command_list.extend(["python", "-c", python_code])
+    print(command_list)
     process = Popen(command_list, stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
 
     if process.returncode != 0:
-        print('Output: ' + stdout.decode('ascii'))
-        print('Error: ' + stderr.decode('ascii'))
-    sys.stdout.flush()
-    sys.stderr.flush()
+        print("Output: " + stdout.decode("ascii"))
+        print("Error: " + stderr.decode("ascii"))
+        raise Exception(subprocess.CalledProcessError)
+    else:
+        print("Error: " + stderr.decode("ascii"))
+        print("Output: " + stdout.decode("ascii"))
 
     tmp_input_file.unlink()
