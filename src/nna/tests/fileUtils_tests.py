@@ -104,12 +104,11 @@ test_data_standard_path_style = [
          "year": "2019",
          "region": "Anwr"
      }), "", "", Path("/folder1/folder2/Anwr/11/2019/")),
-    ("folder1",
-     pd.Series({
-         "locationId": "11",
-         "year": "2019",
-         "region": "Anwr"
-     }), "", "", Path("folder1/Anwr/11/2019/")),
+    ("folder1", pd.Series({
+        "locationId": "11",
+        "year": "2019",
+        "region": "Anwr"
+    }), "", "", Path("folder1/Anwr/11/2019/")),
     ("/folder1/folder2/",
      pd.Series({
          "locationId": 11,
@@ -146,6 +145,11 @@ test_data_standard_path_style = [
                name="S4A10292_20190615_094602.wav"), "_XXX", "",
      Path("folder1/folder2/Prudhoe/11/" +
           "2019/S4A10292_20190615_094602_XXX/")),
+    ("/folder1/folder2/", {
+        "locationId": 11,
+        "year": 2019,
+        "region": "Anwr",
+    }, "", "", Path("/folder1/folder2/Anwr/11/2019/")),
 ]
 
 
@@ -231,8 +235,7 @@ test_data_parse_file_path = [
 ]
 
 
-@pytest.mark.parametrize("file_path, debug,expected",
-                         test_data_parse_file_path)
+@pytest.mark.parametrize("file_path, debug,expected", test_data_parse_file_path)
 def test_parse_file_path(file_path, debug, expected):
     output = fileUtils.parse_file_path(file_path, debug=debug)
 
@@ -251,8 +254,7 @@ test_data_match_path_info2row = [
         "year": "2019",
     }, prudhoeAndAnwr4photoExp_dataV1, 0,
      prudhoeAndAnwr4photoExp_dataV1.loc[Path(
-         "/tank/data/nna/real/prudhoe/12/2019/S4A10274_20190811_103000.flac")]
-     ),
+         "/tank/data/nna/real/prudhoe/12/2019/S4A10274_20190811_103000.flac")]),
     ({
         "timestamp": "20190621_000000",
         "region": "anwr",
@@ -267,7 +269,6 @@ test_data_match_path_info2row = [
 @pytest.mark.parametrize("path_info, file_properties_df, debug,expected",
                          test_data_match_path_info2row)
 def test_match_path_info2row(path_info, file_properties_df, debug, expected):
-    output = fileUtils.match_path_info2row(path_info, file_properties_df,
-                                           debug)
+    output = fileUtils.match_path_info2row(path_info, file_properties_df, debug)
 
     assert list(output[1].items()) == list(expected.items())

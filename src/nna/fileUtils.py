@@ -1,24 +1,20 @@
 """Operations around files by using unix style path."""
 
-from typing import List, Dict, Optional, Union, Sequence
-import glob
-
-import subprocess
-from pathlib import Path
 import csv
-
 import datetime
-
+import glob
 import os
+import subprocess
 import sys
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Union
 
-from pydub import AudioSegment
-# from PIL import Image
-
-from IPython.display import display
 import IPython
-
 import pandas as pd
+from IPython.display import display
+from pydub import AudioSegment
+
+# from PIL import Image
 
 
 def save_to_csv(file_name: Union[str, Path], lines: List[Sequence]) -> None:
@@ -40,7 +36,7 @@ def save_to_csv(file_name: Union[str, Path], lines: List[Sequence]) -> None:
 
 def standard_path_style(
         parent_path: Union[str, Path],
-        row: pd.Series,
+        row: Union[pd.Series, Dict],
         sub_directory_addon: Optional[str] = "",
         file_name_addon: Optional[str] = "") -> Union[Path, None]:
     """Generate a path for a file given sub directory and file.
@@ -57,7 +53,8 @@ def standard_path_style(
 
     Args:
         parent_Path: parent path for the generated path.
-        row: Pandas Series object with properties of region,locationId,year
+        row: Pandas Series object or dict with properties of
+                    region,locationId,year
         sub_Directory_Addon: (Optional) id for the output folder ex-> "_XXX"
         file_name_addon:(Optional)  id for the output file ex-> "_XXX"
     Returns:
@@ -73,8 +70,7 @@ def standard_path_style(
     if sub_directory_addon or file_name_addon:
         file_name = Path(row.name)
     if sub_directory_addon:
-        generated_path = generated_path / (file_name.stem +
-                                           sub_directory_addon)
+        generated_path = generated_path / (file_name.stem + sub_directory_addon)
     if file_name_addon:
         generated_path = generated_path / (file_name.stem + file_name_addon)
     return generated_path
@@ -129,8 +125,8 @@ def parse_file_path(file_path: Union[str, Path], debug: int = 0) -> Dict:
     output_index: Union[int, None] = None
     #OUTPUT_HAS_PARTS = True # such as _XXX001.py
     if len(file_name_parts) > 3:
-        output_index = int("".join(c for c in file_name_parts[-1]
-                                   if c.isdigit()))
+        output_index = int("".join(
+            c for c in file_name_parts[-1] if c.isdigit()))
         # here [1:3] does not work for 0813_091810_embeddings025.npy
         # [-3:-1] works for both S4A10327_20190531_060000_embeddings000.npy
         timestamp = "_".join(file_name_parts[-3:-1])
@@ -140,8 +136,8 @@ def parse_file_path(file_path: Union[str, Path], debug: int = 0) -> Dict:
     yearfile_name = timestamp.split("_")[0][0:4]
 
     # Special Case
-    if yearfile_name != year_folder and (region != "stinchcomb"
-                                         and location_id != "20-Umiat"):
+    if yearfile_name != year_folder and (region != "stinchcomb" and
+                                         location_id != "20-Umiat"):
         print("ERROR File is in the wrong year folder ", file_path)
     if region == "stinchcomb" and location_id == "20-Umiat":
         year = yearfile_name
@@ -190,7 +186,8 @@ def match_path_info2row(path_info: Dict,
                 timestamp       2019-08-11 10:30:00
                 durationSec                    4560
                 timestampEnd    2019-08-11 11:46:00
-                Name: /tank/data/nna/real/prudhoe/12/2019/S4A10274_20190811_103000.flac, dtype: object
+                Name: /tank/data/nna/real/prudhoe/12/\
+                    2019/S4A10274_20190811_103000.flac, dtype: object
     """
 
     is_region = file_properties_df.region == path_info.get("region", "")
@@ -350,7 +347,7 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
             year, month, day = date[0:4], date[4:6], date[6:8]
 
             hour_min_sec = recorderId_startDateTime[2]
-            if hour_min_sec == None:
+            if hour_min_sec is None:
                 print(apath)
             # hour = hour_min_sec[0:2]
             location_id = apath.parts[6]
@@ -385,9 +382,12 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
 
 
 # example usage in ../notebooks/Labeling/save_file_properties.ipynb
-def getLength(input_video):
+def getLength(
+    input_video,
+    ffprobe_path="/scratch/enis/conda/envs/speechEnv/bin/ffprobe",
+):
     input_video = str(input_video)
-    ffprobe_path = "/scratch/enis/conda/envs/speechEnv/bin/ffprobe"
+
     cmd = []
     cmd.extend([
         ffprobe_path, "-i", "{}".format(input_video), "-show_entries",
@@ -464,8 +464,7 @@ def find_files(location, start_time, end_time, length, file_properties_df):
             print(site_name, "---", site_id)
 
     if isinstance(start_time, str):
-        start_time = datetime.datetime.strptime(start_time,
-                                                "%d-%m-%Y_%H:%M:%S")
+        start_time = datetime.datetime.strptime(start_time, "%d-%m-%Y_%H:%M:%S")
 
     site_filtered = file_properties_df[file_properties_df[loc_key] == location]
     # print(site_filtered)
@@ -522,8 +521,7 @@ def find_filesfunc_inputs(location, start_time, end_time, length, buffer,
             "end time value should be given or lenght should be bigger than 0")
 
     if isinstance(start_time, str):
-        start_time = datetime.datetime.strptime(start_time,
-                                                "%Y-%m-%d_%H:%M:%S")
+        start_time = datetime.datetime.strptime(start_time, "%Y-%m-%d_%H:%M:%S")
 
     # if length is given then overwrite end time
     if length > 0:
@@ -644,8 +642,7 @@ def get_audio(sorted_filtered,
         # which seconds of the query audio in this file
         start_minute, start_second = divmod(int(total_seconds), 60)
         start_minute, start_second = str(start_minute), str(start_second)
-        end_minute, end_second = divmod(int(total_seconds + excerpt_length),
-                                        60)
+        end_minute, end_second = divmod(int(total_seconds + excerpt_length), 60)
         end_minute, end_second = str(end_minute), str(end_second)
 
         file_name_specific = file_name + "_" + start_minute + "m_" + \
@@ -667,6 +664,7 @@ def get_audio(sorted_filtered,
 def save_audiofile(mp3_file_path, file_extension, file_name, start_seconds,
                    end_seconds, tmpfolder):
     from nna.labeling_utils import ffmpeg_split_mp3
+
     # if end_seconds bigger than file, ffmpeg ignores it, if both out
     # of order than output is emtpy
     ffmpeg_split_mp3(mp3_file_path,
@@ -715,7 +713,8 @@ def query_audio(location,
 
         output = find_filesv2(location, start_time_org, end_time_org, length,
                               buffer, file_properties_df)
-        sorted_filtered, start_time, end_time, start_time_org, end_time_org = output
+        (sorted_filtered, start_time, end_time, start_time_org,
+         end_time_org) = output
 
         closestLeft = sorted_filtered[
             sorted_filtered["timestampEnd"] < start_time_org][-1:]
