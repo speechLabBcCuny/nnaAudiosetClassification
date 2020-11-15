@@ -54,7 +54,8 @@ def standard_path_style(
     Args:
         parent_Path: parent path for the generated path.
         row: Pandas Series object or dict with properties of
-                    region,locationId,year
+                    region,locationId,year. If Series then it should have a name
+                    and Dict should have a key called "name" 
         sub_Directory_Addon: (Optional) id for the output folder ex-> "_XXX"
         file_name_addon:(Optional)  id for the output file ex-> "_XXX"
     Returns:
@@ -62,13 +63,21 @@ def standard_path_style(
             folder if sub_Directory_Addon is given, if file_name_addon given
             returns a file, otherwise just a folder.
     """
-    if (not row.region) or (not row.locationId) or (not row.year):
+    row_region = row.get("region", "")
+    row_location_id = row.get("locationId", "")
+    row_year = row.get("year", "")
+    if isinstance(row, pd.Series):
+        row_name = row.name
+    elif isinstance(row, dict):
+        row_name = row.get("name", "")
+
+    if (not row_region) or (not row_location_id) or (not row_year):
         print("Empty info for the path from row: {}".format(row))
         return None
-    generated_path = Path(parent_path) / str(row.region) / str(
-        row.locationId) / str(row.year)
+    generated_path = Path(parent_path) / str(row_region) / str(
+        row_location_id) / str(row_year)
     if sub_directory_addon or file_name_addon:
-        file_name = Path(row.name)
+        file_name = Path(row_name)
     if sub_directory_addon:
         generated_path = generated_path / (file_name.stem + sub_directory_addon)
     if file_name_addon:
@@ -411,9 +420,9 @@ def getLength(
     return length
 
 
-def list_files(search_path="/search_path/",
-               ignore_folders=None,
-               file_name="*.*"):
+def list_files(search_path: str = "/search_path/",
+               ignore_folders: Union[List, None] = None,
+               file_name: str = "*.*"):
     if ignore_folders is None:
         ignore_folders = []
     if search_path[-1] != "/":

@@ -1,3 +1,7 @@
+"""Functions for pre-processing input files.
+
+    Initially designed for VGG net but functions are also used for other places.
+"""
 import os
 import math
 import csv
@@ -170,7 +174,6 @@ def load_mp3(input_file_path):
       A tuple (wav_data, sampling_rate)
   """
     input_file_path = Path(input_file_path)
-
     wav_data = AudioSegment.from_mp3(input_file_path)
     sr = wav_data.frame_rate
     # waveform_to_examples already takes mean of two channels
@@ -279,7 +282,7 @@ def mp3file_to_examples(mp3_file_path):
 
         Args:
           mp3_file_path (str/Path): String path to a file.
-                                    The file is assumed to contain mp3 audio data.
+                                The file is assumed to contain mp3 audio data.
 
         Returns:
           See iterate_for_waveform_to_examples.
@@ -455,8 +458,7 @@ def parallel_pre_process(input_path_list,
         # {} for GNU parallel
         + "pre_process_big_file('{}'.split('\t')[0]," +
         "output_dir='{}'.split('\t')[1]," +
-        f"conda_env_name='{conda_env_name}'," +
-        f"segment_len='{segment_len}')")
+        f"conda_env_name='{conda_env_name}'," + f"segment_len='{segment_len}')")
     assert isinstance(python_code, str)
 
     command_list = []

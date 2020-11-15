@@ -4,7 +4,7 @@
     Usage:
 
 """
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Tuple
 
 import pandas as pd
 import numpy as np
@@ -14,80 +14,9 @@ from pathlib import Path
 import datetime
 from nna import fileUtils
 
-random.seed(42)
-
-# 14/Nov/2020
-# from pathlib import Path
-# a = glob.glob("/tank/data/nna/real/*/*")
-# a1 = [(Path(i).stem) for i in a]
-# a2 = [(Path(i).parent.stem,(Path(i).stem)) for i in a]
-EXISTING_REGION_LOCATIONID = [('anwr', '31'), ('anwr', '32'), ('anwr', '33'),
-                              ('anwr', '34'), ('anwr', '35'), ('anwr', '36'),
-                              ('anwr', '37'), ('anwr', '38'), ('anwr', '39'),
-                              ('anwr', '40'), ('anwr', '41'), ('anwr', '42'),
-                              ('anwr', '43'), ('anwr', '44'), ('anwr', '45'),
-                              ('anwr', '46'), ('anwr', '47'), ('anwr', '48'),
-                              ('anwr', '49'), ('anwr', '50'), ('dalton', '01'),
-                              ('dalton', '02'), ('dalton', '03'),
-                              ('dalton', '04'), ('dalton', '05'),
-                              ('dalton', '06'), ('dalton', '07'),
-                              ('dalton', '08'), ('dalton', '09'),
-                              ('dalton', '10'), ('dempster', '11'),
-                              ('dempster', '12'), ('dempster', '13'),
-                              ('dempster', '14'), ('dempster', '16'),
-                              ('dempster', '17'), ('dempster', '19'),
-                              ('dempster', '20'), ('dempster', '21'),
-                              ('dempster', '22'), ('dempster', '23'),
-                              ('dempster', '24'), ('dempster', '25'),
-                              ('ivvavik', 'AR01'), ('ivvavik', 'AR02'),
-                              ('ivvavik', 'AR03'), ('ivvavik', 'AR04'),
-                              ('ivvavik', 'AR05'), ('ivvavik', 'AR06'),
-                              ('ivvavik', 'AR07'), ('ivvavik', 'AR08'),
-                              ('ivvavik', 'AR09'), ('ivvavik', 'AR10'),
-                              ('ivvavik', 'SINP01'), ('ivvavik', 'SINP02'),
-                              ('ivvavik', 'SINP03'), ('ivvavik', 'SINP04'),
-                              ('ivvavik', 'SINP05'), ('ivvavik', 'SINP06'),
-                              ('ivvavik', 'SINP07'), ('ivvavik', 'SINP08'),
-                              ('ivvavik', 'SINP09'), ('ivvavik', 'SINP10'),
-                              ('prudhoe', '11'), ('prudhoe', '12'),
-                              ('prudhoe', '13'), ('prudhoe', '14'),
-                              ('prudhoe', '15'), ('prudhoe', '16'),
-                              ('prudhoe', '17'), ('prudhoe', '18'),
-                              ('prudhoe', '19'), ('prudhoe', '20'),
-                              ('prudhoe', '21'), ('prudhoe', '22'),
-                              ('prudhoe', '23'), ('prudhoe', '24'),
-                              ('prudhoe', '25'), ('prudhoe', '26'),
-                              ('prudhoe', '27'), ('prudhoe', '28'),
-                              ('prudhoe', '29'), ('prudhoe', '30'),
-                              ('stinchcomb', '01-Itkillik'),
-                              ('stinchcomb', '02-Colville2'),
-                              ('stinchcomb', '03-OceanPt'),
-                              ('stinchcomb', '04-Colville4'),
-                              ('stinchcomb', '05-Colville5'),
-                              ('stinchcomb', '06-Umiruk'),
-                              ('stinchcomb', '07-IceRd'),
-                              ('stinchcomb', '08-CD3'),
-                              ('stinchcomb', '09-USGS'),
-                              ('stinchcomb', '10-Nigliq1'),
-                              ('stinchcomb', '11-Nigliq2'),
-                              ('stinchcomb', '12-Anaktuvuk'),
-                              ('stinchcomb', '13-Shorty'),
-                              ('stinchcomb', '14-Rocky'),
-                              ('stinchcomb', '15-FishCreek1'),
-                              ('stinchcomb', '16-FishCreek2'),
-                              ('stinchcomb', '17-FishCreek3'),
-                              ('stinchcomb', '18-FishCreek4'),
-                              ('stinchcomb', '19-Itkillik2'),
-                              ('stinchcomb', '20-Umiat')]
-IGNORE_LOCATION_ID = ['excerpts', 'dups']
-
-EXISTING_YEARS = ['2010', '2013', '2016', '2018', '2019']
-IGNORE_YEARS = ['2010', '2013', '2016']
-
-EXISTING_SUFFIX = ['.flac', '.mp3', '.FLAC', '.mp3']
-
-# in seconds, (4.5 hours + extra 30 minutes)
-EXISTING_LONGEST_FILE_LEN = 5 * 60 * 60
+from mock_data_params import EXISTING_REGION_LOCATIONID, IGNORE_LOCATION_ID
+from mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
+from mock_data_params import EXISTING_LONGEST_FILE_LEN
 
 
 def mock_file_properties_df(
@@ -101,10 +30,9 @@ def mock_file_properties_df(
             index_length: number of items in the DataFrame
             semantic_errors: will there be semantic errors in the rows.
                 wrong dates, negative duration time value etc.
-            structural_errors: will there be structural errors with the DataFrame
-                Missing columns, missing values, wrong type of values.
+            structural_errors: will there be structural errors with the 
+                DataFrame Missing columns, missing values, wrong type of values.
  
-
         file_properties_df's indexes are Path(a_file) and columns are:
             ['region','site_name', 'locationId','site_id', 'recorderId',
             'timestamp','year', 'month', 'day', 'hour_min_sec',
@@ -138,7 +66,7 @@ def mock_file_properties_df(
 
     random_src_paths = [
         '/tank/data/nna/real/', '/scratch/enis/nna/real/', '/scratch/enis/nna/',
-        '/nna/real/', "./"
+        '/nna/real/', './'
     ]
     acceptable_years = list(set(EXISTING_YEARS) - set(IGNORE_YEARS))
 
@@ -147,7 +75,7 @@ def mock_file_properties_df(
     recorder_id_list = []
     distinct_recorder_id_count = 20
     for _ in range(distinct_recorder_id_count):
-        recorder_id = "".join([
+        recorder_id = ''.join([
             random.choice(uppercase_letters),
             str(random.randint(0, 9)),
             random.choice(uppercase_letters),
@@ -162,12 +90,13 @@ def mock_file_properties_df(
         data_df[random_path] = mock_row
 
     df_dict = pd.DataFrame.from_dict(data_df, orient='index')
-    return (df_dict)
+    df_dict = df_dict.astype({'durationSec': 'O'})
+    return df_dict
 
 
-def mock_file_properties_df_row(random_src_paths: List[str],
-                                acceptable_years: List[str],
-                                recorder_id_list: List[str]):
+def mock_file_properties_df_row(
+        random_src_paths: List[str], acceptable_years: List[str],
+        recorder_id_list: List[str]) -> Tuple[Path, Dict]:
     """Generate a random row of file_properties_df.
 
         Given options for src_path, years and recorder_id, create a random
@@ -211,61 +140,89 @@ def mock_file_properties_df_row(random_src_paths: List[str],
         'timestampEnd': timestamp_end,
         'durationSec': float(duration_sec)
     }
+
     return random_path, mock_row
 
 
 def mock_result_data_file(fill_value_func: Callable[[int], int],
                           output_file_path: Path,
                           file_length: int,
-                          segment_len: float = 10.0):
-    """Create a file and fill it with result values.
+                          segment_len: float = 10.0) -> np.array:
+    """SCreate a .npy file and fill it with result values.
     """
+    result_len = (file_length // segment_len)
+    if file_length % segment_len != 0:
+        result_len += 1
+
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
-    results = [fill_value_func(index) for index in range(int(file_length))]
+    results = [fill_value_func(index) for index in range(int(result_len))]
     results = np.array(results)
+    output_file_path = output_file_path.with_suffix('.npy')
     np.save(output_file_path, results)
+
+    return results
 
 
 def mock_results_4input_files(file_properties_df: pd.DataFrame,
                               fill_value_func: Callable[[int], int],
                               output_path: Path,
-                              results_tag_id: str = "XXX",
-                              file_length_limit: str = "01:00:00"):
-    """Mock results for list of files.
+                              results_tag_id: str = 'XXX',
+                              file_length_limit: str = '01:00:00',
+                              segment_len=10):
+    """Mock result files for list of input files.
+
+        Given a file properties, for each row, generate an output file and fill
+        it with given function.
+
     """
-    results_tag_id = "_" + results_tag_id
-    HH_MM_SS = file_length_limit.split(":")
-    HH_MM_SS = [int(i) for i in HH_MM_SS]
-    file_length_limit_seconds = HH_MM_SS[0] * (
-        3600) + HH_MM_SS[1] * 60 + HH_MM_SS[2]
+    #
+    results_tag_id = '_' + results_tag_id
+    # calculate file_length_limit in seconds
+    hh_mm_ss = file_length_limit.split(':')
+    hh_mm_ss = [int(i) for i in hh_mm_ss]
+    file_length_limit_seconds = hh_mm_ss[0] * (
+        3600) + hh_mm_ss[1] * 60 + hh_mm_ss[2]
     for _, row in file_properties_df.iterrows():
 
         file_duration_sec = int(row.durationSec)
-        file_count = 1
+        # output file should be multiple segments if input file
+        # longer than file_length_limit
+        # calculate how many segments should be there
+        segment_count = 1
         if file_duration_sec > file_length_limit_seconds:
-            file_count = (file_duration_sec // file_length_limit_seconds)
-            file_count += 1
-        total_file_length = 
-        for file_index in range(file_count):
-            file_index_padded = "{:0>3}".format(file_index)
+            segment_count = (file_duration_sec // file_length_limit_seconds)
+            file_length_segments = [
+                file_length_limit_seconds for i in range(segment_count)
+            ]
+            file_length_segments.append(
+                int(file_duration_sec % file_length_limit_seconds))
+            segment_count += 1
+        else:
+            file_length_segments = [file_duration_sec]
+
+        # go through each segment and create output files
+        for file_index in range(segment_count):
+            file_index_padded = '{:0>3}'.format(file_index)
             output_file_path = fileUtils.standard_path_style(
                 output_path,
                 row,
                 sub_directory_addon=results_tag_id,
                 file_name_addon=(results_tag_id + file_index_padded))
 
-            mock_result_data_file(fill_value_func,
-                                  output_file_path,
-                                  int(row.durationSec),
-                                  segment_len=10)
+            _ = mock_result_data_file(fill_value_func,
+                                      output_file_path,
+                                      int(file_length_segments[file_index]),
+                                      segment_len=segment_len)
 
     return 1
 
 
-def ones(i):
-    return i
+if '__init__' == '__main__':
 
+    def ones(i):
+        del i
+        return 1
 
-mock_results_4input_files(
-    mock_file_properties_df(2), ones,
-    Path('/Users/berk/Documents/research/nna/src/nna/tests/job_logs'))
+    mock_results_4input_files(
+        mock_file_properties_df(2), ones,
+        Path('/Users/berk/Documents/research/nna/src/nna/tests/job_logs'))

@@ -149,6 +149,7 @@ test_data_standard_path_style = [
         "locationId": 11,
         "year": 2019,
         "region": "Anwr",
+        "name": "S4A10292_20190615_094602.wav",
     }, "", "", Path("/folder1/folder2/Anwr/11/2019/")),
 ]
 

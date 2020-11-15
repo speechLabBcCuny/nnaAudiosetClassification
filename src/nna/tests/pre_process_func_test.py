@@ -32,6 +32,7 @@ def settings_mock():
 
 
 class TestAggregator:
+
     def example_test(self):
         assert True
 
@@ -148,6 +149,9 @@ def test_iterate_for_waveform_to_examples():
 
 @pytest.fixture(scope="function")
 def log_folder():
+    Path(PRE_PROCESSING_queue).unlink(missing_ok=True)
+    Path(PRE_PROCESSED_queue).unlink(missing_ok=True)
+    yield None
     Path(PRE_PROCESSING_queue).unlink(missing_ok=True)
     Path(PRE_PROCESSED_queue).unlink(missing_ok=True)
 
