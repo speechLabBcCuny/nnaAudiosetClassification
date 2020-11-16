@@ -1,6 +1,7 @@
 """Visualizations functions
 
 """
+from typing import Dict, List, Union, Tuple
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +17,7 @@ import matplotlib.dates as mdates
 from matplotlib.colors import Normalize
 from matplotlib.collections import LineCollection
 
-from nna.fileUtils import list_files
+# from nna.fileUtils import list_files
 from nna import fileUtils
 import itertools
 
@@ -54,7 +55,10 @@ def createTimeIndex(selected_areas, file_properties_df, freq):
     # lists in selected_areas_dict is ordered by time
     for _, area in enumerate(selected_areas):
         # get timestamp values from file_properties
-        area_filtered = file_properties_df[file_properties_df.site_id == area]
+        area_filtered = file_properties_df[file_properties_df.locationId ==
+                                           area]
+        # print(area)
+        # print(area_filtered)
         if len(area_filtered.index) > 0:
             start = area_filtered.iloc[0]["timestamp"]
             end = area_filtered.iloc[-1]["timestamp"]
@@ -127,19 +131,20 @@ def prob2binary(result, threshold=0.5, channel=1):
 # with open("/home/enis/projects/nna/data/8tags_on_8sites_DF.pkl", 'ab') as  dffile:
 #             # source, destination
 #     pickle.dump(df_dict, dffile)
-def file2TableDict(selected_areas,
-                   model_tag_names,
-                   globalindex,
-                   globalcolumns,
-                   file_properties_df,
-                   freq,
-                   dataFreq="10S",
-                   dataThreshold=0.5,
-                   channel=1,
-                   gathered_results_perTag=None,
-                   result_path=None,
-                   file_name_addon="",
-                   prob2binaryFlag=True):
+# TODO BUG HANDLE same locationId from multiple regions
+def file2TableDict(selected_areas: List[str],
+                   model_tag_names: List[str],
+                   globalindex: pd.DataFrame,
+                   globalcolumns: List[str],
+                   file_properties_df: pd.DataFrame,
+                   freq: str,
+                   dataFreq: str = "10S",
+                   dataThreshold: float = 0.5,
+                   channel: int = 1,
+                   gathered_results_perTag: Union[Dict, None] = None,
+                   result_path: Union[str, None] = None,
+                   file_name_addon: str = "",
+                   prob2binaryFlag: bool = True) -> Tuple[Dict, List]:
     """Reduce results by dataFreq from multiple files into a pd.DataFrame.
 
         For all selected_areas (locationId), finds results for each tag from
@@ -185,7 +190,8 @@ def file2TableDict(selected_areas,
     no_result_paths = []
 
     # we need to load it from files
-    if gathered_results_perTag is None and (result_path is None):
+    # print(gathered_results_perTag, result_path)
+    if (gathered_results_perTag is None) and (result_path is None):
         print("ERROR: gathered_results_perTag or" +
               "(result_path and subDirectoryAddon )should be defined")
         return (None, None)
@@ -209,9 +215,11 @@ def file2TableDict(selected_areas,
                     check_folder = fileUtils.standard_path_style(
                         result_path,
                         row,
-                        sub_directory_addon=model_tag_name,
+                        sub_directory_addon=file_name_addon,
                         #BUG check if this is used correctly
-                        file_name_addon=file_name_addon,
+                        # checked: it should not be used, otherwise,
+                        # it does not return a folder
+                        # file_name_addon=file_name_addon,
                     )
                     check_folder_str = str(check_folder) + "/"
                     all_segments = fileUtils.list_files(check_folder_str)
@@ -514,6 +522,7 @@ def vis_preds_with_clipping(selected_area, file_properties_df, freq,
     else:
         globalindex, all_start, all_end = createTimeIndex(
             selected_areas, file_properties_df, freq)
+        del all_start, all_end
 
     selected_tag_name = ["_" + i for i in model_tag_names]
     globalcolumns = selected_tag_name  #selected_areas+weather_cols

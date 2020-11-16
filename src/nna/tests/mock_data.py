@@ -14,7 +14,7 @@ from pathlib import Path
 import datetime
 from nna import fileUtils
 
-from mock_data_params import EXISTING_REGION_LOCATIONID, IGNORE_LOCATION_ID
+from mock_data_params import EXISTING_REGION_LOCATIONID  #,IGNORE_LOCATION_ID
 from mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
 from mock_data_params import EXISTING_LONGEST_FILE_LEN
 
@@ -30,7 +30,7 @@ def mock_file_properties_df(
             index_length: number of items in the DataFrame
             semantic_errors: will there be semantic errors in the rows.
                 wrong dates, negative duration time value etc.
-            structural_errors: will there be structural errors with the 
+            structural_errors: will there be structural errors with the
                 DataFrame Missing columns, missing values, wrong type of values.
  
         file_properties_df's indexes are Path(a_file) and columns are:
@@ -148,17 +148,17 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
                           output_file_path: Path,
                           file_length: int,
                           segment_len: float = 10.0) -> np.array:
-    """SCreate a .npy file and fill it with result values.
+    """Create a .npy file and fill it with result values.
     """
     result_len = (file_length // segment_len)
     if file_length % segment_len != 0:
         result_len += 1
-
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
     results = [fill_value_func(index) for index in range(int(result_len))]
     results = np.array(results)
     output_file_path = output_file_path.with_suffix('.npy')
     np.save(output_file_path, results)
+    # print(output_file_path)
 
     return results
 
@@ -166,7 +166,7 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
 def mock_results_4input_files(file_properties_df: pd.DataFrame,
                               fill_value_func: Callable[[int], int],
                               output_path: Path,
-                              results_tag_id: str = 'XXX',
+                              results_tag_id: str = '_XXX',
                               file_length_limit: str = '01:00:00',
                               segment_len=10):
     """Mock result files for list of input files.
@@ -176,14 +176,13 @@ def mock_results_4input_files(file_properties_df: pd.DataFrame,
 
     """
     #
-    results_tag_id = '_' + results_tag_id
     # calculate file_length_limit in seconds
     hh_mm_ss = file_length_limit.split(':')
     hh_mm_ss = [int(i) for i in hh_mm_ss]
     file_length_limit_seconds = hh_mm_ss[0] * (
         3600) + hh_mm_ss[1] * 60 + hh_mm_ss[2]
     for _, row in file_properties_df.iterrows():
-
+        # print(row)
         file_duration_sec = int(row.durationSec)
         # output file should be multiple segments if input file
         # longer than file_length_limit

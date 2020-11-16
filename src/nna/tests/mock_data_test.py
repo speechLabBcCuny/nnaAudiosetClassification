@@ -7,16 +7,17 @@ import datetime
 import glob
 import random
 import shutil
+from pathlib import Path
 
 from testparams import INPUTS_OUTPUTS_PATH
 
 from nna import fileUtils
 
-from mock_data_params import EXISTING_REGION_LOCATIONID, IGNORE_LOCATION_ID
+from mock_data_params import IGNORE_LOCATION_ID
 from mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
 from mock_data_params import EXISTING_LONGEST_FILE_LEN
 
-IO_mock_data_path = INPUTS_OUTPUTS_PATH / "mock_data"
+IO_mock_data_path = INPUTS_OUTPUTS_PATH / 'mock_data'
 
 random.seed(42)
 
@@ -153,7 +154,8 @@ def test_mock_results_4input_files():
         return 1
 
     row_count = 12
-    segment_len = 10
+    # segment_len = 10
+    results_tag = 'YYY'
     file_length_limit_str = '01:00:00'
     file_length_limit_seconds = 1 * 60 * 60
     file_properties_df = mock_data.mock_file_properties_df(row_count)
@@ -163,12 +165,27 @@ def test_mock_results_4input_files():
         file_properties_df,
         ones,
         func_output_path,
-        results_tag_id='_YYY',
+        results_tag_id=results_tag,
         file_length_limit=file_length_limit_str)
 
     found_output_files = fileUtils.list_files(search_path=str(func_output_path),
                                               ignore_folders=None,
                                               file_name='*.npy')
+    for file_name in found_output_files[:10]:
+        # check if there are two underscores before XXX
+        file_name = Path(file_name)
+        assert file_name.stem.split('_')[-2] != ''
+        assert file_name.parent.stem.split('_')[-2] != ''
+
+    for _, row in file_properties_df.iterrows():
+
+        folder4row = fileUtils.standard_path_style(
+            func_output_path,
+            row,
+            sub_directory_addon=results_tag,
+        )
+        assert folder4row.exists()
+
     expected_file_count = 0
     for _, row in file_properties_df.iterrows():
         expected_file_count_row = (row.durationSec // file_length_limit_seconds)
