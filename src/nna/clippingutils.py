@@ -7,9 +7,22 @@ Clipped samples of the audio signal does not carry any information.
 We assume clipping happens when sample's value is +1 or -1 (threshold).
 
 
-    Typical usage example:
-    Function run_task_save combines load_audio and get_clipping_percent.
+    Typical usage    
+        Function run_task_save combines load_audio and get_clipping_percent.
+
+    1)example by using list of files :
     ```[python]
+    from nna import clippingutils
+    test_area_files = ['./data/sound_examples/10minutes.mp3', 
+                        './data/sound_examples/10seconds.mp3']
+
+    all_results_dict, files_w_errors = clippingutils.run_task_save(
+        test_area_files, "test_area", "./output_folder_path", 1.0)
+    ```
+
+    2) example by using a file_properties file :
+    ```[python]
+    from nna import clippingutils
     # file info
     file_properties_df_path = "../nna/data/prudhoeAndAnwr4photoExp_dataV1.pkl"
     file_properties_df = pd.read_pickle(file_properties_df_path)
@@ -19,30 +32,27 @@ We assume clipping happens when sample's value is +1 or -1 (threshold).
     for i,area in enumerate(all_areas[:10]):
         print(area,i)
         area_filtered=file_properties_df[file_properties_df.site_id==area]
-        run_task_save(area_filtered.index,area,clipping_results_path,
-                        clipping_threshold)
+        all_results_dict, files_w_errors = clippingutils.run_task_save(
+                                                    area_filtered.index,
+                                                    area,clipping_results_path,
+                                                    clipping_threshold)
     ```
-
 """
 
-from typing import Union, Tuple, List
-# from nna.fileUtils import list_files
-from pydub import AudioSegment
-# from IPython.display import display, Audio
+import pickle
 from pathlib import Path
+from typing import List, Tuple, Union
+
 import librosa
 import numpy as np
-import pickle
-# import IPython.display as ipd
-# import librosa.display
-# import matplotlib.pyplot as plt
-# import pandas as pd
-# import time
+from pydub import AudioSegment
 
 
-def load_audio(filepath: Union[Path, str],
-               dtype: np.dtype = np.int16,
-               backend: str = "pydub") -> Tuple[np.array, int]:
+def load_audio(
+    filepath: Union[Path, str],
+    dtype: np.dtype = np.int16,
+    backend: str = "pydub",
+) -> Tuple[np.array, int]:
     """Load audio file as numpy array using given backend.
 
     Depending on audio reading library handles data type conversions.
@@ -56,25 +66,50 @@ def load_audio(filepath: Union[Path, str],
         A tuple of array storing audio and sampling rate.
 
     """
+    if dtype not in (np.int16, np.float32, np.float64):
+        raise TypeError("dtype for loading audio should be one of the: " +
+                        "np.int16,np.float32, np.float64")
+
     filepath = str(filepath)
     if backend == "librosa":
-        sound_array, sr = librosa.load(filepath, mono=False, sr=None)
-        # TODO: explain this part
+        if dtype in (np.float32, np.float64):
+            sound_array, sr = librosa.load(filepath,
+                                           mono=False,
+                                           sr=None,
+                                           dtype=dtype)
+        # "Librosa does not support integer-valued samples
+        #   because many of the downstream analyses (STFT etc) would implicitly
+        #   cast to floating point anyway, so we opted to put that requirement
+        #   up front in the audio buffer validation check."
+        #   src: https://github.com/librosa/librosa/issues/946#issuecomment-520555138
+
+        # convert to int16/PCM-16:
+        # 16-bit signed integers, range from −32768 to 32767
+        # and librosa returns a np.float32 and normalizes [-1,1]
+        #
+        # related librosa int16: https://stackoverflow.com/a/53656547/3275163
         if dtype == np.int16:
-            sound_array = sound_array * 32768
-            sound_array = sound_array.astype(np.int16)
+            sound_array, sr = librosa.load(filepath, mono=False, sr=None)
+            sound_array = sound_array.T
+            sound_array = sound_array.reshape(-1, 2)
+            maxv = np.iinfo(np.int16).max + 1  #(32768)
+            sound_array = (sound_array * maxv).astype(np.int16)
+
+            # sound_array, sr = librosa.load(filepath, mono=False, sr=None)
+            # sound_array = sound_array * 32768
+            # sound_array = sound_array.astype(np.int16)
     elif backend == "pydub":
         sound_array = AudioSegment.from_file(filepath)
         sr = sound_array.frame_rate
-        sound_array = np.frombuffer(
-            sound_array._data,  # pylint: disable=W0212
-            dtype=np.int16)
+        sound_array = sound_array.get_array_of_samples()
+        sound_array = np.array(sound_array)
         sound_array = sound_array.reshape(-1, 2).T
         if dtype in (np.float32, np.float64):
-            sound_array = sound_array.astype(np.float32)
-            sound_array = (sound_array / 32768)
+            sound_array = sound_array.astype(dtype)
+            # this was a BUG, keeping here to understand why I did that
+            # sound_array = (sound_array / 32768)
     else:
-        print(f"no backend called {backend}")
+        raise ValueError(f"no backend called {backend}")
     return sound_array, sr
 
 
@@ -111,14 +146,14 @@ def get_clipping_percent(sound_array: np.array,
     return results
 
 
-def run_task_save(allfiles: List[str],
+def run_task_save(allfiles: List[Union[str, Path]],
                   area_id: str,
                   results_folder: Union[str, Path],
                   clipping_threshold: float,
                   segment_len: int = 10,
                   audio_load_backend: str = "pydub",
                   save=True) -> Tuple[dict, list]:
-    """Save clipping dict{Path:np.array} to file as f"{area_id}_{threshold}.pkl"
+    """Save clipping in dict to a file named as f"{area_id}_{threshold}.pkl"
         Args:
             allfiles: List of files to calculate clipping.
             area_id: of the files coming from, will be used in file_name
@@ -135,6 +170,7 @@ def run_task_save(allfiles: List[str],
     """
     files_w_errors = []
     all_results_dict = {}
+    allfiles = [str(i) for i in allfiles]
     # CALCULATE RESULTS
     for _, audio_file in enumerate(allfiles):
         # try:
@@ -163,6 +199,8 @@ def run_task_save(allfiles: List[str],
     filename = "{}_{}.pkl".format(area_id, clipping_threshold_str)
     error_filename = "{}_{}_error.pkl".format(area_id, clipping_threshold_str)
     results_folder = Path(results_folder)
+    results_folder.mkdir(parents=True, exist_ok=True)
+
     output_file_path = results_folder / filename
     error_file_path = results_folder / error_filename
     if save:
@@ -170,8 +208,6 @@ def run_task_save(allfiles: List[str],
             np.save(f, all_results_dict)
         if files_w_errors:
             with open(error_file_path, "wb") as f:
-                pickle.dump(files_w_errors,
-                            f,
-                            protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(files_w_errors, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     return all_results_dict, files_w_errors
