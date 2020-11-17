@@ -24,17 +24,19 @@ We assume clipping happens when sample's value is +1 or -1 (threshold).
     ```[python]
     from nna import clippingutils
     # file info
+    import pandas as pd
+    clipping_threshold=1.0
     file_properties_df_path = "../nna/data/prudhoeAndAnwr4photoExp_dataV1.pkl"
     file_properties_df = pd.read_pickle(file_properties_df_path)
     # where to save results
     clipping_results_path="./clipping_results/"
-
-    for i,area in enumerate(all_areas[:10]):
-        print(area,i)
-        area_filtered=file_properties_df[file_properties_df.site_id==area]
+    location_ids=['11','12']
+    for i,location_id in enumerate(location_ids):
+        print(location_id,i)
+        location_id_filtered=file_properties_df[file_properties_df.locationId==location_id]
         all_results_dict, files_w_errors = clippingutils.run_task_save(
-                                                    area_filtered.index,
-                                                    area,clipping_results_path,
+                                                    location_id_filtered.index,
+                                                    location_id,clipping_results_path,
                                                     clipping_threshold)
     ```
 """
