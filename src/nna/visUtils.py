@@ -16,24 +16,52 @@ import matplotlib.ticker as ticker
 import matplotlib.dates as mdates
 from matplotlib.colors import Normalize
 from matplotlib.collections import LineCollection
+import cycler
 
 # from nna.fileUtils import list_files
 from nna import fileUtils
 import itertools
 
 
+
 # https://stackoverflow.com/questions/30079590/use-matplotlib-color-map-for-color-cycle
-def get_cycle(cmap, N=None, use_index="auto"):
+def get_cycle(cmap: Union[matplotlib.colors.Colormap, str, None],
+              color_count: int = None,
+              use_index: str = "auto",)->cycler.cycler:
+    """Cycle colors to use with  matplotlib.
+
+
+    Usage:
+        Continous:
+            import matplotlib.pyplot as plt
+            N = 6
+            plt.rcParams["axes.prop_cycle"] = get_cycle("viridis", N)
+
+            fig, ax = plt.subplots()
+            for i in range(N):
+                ax.plot([0,1], [i, 2*i])
+
+            plt.show()
+        discrete case:
+            import matplotlib.pyplot as plt
+
+            plt.rcParams["axes.prop_cycle"] = get_cycle("tab20c")
+
+            fig, ax = plt.subplots()
+            for i in range(15):
+                ax.plot([0,1], [i, 2*i])
+
+            plt.show()
+    """
     if isinstance(cmap, str):
         if use_index == "auto":
             use_index = cmap in [
                 "Pastel1", "Pastel2", "Paired", "Accent", "Dark2", "Set1",
                 "Set2", "Set3", "tab10", "tab20", "tab20b", "tab20c"
             ]
-
         cmap = matplotlib.cm.get_cmap(cmap)
-    if not N:
-        N = cmap.N
+    if not color_count:
+        color_count = cmap.N
     if use_index == "auto":
         if cmap.N > 100:
             use_index = False
@@ -42,10 +70,10 @@ def get_cycle(cmap, N=None, use_index="auto"):
         elif isinstance(cmap, ListedColormap):
             use_index = True
     if use_index:
-        ind = np.arange(int(N)) % cmap.N
+        ind = np.arange(int(color_count)) % cmap.N
         return plt.cycler("color", cmap(ind))
     else:
-        colors = cmap(np.linspace(0.2, 1, N))
+        colors = cmap(np.linspace(0.2, 1, color_count))
         return plt.cycler("color", colors)
 
 
@@ -100,8 +128,7 @@ def createTimeIndex(selected_areas, file_properties_df, freq):
 
 # result_path="/scratch/enis/data/nna/real/"
 def loadResults(all_segments, prob2binaryFlag, threshold=0.5, channel=1):
-    # try:
-    if type(all_segments) != list:
+    if isinstance(all_segments,list):
         all_segments = [all_segments]
 
     results = []
@@ -115,6 +142,7 @@ def loadResults(all_segments, prob2binaryFlag, threshold=0.5, channel=1):
         results.append(data)
 
     results = np.concatenate(results)
+
     return results
 
 
@@ -215,13 +243,17 @@ def file2TableDict(selected_areas: List[str],
                     check_folder = fileUtils.standard_path_style(
                         result_path,
                         row,
-                        sub_directory_addon=file_name_addon,
+                        # sub_directory_addon=file_name_addon,
+                        sub_directory_addon=model_tag_name,
                         #BUG check if this is used correctly
                         # checked: it should not be used, otherwise,
                         # it does not return a folder
                         # file_name_addon=file_name_addon,
                     )
+                    # print(result_path, file_name_addon, row)
+                    # print(check_folder)
                     check_folder_str = str(check_folder) + "/"
+                    # print(check_folder_str)
                     all_segments = fileUtils.list_files(check_folder_str)
                     all_segments.sort()
                     if not all_segments:
@@ -243,9 +275,12 @@ def file2TableDict(selected_areas: List[str],
                         )
 
                 if data.size == 0:
+                    # check how can it reach there without error
+                    # print(check_folder_str)
+                    # print(all_segments)
                     no_result_paths.append(afile)
                     continue
-
+                # continue  #!!!!!!!!!
                 start = file_properties_df.loc[afile]["timestamp"]
                 end = start + timedelta(seconds=(10 * (len(data) - 1)))
                 index = pd.date_range(start, end, freq=dataFreq)
@@ -328,9 +363,8 @@ def rawFile2Csv(csvPath,
     # dataFreq is sampling frequency of the data,
     # most of the time we have predictions for each 10 second
     if dataFreq != "10S":
-        print(
-            "ERROR: this function does not do aggregation, set dataFreq to 10S")
-        return None
+        raise ValueError(
+            "this function does not do aggregation, set dataFreq to 10S")
 
     csvFilesWritten = []
     no_result_paths = []
@@ -342,8 +376,10 @@ def rawFile2Csv(csvPath,
         return (None, None)
 
     for _, area in enumerate(selected_areas):
-        #         df_sums = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
-        #         df_count = pd.DataFrame(index=globalindex, columns=globalcolumns).fillna(0)
+        #         df_sums = pd.DataFrame(index=globalindex,
+        # columns=globalcolumns).fillna(0)
+        #         df_count = pd.DataFrame(index=globalindex,
+        #  columns=globalcolumns).fillna(0)
 
         for model_tag_name in model_tag_names:
             df_raw_list = []
@@ -378,6 +414,8 @@ def rawFile2Csv(csvPath,
                         data = prob2binary(data, threshold=0.5, channel=channel)
 
                 if data.size == 0:
+                    print(check_folder_str)
+                    print(all_segments)
                     no_result_paths.append(afile)
                     continue
 
@@ -422,13 +460,19 @@ def add_normal_dist_alpha(aCmap):
     return my_cmaps
 
 
-def load_clipping_2dict(clippingResultsPath, selected_areas, selected_tag_name):
+def load_clipping_2dict(clippingResultsPath,
+                        selected_areas,
+                        selected_tag_name,
+                        threshold: float = 1.0):
     gathered_results_perTag = {selected_tag_name: {}}
     gathered_results = {}
     selected_areas_files = {}
     for i, area in enumerate(selected_areas):
         to_be_deleted = []
-        fileName = (clippingResultsPath + area + "_1.pkl")
+        clipping_threshold_str = str(threshold)
+        clipping_threshold_str = clipping_threshold_str.replace(".", ",")
+        fileName = (clippingResultsPath + area +
+                    f"_{clipping_threshold_str}.pkl")
         resultsDict = np.load(fileName, allow_pickle=True)
         resultsDict = resultsDict[()]
         gathered_results_perTag[selected_tag_name].update(resultsDict)
@@ -507,9 +551,17 @@ def get_time_index_per_file(selected_area,
     return fileTimeIndexSeries
 
 
-def vis_preds_with_clipping(selected_area, file_properties_df, freq,
-                            model_tag_names, my_cmaps, result_path, data_folder,
-                            vis_file_path, id2name):
+def vis_preds_with_clipping(selected_area,
+                            file_properties_df,
+                            freq,
+                            model_tag_names,
+                            my_cmaps,
+                            result_path,
+                            data_folder,
+                            clippingResultsPath,
+                            vis_file_path,
+                            id2name,
+                            clipping_threshold: float = 1.0):
     selected_areas = [
         selected_area,
     ]
@@ -528,15 +580,17 @@ def vis_preds_with_clipping(selected_area, file_properties_df, freq,
     globalcolumns = selected_tag_name  #selected_areas+weather_cols
 
     #     print(globalindex)
-    df_dict, no_result_paths = file2TableDict(selected_areas,
-                                              selected_tag_name,
-                                              globalindex,
-                                              globalcolumns,
-                                              file_properties_df,
-                                              freq,
-                                              dataFreq="10S",
-                                              result_path=result_path,
-                                              prob2binaryFlag=False)
+    df_dict, no_result_paths = file2TableDict(
+        selected_areas,
+        selected_tag_name,
+        globalindex,
+        globalcolumns,
+        file_properties_df,
+        freq,
+        dataFreq="10S",
+        result_path=result_path,
+        prob2binaryFlag=False,
+    )
     if len(no_result_paths) != 0:
         print("{} number of files do not have results".format(
             len(no_result_paths)))
@@ -557,14 +611,15 @@ def vis_preds_with_clipping(selected_area, file_properties_df, freq,
     df_freq = df_freq * 100
 
     ########     LOAD Clipping     #########
-    clippingResultsPath = data_folder + "clipping_results_old/"
+    # clippingResultsPath = data_folder + "clipping_results_old/"
     selected_tag_name = "Clipping"
     #     model_tag_names=[selected_tag_name]
     globalcolumns = [selected_tag_name]  #selected_areas+weather_cols
 
     gathered_results_perTag = load_clipping_2dict(clippingResultsPath,
                                                   selected_areas,
-                                                  selected_tag_name)
+                                                  selected_tag_name,
+                                                  threshold=clipping_threshold)
 
     df_dict_clipping, no_result_paths = file2TableDict(
         selected_areas,
@@ -607,18 +662,24 @@ def vis_preds_with_clipping(selected_area, file_properties_df, freq,
 
     uniqueYears = np.unique([month.year for month in monthsTime])
     for year in uniqueYears:
-        monthsInAYear = [
-            months[i]
-            for i, month in enumerate(monthsTime)
-            if month.year == year
-        ]
-        monthsTimeInAYear = [
-            monthsTime[i]
-            for i, month in enumerate(monthsTime)
-            if month.year == year
-        ]
-        create_figure(selected_area, monthsInAYear, monthsTimeInAYear, my_cmaps,
-                      cord_list, vis_file_path, regionName, year, freq, id2name)
+        try:
+            monthsInAYear = [
+                months[i]
+                for i, month in enumerate(monthsTime)
+                if month.year == year
+            ]
+            monthsTimeInAYear = [
+                monthsTime[i]
+                for i, month in enumerate(monthsTime)
+                if month.year == year
+            ]
+
+            create_figure(selected_area, monthsInAYear, monthsTimeInAYear,
+                          my_cmaps, cord_list, vis_file_path, regionName, year,
+                          freq, id2name)
+        except:
+            continue
+    return no_result_paths
 
 
 def create_figure(selected_area, months, monthsTime, my_cmaps, cord_list,
