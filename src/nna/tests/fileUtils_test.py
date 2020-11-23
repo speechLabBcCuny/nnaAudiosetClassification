@@ -117,14 +117,14 @@ test_data_standard_path_style = [
      },
                name="S4A10292_20190615_094602.wav"), "_vgg", "_vgg",
      Path("/folder1/folder2/Anwr/11/" +
-          "2019/S4A10292_20190615_094602_vgg/S4A10292_20190615_094602_vgg")),
+          "2019/S4A10292_20190615_094602__vgg/S4A10292_20190615_094602__vgg")),
     ("/folder1/folder2/",
      pd.Series({
          "locationId": "11",
          "year": "2019",
          "region": "Prudhoe"
      },
-               name="S4A10292_20190615_094602.wav"), "", "_vgg",
+               name="S4A10292_20190615_094602.wav"), "", "vgg",
      Path("/folder1/folder2/Prudhoe/11/" +
           "2019/S4A10292_20190615_094602_vgg")),
     ("/folder1/folder2/",
@@ -133,7 +133,7 @@ test_data_standard_path_style = [
          "year": "2019",
          "region": "Prudhoe"
      },
-               name="S4A10292_20190615_094602.wav"), "_XXX", "_YYY",
+               name="S4A10292_20190615_094602.wav"), "XXX", "YYY",
      Path("/folder1/folder2/Prudhoe/11/" +
           "2019/S4A10292_20190615_094602_XXX/S4A10292_20190615_094602_YYY")),
     ("folder1/folder2",
@@ -142,7 +142,7 @@ test_data_standard_path_style = [
          "year": "2019",
          "region": "Prudhoe"
      },
-               name="S4A10292_20190615_094602.wav"), "_XXX", "",
+               name="S4A10292_20190615_094602.wav"), "XXX", "",
      Path("folder1/folder2/Prudhoe/11/" +
           "2019/S4A10292_20190615_094602_XXX/")),
     ("/folder1/folder2/", {

@@ -95,7 +95,7 @@ def test_mock_file_properties_df_row():
 def test_mock_result_data_file():
     """Test for mock_data.mock_result_data_file function.
     """
-
+### test with ones
     def ones(i):
         del i
         return 1
@@ -119,7 +119,7 @@ def test_mock_result_data_file():
     assert len(result_array) == reslen
     assert sum(result_array) == reslen
     output_file_path.unlink()
-
+### test with index 
     def index_values(i):
         return i
 
@@ -139,6 +139,30 @@ def test_mock_result_data_file():
         reslen += 1
     assert len(result_array) == reslen
     assert sum(result_array) == sum(range(reslen))
+    output_file_path.unlink()
+### test channel count 
+    channel_count = 2
+    # def index_values(i):
+        # return i
+
+    file_length = 102445
+    segment_len = 10
+    result_array = mock_data.mock_result_data_file(index_values,
+                                                   output_file_path,
+                                                   file_length,
+                                                   segment_len=segment_len,
+                                                   channel_count=channel_count)
+    output_file_path = output_file_path.with_suffix('.npy')
+
+    result_array_file = np.load(output_file_path)
+    assert np.array_equal(result_array, result_array_file)
+
+    reslen = file_length // segment_len
+    if file_length % segment_len != 0:
+        reslen += 1
+    assert len(result_array) == reslen
+    assert np.sum(result_array) == sum(range(reslen))*channel_count
+    assert result_array.shape == (reslen,channel_count)
     output_file_path.unlink()
 
 
@@ -161,12 +185,15 @@ def test_mock_results_4input_files():
     file_properties_df = mock_data.mock_file_properties_df(row_count)
     func_output_path = IO_mock_data_path / 'mock_results_4input_files' / 'outputs'
 
-    _ = mock_data.mock_results_4input_files(
+    resulting_output_file_paths = mock_data.mock_results_4input_files(
         file_properties_df,
         ones,
         func_output_path,
         results_tag_id=results_tag,
         file_length_limit=file_length_limit_str)
+
+    assert resulting_output_file_paths
+    assert len(resulting_output_file_paths)>=len(file_properties_df.index)
 
     found_output_files = fileUtils.list_files(search_path=str(func_output_path),
                                               ignore_folders=None,

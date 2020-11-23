@@ -14,9 +14,9 @@ from pathlib import Path
 import datetime
 from nna import fileUtils
 
-from mock_data_params import EXISTING_REGION_LOCATIONID  #,IGNORE_LOCATION_ID
-from mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
-from mock_data_params import EXISTING_LONGEST_FILE_LEN
+from nna.tests.mock_data_params import EXISTING_REGION_LOCATIONID  #,IGNORE_LOCATION_ID
+from nna.tests.mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
+from nna.tests.mock_data_params import EXISTING_LONGEST_FILE_LEN
 
 
 def mock_file_properties_df(
@@ -32,7 +32,6 @@ def mock_file_properties_df(
                 wrong dates, negative duration time value etc.
             structural_errors: will there be structural errors with the
                 DataFrame Missing columns, missing values, wrong type of values.
- 
         file_properties_df's indexes are Path(a_file) and columns are:
             ['region','site_name', 'locationId','site_id', 'recorderId',
             'timestamp','year', 'month', 'day', 'hour_min_sec',
@@ -49,9 +48,7 @@ def mock_file_properties_df(
             durationSec: length of the recording
         There should not be two files covering the same location and at
             the same time.
-        
         Returns: A pandas.DataFrame similar to file_properties_df.
-
     """
     # TODO: implement these
     del semantic_errors, structural_errors
@@ -147,7 +144,8 @@ def mock_file_properties_df_row(
 def mock_result_data_file(fill_value_func: Callable[[int], int],
                           output_file_path: Path,
                           file_length: int,
-                          segment_len: float = 10.0) -> np.array:
+                          segment_len: float = 10.0,
+                          channel_count:int=1) -> np.array:
     """Create a .npy file and fill it with result values.
     """
     result_len = (file_length // segment_len)
@@ -156,6 +154,10 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
     results = [fill_value_func(index) for index in range(int(result_len))]
     results = np.array(results)
+    if channel_count>1:
+        results = np.repeat(np.array(results),channel_count)
+        results = results.reshape(-1,channel_count)
+
     output_file_path = output_file_path.with_suffix('.npy')
     np.save(output_file_path, results)
     # print(output_file_path)
@@ -166,15 +168,17 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
 def mock_results_4input_files(file_properties_df: pd.DataFrame,
                               fill_value_func: Callable[[int], int],
                               output_path: Path,
-                              results_tag_id: str = '_XXX',
+                              results_tag_id: str = 'XXX',
                               file_length_limit: str = '01:00:00',
-                              segment_len=10):
+                              segment_len:int=10,
+                              channel_count:int=1):
     """Mock result files for list of input files.
 
         Given a file properties, for each row, generate an output file and fill
         it with given function.
 
     """
+    resulting_output_file_paths = []
     #
     # calculate file_length_limit in seconds
     hh_mm_ss = file_length_limit.split(':')
@@ -211,10 +215,13 @@ def mock_results_4input_files(file_properties_df: pd.DataFrame,
             _ = mock_result_data_file(fill_value_func,
                                       output_file_path,
                                       int(file_length_segments[file_index]),
-                                      segment_len=segment_len)
+                                      segment_len=segment_len,
+                                      channel_count=channel_count)
 
-    return 1
-
+            resulting_output_file_paths.append(output_file_path)
+    
+    resulting_output_file_paths = [i.with_suffix('.npy') for i in resulting_output_file_paths]
+    return resulting_output_file_paths
 
 if '__init__' == '__main__':
 

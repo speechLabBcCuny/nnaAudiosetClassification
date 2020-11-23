@@ -45,19 +45,21 @@ def standard_path_style(
     and they have a file name add-on following an underscore except original
     files.
     Add-on is a identifier for process applied to original file.
-    Such as '_vgg' which means vgg embeddings of the original file.
+    Such as 'vgg' which means vgg embeddings of the original file.
     Path might have an extra folder in case there are multiple outputs
     for a original file.
     This folder named as original_file_name + sub_Directory_Addon.
     Usually sub_Directory_Addon is same with file_name_addon.
+    
+    !!sub_directory_addon and file_name_addon are merged with "_"
 
     Args:
         parent_Path: parent path for the generated path.
         row: Pandas Series object or dict with properties of
                     region,locationId,year. If Series then it should have a name
-                    and Dict should have a key called "name" 
-        sub_Directory_Addon: (Optional) id for the output folder ex-> "_XXX"
-        file_name_addon:(Optional)  id for the output file ex-> "_XXX"
+                    and Dict should have a key called "name"
+        sub_Directory_Addon: (Optional) id for the output folder ex-> "XXX"
+        file_name_addon:(Optional)  id for the output file ex-> "XXX"
     Returns:
         generated_path: a Path object following NNA folder ordering, has extra
             folder if sub_Directory_Addon is given, if file_name_addon given
@@ -68,20 +70,26 @@ def standard_path_style(
     row_year = row.get("year", "")
     if isinstance(row, pd.Series):
         row_name = row.name
+        if row_name is None:
+            row_name = ""
     elif isinstance(row, dict):
         row_name = row.get("name", "")
+    else:
+        raise TypeError("row should be dict or pd.Series")
+    file_name = Path(row_name)
 
     if (not row_region) or (not row_location_id) or (not row_year):
         print("Empty info for the path from row: {}".format(row))
         return None
     generated_path = Path(parent_path) / str(row_region) / str(
         row_location_id) / str(row_year)
-    if sub_directory_addon or file_name_addon:
-        file_name = Path(row_name)
+        
     if sub_directory_addon:
-        generated_path = generated_path / (file_name.stem + sub_directory_addon)
+        sub_directory_name = "_".join([file_name.stem,sub_directory_addon])
+        generated_path = generated_path / sub_directory_name
     if file_name_addon:
-        generated_path = generated_path / (file_name.stem + file_name_addon)
+        file_name = "_".join([file_name.stem,file_name_addon])
+        generated_path = generated_path / file_name
     return generated_path
 
 
