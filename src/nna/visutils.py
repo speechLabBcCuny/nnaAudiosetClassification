@@ -1,6 +1,7 @@
 """Visualizations functions
 
 """
+from logging import error
 from typing import Dict, List, Union, Tuple
 from pathlib import Path
 
@@ -23,13 +24,13 @@ from nna import fileUtils
 import itertools
 
 
-
 # https://stackoverflow.com/questions/30079590/use-matplotlib-color-map-for-color-cycle
-def get_cycle(cmap: Union[matplotlib.colors.Colormap, str, None],
-              color_count: int = None,
-              use_index: str = "auto",)->cycler.cycler:
+def get_cycle(
+    cmap: Union[matplotlib.colors.Colormap, str, None],
+    color_count: int = None,
+    use_index: str = "auto",
+) -> cycler.cycler:
     """Cycle colors to use with  matplotlib.
-
 
     Usage:
         Continous:
@@ -77,68 +78,60 @@ def get_cycle(cmap: Union[matplotlib.colors.Colormap, str, None],
         return plt.cycler("color", colors)
 
 
-def createTimeIndex(selected_areas, file_properties_df, freq):
-    times = []
+def create_time_index(selected_location_ids, file_properties_df,
+                      freq) -> Tuple[pd.DataFrame, pd.Timestamp, pd.Timestamp]:
+    """Create time index boundaries of the bins with size of frequency.
+
+        Generate a time index as boundary of the bins to gather data by time.
+        Bins have the length of the freq ex: 270 minutes
+        Start and end times are earliest and latest points in time within the
+        recordings of the selected_areas.
+
+        Args: 
+            selected_location_ids: location_ids selected for this index
+            file_properties_df: See file_properties_df.
+            freq: frequency of the time to be used to divide time into bins
+        Returns:
+            Tuple[pd.DataFrame, pd.Timestamp, pd.Timestamp]
+
+    """
     # FIND earliest and latest time for time scale
     # lists in selected_areas_dict is ordered by time
-    for _, area in enumerate(selected_areas):
-        # get timestamp values from file_properties
-        area_filtered = file_properties_df[file_properties_df.locationId ==
-                                           area]
-        # print(area)
-        # print(area_filtered)
-        if len(area_filtered.index) > 0:
-            start = area_filtered.iloc[0]["timestamp"]
-            end = area_filtered.iloc[-1]["timestamp"]
+    selected_bool = file_properties_df["locationId"].isin(selected_location_ids)
+    location_id_filtered = file_properties_df[selected_bool]
 
-            times.extend([start, end])
-        else:
-            print("{}, do not have any files".format(area))
+    times = sorted(location_id_filtered["timestamp"].values)
 
-    times.sort()
-    all_start = times[0].replace(hour=0, minute=0, second=0)
-    all_end = times[-1].replace(hour=23, minute=59, second=59)
+    all_start = times[0]
+    all_end = times[-1]
 
-    # def days_hours_minutes(td):
-    #     return td.days, td.seconds // 3600, (td.seconds // 60) % 60
-
-    # create date axis indexes depending on start,end along with frequency
-    if "H" in freq:
-        number_hours = 3600
-        count = int(freq[:-1])
-        # extra = math.ceil(3 / count)
-        periods = ((all_end - all_start).total_seconds() //
-                   (number_hours * count) + 48)
-        globalindex = pd.date_range(all_start, periods=periods, freq=freq)
-    elif "D" in freq:
-        periods = (all_end - all_start).days + 3
-        globalindex = pd.date_range(all_start, periods=periods, freq=freq)
-    elif "T" in freq or "min" in freq:
-        #‘m’ / ‘minute’ / ‘min’ / ‘minutes’ / ‘T’
-        time_digits = "".join([i for i in freq if i.isdigit()])
-        buffer = timedelta(minutes=int(time_digits))
-        all_end = all_end + buffer
-        globalindex = pd.date_range(all_start, all_end, freq=freq)
-
-    else:
-        globalindex = pd.date_range(all_start, all_end, freq=freq)
+    all_end_padded = all_end + pd.tseries.frequencies.to_offset(freq)
+    globalindex = pd.date_range(all_start, all_end_padded, freq=freq)
 
     return globalindex, all_start, all_end
 
 
 # result_path="/scratch/enis/data/nna/real/"
-def loadResults(all_segments, prob2binaryFlag, threshold=0.5, channel=1):
-    if isinstance(all_segments,list):
+def load_npy_files(all_segments: Union[List[Union[str, Path]], Union[str,
+                                                                     Path]],):
+    """Load list of numpy files and concatanate in order. 
+        args:
+            all_segments: list of npy file paths or single path
+        return:
+            np.Array
+    """
+    if not isinstance(all_segments, list):
         all_segments = [all_segments]
 
     results = []
     for filename in all_segments:
         filename = Path(filename)
         if not filename.exists():
-            data = []
-        data = np.load(filename)
-        if prob2binaryFlag == True:
-            data = prob2binary(data, threshold=threshold, channel=channel)
+            raise FileNotFoundError(f"file does not exists: {str(filename)} ")
+        else:
+            data = np.load(filename)
+        # if prob2binary_flag:
+        # data = prob2binary(data, threshold=threshold, channel=channel)
         results.append(data)
 
     results = np.concatenate(results)
@@ -146,13 +139,41 @@ def loadResults(all_segments, prob2binaryFlag, threshold=0.5, channel=1):
     return results
 
 
-def prob2binary(result, threshold=0.5, channel=1):
+def prob2binary(
+    result: np.array,
+    threshold: float = 0.5,
+    channel: int = 1,
+    segment_len=10,
+) -> np.array:
+    """Given a numpy array, applies threshold to group of values, calculate single.
+
+            ! padds array so it is length is divisible by segment_len
+
+        args:
+            result: numpy array to be modified
+            threshld: threshold value
+            channel: last dimension of the array, how many channels sound has
+                     axis=0 
+    """
+    if len(result.shape) > 1 and result.shape[-1] != channel:
+        raise ValueError(
+            f"input array should have same dimension size with channel")
     if channel == 2:
-        result = np.min(result, axis=1)
+        result = np.max(result, axis=1)
+    if channel > 2:
+        raise NotImplementedError(
+            f"channel bigger than 2 is not implemented given {channel}")
     result[result > threshold] = 1
     result[result <= threshold] = 0
-    result = result[:(result.size // 10) * 10]
-    result = result.reshape(10, -1).max(axis=0)
+    remainder = (result.size % segment_len)
+    if remainder > 0:
+        pad_width = segment_len - remainder
+        result = np.pad(result, (0, pad_width),
+                        'constant',
+                        constant_values=(0, 0))
+
+    result = result[:(result.size // segment_len) * segment_len]
+    result = result.reshape(segment_len, -1).max(axis=0)
     return result
 
 
@@ -171,7 +192,6 @@ def file2TableDict(selected_areas: List[str],
                    channel: int = 1,
                    gathered_results_perTag: Union[Dict, None] = None,
                    result_path: Union[str, None] = None,
-                   file_name_addon: str = "",
                    prob2binaryFlag: bool = True) -> Tuple[Dict, List]:
     """Reduce results by dataFreq from multiple files into a pd.DataFrame.
 
@@ -239,30 +259,23 @@ def file2TableDict(selected_areas: List[str],
                 afile = Path(afile)
                 # we either load data from multiple files or from single one
                 if gathered_results_perTag is None:
-                    # TODO, make _FCmodel variable
                     check_folder = fileUtils.standard_path_style(
                         result_path,
                         row,
-                        # sub_directory_addon=file_name_addon,
                         sub_directory_addon=model_tag_name,
-                        #BUG check if this is used correctly
-                        # checked: it should not be used, otherwise,
-                        # it does not return a folder
-                        # file_name_addon=file_name_addon,
                     )
-                    # print(result_path, file_name_addon, row)
-                    # print(check_folder)
                     check_folder_str = str(check_folder) + "/"
-                    # print(check_folder_str)
                     all_segments = fileUtils.list_files(check_folder_str)
                     all_segments.sort()
                     if not all_segments:
                         data = np.empty(0)
                     else:
-                        data = loadResults(all_segments,
-                                           prob2binaryFlag=prob2binaryFlag,
-                                           threshold=dataThreshold,
-                                           channel=channel)
+                        data = load_npy_files(all_segments)
+                        if data.size != 0 and prob2binaryFlag:
+                            data = prob2binary(data,
+                                               threshold=dataThreshold,
+                                               channel=channel)
+
                         # gathered_results[file]=result[:]
                 else:
                     data = gathered_results_perTag[model_tag_name].get(
@@ -319,12 +332,22 @@ def file2TableDict(selected_areas: List[str],
     return df_dict, no_result_paths
 
 
-def reverseTableDict(selected_areas, df_dict, model_tag_names):
-    # Reverse order of TAG and AREA in the dataframe
-    # This graph for each tag for all areas
+def reverse_df_dict(df_dict):
+    """Switch TAG and AREA keys in the dataframe dict.
+        df_dict is
+                    {"area_name1":(df_count:pd.DataFrame,df_sums:pd.DataFrame),
+                    "area_name2":(df_count:pd.DataFrame,df_sums:pd.DataFrame),}
+                    then DataFrame has columns tag_name1, tag_name2 ex:(XXX)
+        df_dict_reverse is
+                    {"tag_name1":(df_count:pd.DataFrame,df_sums:pd.DataFrame),
+                    "tag_name2":(df_count:pd.DataFrame,df_sums:pd.DataFrame),}
+                    then DataFrame has columns area_name1, area_name2
+    """
 
     df_dict_reverse = {}  # type: ignore
-    for _, area in enumerate(selected_areas):
+    location_ids = list(df_dict.keys())
+    model_tag_names = df_dict[location_ids[0]][0].columns
+    for area in df_dict.keys():
         df_count, df_sums = df_dict[area]
         for tagname in model_tag_names:
             df_dict_reverse.setdefault(tagname, [[], []])
@@ -332,10 +355,9 @@ def reverseTableDict(selected_areas, df_dict, model_tag_names):
             df_dict_reverse[tagname][1].append(df_sums[tagname])
 
     for tagname in model_tag_names:
-
         df_count = pd.concat(df_dict_reverse[tagname][0], axis=1)
         df_sums = pd.concat(df_dict_reverse[tagname][1], axis=1)
-        df_count.columns, df_sums.columns = selected_areas, selected_areas
+        df_count.columns, df_sums.columns = location_ids, location_ids
         df_dict_reverse[tagname] = df_count, df_sums
 
     return df_dict_reverse
@@ -391,22 +413,23 @@ def rawFile2Csv(csvPath,
                 afile = Path(afile)
 
                 # we either load data from multiple files or from single one
-                if gathered_results_perTag == None:
+                if gathered_results_perTag is None:
                     check_folder = fileUtils.standard_path_style(
                         result_path,
                         row,
                         sub_directory_addon=model_tag_name,
-                        file_name_addon=file_name_addon)
+                    )
                     check_folder_str = str(check_folder) + "/"
                     all_segments = fileUtils.list_files(check_folder_str)
                     if not all_segments:
                         data = np.empty(0)
                     else:
-                        data = loadResults(all_segments,
-                                           prob2binaryFlag=prob2binaryFlag,
-                                           threshold=dataThreshold,
-                                           channel=channel)
-                        # gathered_results[file]=result[:]
+                        data = load_npy_files(all_segments)
+                        if data.size != 0 and prob2binaryFlag:
+                            data = prob2binary(data,
+                                               threshold=dataThreshold,
+                                               channel=channel)
+
                 else:
                     data = gathered_results_perTag[model_tag_name].get(
                         afile, np.empty(0))[:]
@@ -414,8 +437,6 @@ def rawFile2Csv(csvPath,
                         data = prob2binary(data, threshold=0.5, channel=channel)
 
                 if data.size == 0:
-                    print(check_folder_str)
-                    print(all_segments)
                     no_result_paths.append(afile)
                     continue
 
@@ -460,95 +481,71 @@ def add_normal_dist_alpha(aCmap):
     return my_cmaps
 
 
-def load_clipping_2dict(clippingResultsPath,
+def load_clipping_2dict(clipping_results_path,
                         selected_areas,
                         selected_tag_name,
                         threshold: float = 1.0):
-    gathered_results_perTag = {selected_tag_name: {}}
+    """Load clipping results into a dictionary.
+
+
+    """
     gathered_results = {}
-    selected_areas_files = {}
-    for i, area in enumerate(selected_areas):
-        to_be_deleted = []
+    for _, area in enumerate(selected_areas):
         clipping_threshold_str = str(threshold)
         clipping_threshold_str = clipping_threshold_str.replace(".", ",")
-        fileName = (clippingResultsPath + area +
+        fileName = (clipping_results_path + area +
                     f"_{clipping_threshold_str}.pkl")
         resultsDict = np.load(fileName, allow_pickle=True)
         resultsDict = resultsDict[()]
-        gathered_results_perTag[selected_tag_name].update(resultsDict)
-    return gathered_results_perTag
+        gathered_results.update(resultsDict)
+    return gathered_results
 
 
-# def loadClipping(clippingInfoFile):
+def time_index_by_close_recordings(file_properties_df,
+                                   max_time_distance_allowed=5):
+    """Cal time indexes of bins with recordings not far to each other more than.
 
-#     clippingInfo=np.load(clippingInfoFile,allow_pickle=True)
-#     clippingInfo = clippingInfo[()]
-#     clippingInfo2={}
-#     clippingInfoArray=[]
-#     cc=0
-#     for clipFile,clipping in clippingInfo.items():
-#         locID=Path(clipFile).stem.split("_")[:2]
-#         locID = tuple(locID)
-#         clippingInfo2[locID] = clipping
-#         if clipping.shape==(1,2):
-#             clipping = clipping[0]
-#         elif clipping.shape==(2,2):
-#             clipping = clipping[0]
-#         elif clipping.shape==(2,):
-#             pass
-#         else:
-#             print("ERROR",clipping)
-#         clippingInfoArray.append(clipping)
-#         clippingInfo2[locID] = clipping
-
-#     clippingInfoArray = np.concatenate(clippingInfoArray).reshape(-1,2)
-#     return clippingInfo2,clippingInfoArray
-
-
-def get_time_index_per_file(selected_area,
-                            file_properties_df,
-                            freq,
-                            timeDifference=5):
+        This function is for creating a time index of bins used to group data
+        but specifically grouping close recordings. So that each bin represents
+        a group of recording that was continous or close enough.
+        Args:
+            file_properties_df: see file_properties_df
+            max_time_distance_allowed: how far one recording's ending can be
+                                        further than next one's start
+    """
     #TODO add sensitivity
-    rowiterator = file_properties_df[file_properties_df.site_id ==
-                                     selected_area].iterrows()
+    file_properties_df.sort_values(by=['timestamp'], inplace=True)
+    rowiterator = file_properties_df.iterrows()
     # use first item as initialization, ahead of for loop
     n = next(rowiterator)
     start = n[1].timestamp
     beginning = start
     end = n[1].timestampEnd
-    fileTimeIndex = []
-    IsHead = False
-    #     print(start)
+    file_time_index = []
+    is_head = False
     for row in rowiterator:
         # if end of previous file not equal to start of the second one
-        if (row[1].timestamp - end) > timedelta(minutes=timeDifference):
+        if (row[1].timestamp -
+                end) > timedelta(minutes=max_time_distance_allowed):
             # add previous one to list and make new one the beginning of continous recording
-            fileTimeIndex.append(beginning)
+            file_time_index.append(beginning)
             beginning = row[1].timestamp
-            IsHead = True
-    #             pass
-#             print("noteq",row[1].timestamp-end)
-#         print(row[1].timestamp,end)
+            is_head = True
+
+
 # if they are equal, they should be in the same bin, so keep going
         else:
-            IsHead = False
-    #             pass
-    #         print("equal",row[1].timestampEnd-start)
-    #         fileTimeIndex.append(start)
-    #         print(row[1].timestampEnd,start)
+            is_head = False
         start = row[1].timestamp
         end = row[1].timestampEnd
     # If last one is a head add to the list
 
-
-#     print(IsHead)
-    if IsHead:
-        fileTimeIndex.append(beginning)
+    if is_head:
+        file_time_index.append(beginning)
     # add end since last bin border should be bigger than all data
-    fileTimeIndex.append(end)
-    fileTimeIndexSeries = pd.Series(fileTimeIndex)
-    return fileTimeIndexSeries
+    file_time_index.append(end)
+    file_time_index_series = pd.Series(file_time_index)
+    return file_time_index_series
 
 
 def vis_preds_with_clipping(selected_area,
@@ -567,12 +564,14 @@ def vis_preds_with_clipping(selected_area,
     ]
     # file length based time index
     if freq == "continous":
-        fileTimeIndexSeries = get_time_index_per_file(selected_area,
-                                                      file_properties_df, freq)
+        filtered_file_properties_df = file_properties_df[
+            file_properties_df.site_id == selected_area]
+        fileTimeIndexSeries = time_index_by_close_recordings(
+            filtered_file_properties_df)
         globalindex = fileTimeIndexSeries
     #fixed freq based  time index
     else:
-        globalindex, all_start, all_end = createTimeIndex(
+        globalindex, all_start, all_end = create_time_index(
             selected_areas, file_properties_df, freq)
         del all_start, all_end
 
@@ -616,10 +615,10 @@ def vis_preds_with_clipping(selected_area,
     #     model_tag_names=[selected_tag_name]
     globalcolumns = [selected_tag_name]  #selected_areas+weather_cols
 
-    gathered_results_perTag = load_clipping_2dict(clippingResultsPath,
-                                                  selected_areas,
-                                                  selected_tag_name,
-                                                  threshold=clipping_threshold)
+    gathered_results = load_clipping_2dict(clippingResultsPath,
+                                           selected_areas,
+                                           threshold=clipping_threshold)
+    gathered_results_per_tag = {selected_tag_name: gathered_results}
 
     df_dict_clipping, no_result_paths = file2TableDict(
         selected_areas,
@@ -631,8 +630,9 @@ def vis_preds_with_clipping(selected_area,
         dataFreq="10S",
         dataThreshold=0.01,
         channel=2,
-        gathered_results_perTag=gathered_results_perTag,
-        result_path=None)
+        gathered_results_perTag=gathered_results_per_tag,
+        result_path=None,
+    )
 
     df_count_clipping, df_sums_clipping = df_dict_clipping[selected_area]
     df_freq_clipping = df_sums_clipping / df_count_clipping
