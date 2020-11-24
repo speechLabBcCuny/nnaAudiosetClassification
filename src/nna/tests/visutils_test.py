@@ -2,6 +2,7 @@
 
 import datetime
 import numpy as np
+import pandas as pd
 import pytest
 from nna import visutils
 from nna.tests import mock_data
@@ -207,9 +208,6 @@ def test_file2TableDict():
         # assert approx_sum_flag
         # sums should be bigger than counts,
         assert (counts[counts['XXX'] > 0] <= sums[sums['XXX'] > 0]).all()[0]
-
-
-import pandas as pd
 
 
 def test_reverse_df_dict():
