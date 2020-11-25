@@ -34,7 +34,7 @@ from matplotlib.collections import LineCollection
 from nna.pre_process_func import read_queue
 from nna.fileUtils import read_file_properties
 from nna.labeling_utils import load_labels
-from nna.visutils import get_cycle, createTimeIndex, file2TableDict, reverseTableDict
+from nna.visutils import get_cycle, create_time_index, file2TableDict, reverse_df_dict
 
 import nna
 

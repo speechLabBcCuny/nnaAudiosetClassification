@@ -660,7 +660,7 @@ def divide_data_into_months(df_freq,):
     return data_figure_parts_by_year
 
 
-def create_figure(selected_area, months, months_time, my_cmaps, cord_list,
+def create_figure(location_id, months, months_time, my_cmaps, cord_list,
                   vis_file_path, region_name, year, freq, id2name):
     #     plt.rcParams["axes.prop_cycle"] = get_cycle("tab10",N=8)
     vmin, vmax = 0, 100
@@ -753,13 +753,13 @@ def create_figure(selected_area, months, months_time, my_cmaps, cord_list,
     plt.subplots_adjust(top=0.90)
 
     fig.suptitle(
-        "Site {}, Normalized Bi-270min Frequency [%]".format(selected_area),
+        "Site {}, Normalized Bi-270min Frequency [%]".format(location_id),
         fontsize=48)
     #     plt.show()
 
     fig_dir = Path(vis_file_path) / ("Freq-" + freq) / region_name
     fig_dir.mkdir(parents=True, exist_ok=True)
-    fig_path = fig_dir / ("_".join([selected_area, str(year)]) + "." + "png")
+    fig_path = fig_dir / ("_".join([location_id, str(year)]) + "." + "png")
 
     fig.savefig(fig_path)
     #     fig.show()
