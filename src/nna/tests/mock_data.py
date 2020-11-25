@@ -18,6 +18,8 @@ from nna.tests.mock_data_params import EXISTING_REGION_LOCATIONID  #,IGNORE_LOCA
 from nna.tests.mock_data_params import EXISTING_YEARS, IGNORE_YEARS, EXISTING_SUFFIX
 from nna.tests.mock_data_params import EXISTING_LONGEST_FILE_LEN
 
+random.seed(44)
+
 
 def mock_file_properties_df(
     index_length: int = 100,
@@ -145,7 +147,7 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
                           output_file_path: Path,
                           file_length: int,
                           segment_len: float = 10.0,
-                          channel_count:int=1) -> np.array:
+                          channel_count: int = 1) -> np.array:
     """Create a .npy file and fill it with result values.
     """
     result_len = (file_length // segment_len)
@@ -154,9 +156,9 @@ def mock_result_data_file(fill_value_func: Callable[[int], int],
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
     results = [fill_value_func(index) for index in range(int(result_len))]
     results = np.array(results)
-    if channel_count>1:
-        results = np.repeat(np.array(results),channel_count)
-        results = results.reshape(-1,channel_count)
+    if channel_count > 1:
+        results = np.repeat(np.array(results), channel_count)
+        results = results.reshape(-1, channel_count)
 
     output_file_path = output_file_path.with_suffix('.npy')
     np.save(output_file_path, results)
@@ -170,8 +172,8 @@ def mock_results_4input_files(file_properties_df: pd.DataFrame,
                               output_path: Path,
                               results_tag_id: str = 'XXX',
                               file_length_limit: str = '01:00:00',
-                              segment_len:int=10,
-                              channel_count:int=1):
+                              segment_len: int = 10,
+                              channel_count: int = 1):
     """Mock result files for list of input files.
 
         Given a file properties, for each row, generate an output file and fill
@@ -219,9 +221,34 @@ def mock_results_4input_files(file_properties_df: pd.DataFrame,
                                       channel_count=channel_count)
 
             resulting_output_file_paths.append(output_file_path)
-    
-    resulting_output_file_paths = [i.with_suffix('.npy') for i in resulting_output_file_paths]
+
+    resulting_output_file_paths = [
+        i.with_suffix('.npy') for i in resulting_output_file_paths
+    ]
     return resulting_output_file_paths
+
+
+def mock_clipping_results_dict_file(file_properties_df, region_location_name,
+                                    clipping_results_path):
+    clipping_resultsdict_mock = {}
+    for row in file_properties_df.iterrows():
+        # print(row[0],row)
+        clipping_mock = []
+        for i in range(int(row[1].durationSec / 10)):
+            channel1 = 1 / (i + 1)
+            channel2 = channel1 * 1.1
+            clipping_mock.append([channel1, channel2])
+
+        clipping_mock_np = np.array(clipping_mock)
+        clipping_resultsdict_mock[row[0]] = clipping_mock_np[:]
+
+    filename = '{}_{}.pkl'.format(region_location_name, '1,0')
+
+    output_file_path = clipping_results_path / filename
+    with open(output_file_path, 'wb') as f:
+        np.save(f, clipping_resultsdict_mock)
+    return output_file_path
+
 
 if '__init__' == '__main__':
 
