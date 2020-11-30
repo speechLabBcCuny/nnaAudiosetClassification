@@ -32,6 +32,10 @@ if __name__ == "__main__":
                         "--watch",
                         help="wait for input, do not quit",
                         action='store_true')
+    parser.add_argument("-p",
+                        "--probability",
+                        help="results should be probability not binary",
+                        action='store_true')
     args = parser.parse_args()
 
     if args.modelPath is None or args.modelName is None:
@@ -44,7 +48,8 @@ if __name__ == "__main__":
         args.modelName + '_processing_queue.csv'
     Audioset_output_queue = './job_logs/' + args.modelName + '_output_queue.csv'
 
-    classifier = classicML(classifier_model_path=args.modelPath)
+    classifier = classicML(classifier_model_path=args.modelPath,
+                           predictProbFlag=True)
 
     watch = True
     filesToDoFlag = True
@@ -66,9 +71,9 @@ if __name__ == "__main__":
             if len(files_to_do) > file_batch_size:
                 files_to_do = random.sample(files_to_do, k=file_batch_size)
             # save to processing queue
-            pre_process_func.save_to_csv(Audioset_processing_queue,
-                                         [[str(afile)]
-                                          for afile in files_to_do])
+            pre_process_func.save_to_csv(
+                Audioset_processing_queue,
+                [[str(afile)] for afile in files_to_do])
             for vgg_npy_file in files_to_do:
                 classifier.classify_file(vgg_npy_file,
                                          ModelName=args.modelName,
