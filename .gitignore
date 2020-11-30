@@ -3,6 +3,7 @@
 job_logs/*
 */*/*/wandb
 */*/wandb
+.DS_Store
 data/
 backup/
 results/
@@ -24,7 +25,7 @@ src/nna/assets/
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.png
 # C extensions
 *.so
 
@@ -137,3 +138,13 @@ dmypy.json
 files_missing.txt
 sendmail.py
 newFile.txt
+#specific files
+notebooks/explore/allEmbeddings.csv
+notebooks/explore/mashup.wav
+notebooks/model_exp/unbalanced_train_segments.csv
+notebooks/unsupervised/small_pre_processed.npy
+notebooks/Visualizations/01-Itkillik_CABLE2.csv
+notebooks/Visualizations/auc_matrix.pkl
+notebooks/Visualizations/coordinates.csv
+notebooks/Visualizations/profile1
+src/scripts/locationIds.txt
