@@ -1,5 +1,6 @@
 */*/job_logs/*
 */job_logs/*
+job_logs/*
 */*/*/wandb
 */*/wandb
 data/
@@ -12,6 +13,13 @@ src/visualizations/side.py
 src/visualizations/simple_agg.py
 test.txt
 tmp*
+.vscode
+*.tmp
+notebooks/model_exp/louder/*
+notebooks/trap_photo_audio_new*/*
+notebooks/visualizations/booksrc/csv_version/*
+src/scripts/clipping_output/*
+src/nna/assets/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -128,3 +136,4 @@ dmypy.json
 .pyre/
 files_missing.txt
 sendmail.py
+newFile.txt
