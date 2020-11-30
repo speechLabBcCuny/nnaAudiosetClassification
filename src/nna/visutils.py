@@ -3,6 +3,7 @@
 """
 from typing import Dict, List, Union, Tuple
 from pathlib import Path
+from matplotlib.pyplot import contour
 
 import numpy as np
 import pandas as pd
@@ -187,7 +188,7 @@ def prob2binary(
     result: np.array,
     threshold: float = 0.5,
     channel: int = 1,
-    segment_len=10,
+    segment_len=1,
 ) -> np.array:
     """Applies threshold to group of values, calculate single.
 
@@ -231,8 +232,18 @@ def load_data_of_row(
     """Load data belonging to a sound file (row from file_properties_df).
     """
     if gathered_results_per_tag:
-        data = gathered_results_per_tag[model_tag_name].get(afile,
-                                                            np.empty(0))[:]
+        a_key = next(iter(gathered_results_per_tag))
+        if isinstance(a_key, str):
+            afile_as_key = str(afile)
+        elif isinstance(a_key, Path):
+            afile_as_key = Path(afile)
+        else:
+            afile_as_key = afile
+            print("ERROR from load_data_of_row, \
+                gathered_results_per_tag has a key which is not Path or str")
+        data = gathered_results_per_tag[model_tag_name].get(
+            afile_as_key, np.empty(0))[:]
+
     else:
         check_folder = fileUtils.standard_path_style(
             result_path,
@@ -347,23 +358,26 @@ def file2TableDict(  # pylint: disable=invalid-name
     selected_location_ids = set(file_properties_df.locationId.values)
     df_dict = {key: None for key in selected_location_ids}
 
-    area_prev = None
+    location_id_prev = None
+    location_id = None
     no_result_paths = []
     for location_id, _, df_afile in load_data_yield(
             model_tag_names, file_properties_df, input_data_freq,
             prob2binary_threshold, channel, gathered_results_per_tag,
             result_path, prob2binary_flag):
+        # if file could not be loaded
         if location_id is None:
             no_result_paths.append(df_afile)
             continue
-        if area_prev != location_id:
-            if area_prev is not None:
-                df_dict[area_prev] = (
+        if location_id_prev != location_id:
+            if location_id_prev is not None:
+                df_dict[location_id_prev] = (
                     df_count.copy(),  #type: ignore
                     df_sums.copy(),  #type: ignore
                 )  #type: ignore
 
-            area_prev = location_id
+            #init for next location_id
+            location_id_prev = location_id
             df_sums = pd.DataFrame(index=global_index,
                                    columns=model_tag_names).fillna(0)
             df_count = pd.DataFrame(index=global_index,
@@ -376,7 +390,8 @@ def file2TableDict(  # pylint: disable=invalid-name
             df_sums)  #type: ignore
 
     # last results
-    df_dict[area_prev] = (df_count.copy(), df_sums.copy())  #type: ignore
+    if location_id is not None:
+        df_dict[location_id] = (df_count.copy(), df_sums.copy())  #type: ignore
     return df_dict, no_result_paths
 
 
@@ -411,13 +426,18 @@ def load_data_yield(tag_names: List[str],
                     yield (None, None, afile)
 
                 if prob2binary_flag:
-                    data = prob2binary(data,
-                                       threshold=prob2binary_threshold,
-                                       channel=channel)
-
-                df_afile = row_data_2_df(row, data, input_data_freq, a_tag_name)
-
-                yield location_id, a_tag_name, df_afile
+                    data = prob2binary(
+                        data,
+                        threshold=prob2binary_threshold,
+                        channel=channel,
+                    )
+                try:
+                    df_afile = row_data_2_df(row, data, input_data_freq,
+                                             a_tag_name)
+                    yield location_id, a_tag_name, df_afile
+                except:
+                    print(afile, row, data.shape, input_data_freq, a_tag_name)
+                    yield None, None, afile
 
 
 def reverse_df_dict(df_dict):
@@ -466,49 +486,56 @@ def export_raw_results_2_csv(output_folder_path,
     if output_data_freq != "10S":
         raise ValueError(
             "this function does not do aggregation, set dataFreq to 10S")
+    output_folder_path = Path(output_folder_path)
 
-    def export_list_of_df_2csv(df_raw_list, csv_files_written):
+    def export_list_of_df_2csv(df_raw_list, csv_files_written, location_id,
+                               tag_name):
         if df_raw_list:
             df_raw = pd.concat(df_raw_list)
             df_raw = df_raw.sort_index()
-            csv_file_name = "_".join([location_id, model_tag_name + ".csv"])  #pylint: disable=undefined-loop-variable
+            csv_file_name = "_".join([location_id, tag_name + ".csv"])
             output_folder_path.mkdir(exist_ok=True, parents=True)
             df_raw.to_csv((output_folder_path / csv_file_name),
                           index_label="TimeStamp",
-                          header=[model_tag_name])  #pylint: disable=undefined-loop-variable
+                          header=[tag_name])
             csv_files_written.append((output_folder_path / csv_file_name))
         return csv_files_written
 
     csv_files_written = []
     no_result_paths = []
 
-    model_tag_name_prev = None
+    tag_name_prev = None
     location_id_prev = None
     df_raw_list = []
-
-    for location_id, model_tag_name, df_afile in load_data_yield(
+    tag_name = None
+    location_id = None
+    for location_id, tag_name, df_afile in load_data_yield(
             tag_names, file_properties_df, input_data_freq, raw2prob_threshold,
             channel, gathered_results_per_tag, result_files_folder,
             prob2binary_flag):
         # no results, yields None,None,df_afile
         if location_id is None:
             no_result_paths.append(df_afile)
+            continue
 
         # if location_id or model_tag_name changed, save the buffer
         # in the first one df_raw_list will be empty anyway
-        if (location_id_prev, model_tag_name_prev) != (location_id,
-                                                       model_tag_name):
+        if (location_id_prev, tag_name_prev) != (location_id, tag_name):
             if df_raw_list:
                 csv_files_written = export_list_of_df_2csv(
-                    df_raw_list, csv_files_written)
-            model_tag_name_prev = model_tag_name
+                    df_raw_list, csv_files_written, location_id_prev,
+                    tag_name_prev)
+            tag_name_prev = tag_name
             location_id_prev = location_id
             df_raw_list = []
 
         df_raw_list.append(df_afile)
 
     # save last yielded batch
-    csv_files_written = export_list_of_df_2csv(df_raw_list, csv_files_written)
+    if tag_name and location_id:
+        csv_files_written = export_list_of_df_2csv(df_raw_list,
+                                                   csv_files_written,
+                                                   location_id, tag_name)
     return csv_files_written, no_result_paths
 
 
@@ -543,6 +570,7 @@ def load_clipping_2dict(
 file_properties_df, region_location_name,
                                     clipping_results_path
     """
+    clipping_results_path = Path(clipping_results_path)
     if not gathered_results:
         gathered_results = {}
     clipping_threshold_str = str(threshold)
@@ -590,7 +618,8 @@ def vis_preds_with_clipping(region,
         region_location_name,
         clipping_results_path,
         threshold=clipping_threshold,
-        gathered_results=gathered_results,)
+        gathered_results=gathered_results,
+    )
     gathered_results_per_tag = {"Clipping": gathered_results}
 
     df_dict_clipping, no_result_paths = file2TableDict(
