@@ -65,9 +65,9 @@ def main():
     # wandb.config.update(args) # adds all of the arguments as config variables
 
     params = {
-        'batch_size': config.batch_size,
+        "batch_size": config.batch_size,
         "shuffle": True,
-        'num_workers': 0
+        "num_workers": 0
     }
 
     tagSet = [
@@ -75,7 +75,7 @@ def main():
         "Wind", "Aircraft"
     ]
 
-    labelsbyhumanpath = Path('/scratch/enis/data/nna/labeling/results/')
+    labelsbyhumanpath = Path("/scratch/enis/data/nna/labeling/results/")
     # splits_path= Path('/files/scratch/enis/data/nna/labeling/splits/')
     sourcePath = Path("/scratch/enis/data/nna/labeling/splits/")
 
@@ -205,5 +205,5 @@ def main():
                  config, wandb_project_name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

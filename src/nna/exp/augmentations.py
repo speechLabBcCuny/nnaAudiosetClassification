@@ -2,6 +2,11 @@ import numpy as np
 import torch
 import librosa
 
+#mix two of them by time
+# time streching and 
+
+# run probabilities on the background
+# 
 
 def randomMerge(data, count=1, splitIndex=-1):
     """
