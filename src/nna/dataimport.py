@@ -227,18 +227,18 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
             'dgs': '1.1.7',
             'flare': '0.4.0',
             'fox': '1.2.4',
-            'geo': 'X.X.X',
+            'geo': '2.0.0',
             'grouse': '1.1.8',
             'loon': '1.1.3',
             'mam': '1.2.0',
             'plane': '0.2.0',
             'ptarm': '1.1.8',
-            'rain': 'X.X.X',
+            'rain': '2.1.0',
             'seab': '1.1.5',
-            'silence': 'X.X.X',
+            'silence': '3.0.0',
             'songbird': '1.1.10',
             'unknown': 'X.X.X',
-            'water': 'X.X.X',
+            'water': '2.2.0',
             'x': 'X.X.X',
         }
     if row['Specific Category'] in ['Songb', 'SongB']:
@@ -246,6 +246,10 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
 
     if row['Category'] in ['Mamm']:
         row['Category'] = 'Mam'
+    # 'S4A10288_20190729_033000_unknown.wav', # 'Anthro/Bio': 'Uknown', no other data 
+
+    if row['Anthro/Bio'] in ['Uknown','Unknown']:
+        row['Anthro/Bio']=''
 
     code = [row['Anthro/Bio'], row['Category'], row['Specific Category']]
 
@@ -262,7 +266,9 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
             raise NotImplementedError(
                 f"row has wrong info about categories, '/' found: {row}")
 
-    if code[2] != 'X':
+    if code == ['X','X','X']:
+        yaml_code = 'X.X.X'
+    elif code[2] != 'X':
         yaml_code = excell_names2code[code[2].lower()]
     elif code[1] != 'X':
         yaml_code = excell_names2code[code[1].lower()]
@@ -271,7 +277,9 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
     else:
         print(code)
         raise ValueError(f'row does not belong to any toplogy: {row}')
-
     return yaml_code
+
+
+        
 
 
