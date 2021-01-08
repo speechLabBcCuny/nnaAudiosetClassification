@@ -148,3 +148,5 @@ notebooks/Visualizations/auc_matrix.pkl
 notebooks/Visualizations/coordinates.csv
 notebooks/Visualizations/profile1
 src/scripts/locationIds.txt
+env_info/ebc/soundEnv_from-history.yml
+env_info/ebc/soundEnv.yml

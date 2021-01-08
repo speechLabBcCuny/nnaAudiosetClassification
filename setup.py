@@ -3,8 +3,10 @@
 from setuptools import find_packages
 from setuptools import setup
 
+# strict
+    # 'ffmpeg==4.3',
+
 requirements = [
-    'ffmpeg==4.3.1',
     'pandas==1.0.3',
     'pydub==0.23.1',
     'pillow==7.1.1',
@@ -21,6 +23,8 @@ requirements = [
     'pysoundfile==0.10.2',
     'resampy==0.2.2',
 ]
+
+
 
 setup(name='nna',
       version='0.1.0',
