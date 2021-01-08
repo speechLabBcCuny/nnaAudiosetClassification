@@ -20,9 +20,8 @@ from nna import dataimport
 # sample_count_limit = 25
 # sample_length_limit = 10
 
-
 # %%
-def load_file_info2dataset(megan_labeled_files_info_path):
+def load_file_info2dataset(megan_labeled_files_info_path, dataset_name_v=''):
     """read path, len of megan labeled files from meganLabeledFiles_wlenV1.txt
      store them in a dataimport.dataset, keys are gonna be file_name
     """
@@ -40,9 +39,13 @@ def load_file_info2dataset(megan_labeled_files_info_path):
     assert len(set([i.name for i in audio_dataset.values()
                    ])) == len(list(audio_dataset.keys()))
     # change keys to file names
-    # TODO fix requirement for **
+    data_dict = {i.name: i for i in audio_dataset.values()}
+    print(megan_labeled_files_info_path)
+    print(Path(megan_labeled_files_info_path).parent)
     audio_dataset = dataimport.Dataset(
-        **{i.name: i for i in audio_dataset.values()})
+        dataset_name_v=dataset_name_v,
+        dataset_folder=Path(megan_labeled_files_info_path).parent,
+        data_dict=data_dict)
 
     return audio_dataset
 
@@ -71,9 +74,8 @@ def load_labeled_info(csv4megan_excell, audio_dataset, ignore_files=None):
             missing_audio_files.append(row['File Name'])
 
     missing_audio_files = set(missing_audio_files)
-    print(
-        f'{len(missing_audio_files)}audio files are missing corresponding to excell.'
-    )
+    print((f'{len(missing_audio_files)} files are missing' +
+           ' corresponding to excell entries'))
 
     megan_data_sheet = []
     for row in reader:
@@ -84,9 +86,10 @@ def load_labeled_info(csv4megan_excell, audio_dataset, ignore_files=None):
     deleted_files = set()
     deleted_files.update(ignore_files)
     deleted_files.update(missing_audio_files)
-    pprint(f'{len(deleted_files)} number of samples are DELETED')
+    pprint((f'-> {len(deleted_files)} number of samples are DELETED due to ' +
+            'ignore_files and missing_audio_files'))
 
-    return megan_data_sheet, deleted_files
+    return megan_data_sheet, list(deleted_files)
 
 
 # %%
@@ -115,6 +118,29 @@ def add_taxo_code2dataset(megan_data_sheet, audio_dataset):
         audio_sample.taxo_code = taxonomy_code
 
 
+def del_samples_not_labeled(audio_dataset, megan_data_sheet):
+    """ remove files from dataset that are not in the labeled list 
+        
+        we have some audio files in the original folder but
+        they are not samples but original big recordings etc
+        remove anything that is not in the list
+    
+    """
+
+    megan_data_sheet_file_names = {row['File Name'] for row in megan_data_sheet}
+
+    to_be_deleted = []
+    for key in audio_dataset:
+        if key not in megan_data_sheet_file_names:
+            to_be_deleted.append(key)
+    for k in to_be_deleted:
+        del audio_dataset[k]
+    print(
+        f'-> {len(to_be_deleted)} samples DELETED because they are not in the '
+        + 'excell\n')
+    return to_be_deleted
+
+
 def del_samples_w_no_taxo(audio_dataset):
     """remove samples without taxonomy code from dataset
 
@@ -127,21 +153,27 @@ def del_samples_w_no_taxo(audio_dataset):
     for k in to_be_deleted:
         del audio_dataset[k]
     print(
-        f'-> {len(to_be_deleted)} samples removed because they are not in the '
-        + 'excell\n')
+        f'-> {len(to_be_deleted)} samples DELETED because they do not have the '
+        + 'taxo info coming from excell\n')
+    return to_be_deleted
 
 
 def count_category_size(audio_dataset, sample_length_limit):
     """Go through rows of the excell and count category population
     """
+    no_taxo_code = []
     taxo_code_counter = Counter()
     for audio_ins in audio_dataset.values():
         if audio_ins.taxo_code is None:
-            print(audio_ins)
+            no_taxo_code.append(audio_ins)
         if audio_ins.length >= sample_length_limit:
             sample_count = audio_ins.length // audio_dataset.excerpt_length
             taxo_code_counter.update({audio_ins.taxo_code: sample_count})
-
+    if no_taxo_code:
+        msg = 'following samples do not have taxonomy info:'
+        print(msg)
+        for i in no_taxo_code:
+            print(i)
     return taxo_code_counter
 
 
@@ -152,13 +184,13 @@ def delete_samples_by_taxo_limit(taxo_code_counter, audio_dataset,
 
     """
     taxonomy_no_enough_data = []
-    print('-> classes that do not have enough data\nwill be REMOVED!')
+    print('-> classes that do not have enough data:\n[REMOVED!]')
     for k, v in taxo_code_counter.items():
         if v < taxo_count_limit:
             print(audio_dataset.taxonomy.edges[k], v)
             taxonomy_no_enough_data.append(k)
 
-    print('-> classes that have enough data\n')
+    print('\n-> classes that have enough data:')
     for k, v in taxo_code_counter.items():
         if v >= taxo_count_limit:
             print(audio_dataset.taxonomy.edges[k], v)
@@ -179,11 +211,36 @@ def delete_samples_by_taxo_limit(taxo_code_counter, audio_dataset,
     return samples_2_delete
 
 
+# %%
+
+
+def delete_samples_by_length_limit(audio_dataset, sample_length_limit):
+    """find samples that are not long enough and delete samples from dataset
+
+    """
+    sample_not_long_enough = []
+    print('-> classes that do not have enough data\nwill be REMOVED!')
+    for k, v in audio_dataset.items():
+        if v.length < sample_length_limit:
+            sample_not_long_enough.append(k)
+
+    #  DELETE samples with not enough data
+    for k in sample_not_long_enough:
+        del audio_dataset[k]
+
+    print(f'-> {len(sample_not_long_enough)} number of samples are deleted ' +
+          'because their length is not long enough.')
+
+    return sample_not_long_enough
+
+
 #%%
 def setup():
     # runconfigs.py ########
     TAXO_COUNT_LIMIT = 25
     SAMPLE_LENGTH_LIMIT = 10
+    DATASET_NAME_V = 'megan_v1'
+
     # ########
 
     taxo_count_limit = TAXO_COUNT_LIMIT
@@ -229,7 +286,8 @@ def setup():
     }
     return (megan_labeled_files_info_path, taxonomy_file_path,
             csv4megan_excell_clenaed, ignore_files, excerpt_length,
-            excell_names2code, sample_length_limit, taxo_count_limit)
+            excell_names2code, sample_length_limit, taxo_count_limit,
+            DATASET_NAME_V)
 
 
 #%%
@@ -240,43 +298,57 @@ def run(megan_labeled_files_info_path,
         excerpt_length,
         sample_length_limit,
         taxo_count_limit,
-        excell_names2code=None):
+        excell_names2code=None,
+        dataset_name_v=''):
 
-    audio_dataset = load_file_info2dataset(megan_labeled_files_info_path)
+    audio_dataset = load_file_info2dataset(megan_labeled_files_info_path,
+                                           dataset_name_v)
 
     megan_data_sheet, deleted_files = load_labeled_info(
         csv4megan_excell_clenaed, audio_dataset, ignore_files=ignore_files)
 
     audio_dataset.excerpt_length = excerpt_length
-    audio_dataset.excell_names2code = excell_names2code
+    audio_dataset.excell_names2code = excell_names2code  # type: ignore
 
     load_taxonomy2dataset(taxonomy_file_path, audio_dataset)
     add_taxo_code2dataset(megan_data_sheet, audio_dataset)
 
-    del_samples_w_no_taxo(audio_dataset)
+    deleted_samples_not_labeled = del_samples_not_labeled(
+        audio_dataset, megan_data_sheet)
+    deleted_samples_w_no_taxo = del_samples_w_no_taxo(audio_dataset)
     taxo_code_counter = count_category_size(audio_dataset, sample_length_limit)
 
-    samples_2_delete = delete_samples_by_taxo_limit(taxo_code_counter,
-                                                    audio_dataset,
-                                                    taxo_count_limit)
+    # Apply Limits taxo_count_limit and sample_length_limit
+    small_taxo_deleted = delete_samples_by_taxo_limit(taxo_code_counter,
+                                                      audio_dataset,
+                                                      taxo_count_limit)
+    sample_not_long_enough = delete_samples_by_length_limit(
+        audio_dataset, sample_length_limit)
 
-    return audio_dataset, samples_2_delete, deleted_files
+    audio_dataset.update_samples_w_clipping_info()
+    deleted_files = (deleted_files + small_taxo_deleted +
+                     sample_not_long_enough + deleted_samples_not_labeled +
+                     deleted_samples_w_no_taxo)
+    return audio_dataset, deleted_files
 
 
 #%%
 def main():
     (megan_labeled_files_info_path, taxonomy_file_path,
      csv4megan_excell_clenaed, ignore_files, excerpt_length, excell_names2code,
-     sample_length_limit, taxo_count_limit) = setup()
+     sample_length_limit, taxo_count_limit, DATASET_NAME_V) = setup()
 
-    run(megan_labeled_files_info_path,
-        taxonomy_file_path,
-        csv4megan_excell_clenaed,
-        ignore_files,
-        excerpt_length,
-        sample_length_limit,
-        taxo_count_limit,
-        excell_names2code=excell_names2code)
+    audio_dataset, deleted_files = run(megan_labeled_files_info_path,
+                                       taxonomy_file_path,
+                                       csv4megan_excell_clenaed,
+                                       ignore_files,
+                                       excerpt_length,
+                                       sample_length_limit,
+                                       taxo_count_limit,
+                                       excell_names2code=excell_names2code,
+                                       dataset_name_v=DATASET_NAME_V)
+
+    return audio_dataset, deleted_files
 
 
 if __name__ == '__main__':
