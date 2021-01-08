@@ -10,6 +10,8 @@ def roc_auc_perClass_compute_fn(y_preds, y_targets):
 
     y_true = y_targets.numpy()
     y_pred = y_preds.numpy()
+    # following for loop could be replaced by that line
+    # res = roc_auc_score(y_true, y_pred, average=None)
     res = []
     for y_true_perClass_Index in y_true.shape[1]:
         res.append(

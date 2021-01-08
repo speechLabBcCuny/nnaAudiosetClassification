@@ -21,7 +21,7 @@ import wandb
 
 import augmentations
 import modelArchs
-import runUtils
+import runutils
 
 # REPRODUCE
 
@@ -77,8 +77,8 @@ def main():
     device = torch.device(
         f"cuda:{config.device}" if torch.cuda.is_available() else "cpu")
 
-    # RAW DATA
-    # load labels for data
+    # # RAW DATA
+    # # load labels for data
     # with open(labelsbyhumanpath/"np_array_Ymatrix.npy", 'rb') as f:
     #     y_true = np.load(f)
     #
@@ -106,7 +106,7 @@ def main():
     # ########### calculate mel-spectogram for all data
     #
     # XArrays=[X_val,X_test,X_train]
-    # X_val,X_test,X_train=runUtils.clipped_mel_loop(XArrays,850)
+    # X_val,X_test,X_train=runutils.clipped_mel_loop(XArrays,850)
     #
     #     # # add channel dimension and turn data into float32
     # XArrays=[X_train,X_test,X_val]
@@ -145,7 +145,7 @@ def main():
 # training_generator = DataLoader(training_set, **params)
 
     sound_datasets = {
-        phase: runUtils.audioDataset(XY[0], XY[1])
+        phase: runutils.audioDataset(XY[0], XY[1])
         for phase, XY in
         zip(['train', 'val', "test"],
             [[X_train, y_train], [X_val, y_val], [X_test, y_test]])
@@ -178,11 +178,11 @@ def main():
 
     metrics = {
         "loss": Loss(criterion),  # "accuracy": Accuracy(),
-        "ROC_AUC": ROC_AUC(runUtils.activated_output_transform),
+        "ROC_AUC": ROC_AUC(runutils.activated_output_transform),
     }
 
     print("ready ?")
-    runUtils.run(model, dataloaders, optimizer, criterion, metrics, device,
+    runutils.run(model, dataloaders, optimizer, criterion, metrics, device,
                  config, wandb_project_name)
 
 if __name__ == '__main__':

@@ -3,7 +3,36 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class testModel(nn.Module):
+    '''A simple model for testing by overfitting.
+    '''
+    def __init__(self, out_channels, h_w, kernel_size, FLAT=False):
+        super(testModel, self).__init__()
+        self.out_channels = out_channels
+        self.conv1 = nn.Conv1d(in_channels=1,
+                               out_channels=self.out_channels,
+                               kernel_size=kernel_size,
+                               padding=(1, 1))
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        # x = self.drop(x)
+
+        x = x.view(-1, self.out_channels * self.conv1_h * self.conv1_w)
+
+        x = F.relu(self.fc1_bn(self.fc1(x)))
+        x = self.drop(x)
+
+        x = self.fc4(x)
+        x = torch.sigmoid(x)
+        #         x = F.log_softmax(x,dim=1)
+        return x
+        
+
+
 class NetCNN1(nn.Module):
+    '''model with single CNN layer
+    '''
     def __init__(self, out_channels, h_w, kernel_size, FLAT=False):
         super(NetCNN1, self).__init__()
         self.out_channels = out_channels
@@ -15,6 +44,7 @@ class NetCNN1(nn.Module):
         self.conv1_h, self.conv1_w = conv_output_shape(h_w,
                                                        kernel_size=kernel_size,
                                                        pad=1)
+        # maxpool affect
         self.conv1_h, self.conv1_w = self.conv1_h // 2, self.conv1_w // 2
         #         print(self.conv1_h,self.conv1_w)
         # #         self.conv2 = nn.Conv2d(6, 16, 5)
@@ -37,7 +67,7 @@ class NetCNN1(nn.Module):
         torch.nn.init.xavier_normal_(self.fc3.weight)
         self.fc3_bn = nn.BatchNorm1d(5)
 
-        self.fc4 = nn.Linear(10, 8)  # 100
+        self.fc4 = nn.Linear(10, 10)  # 100
         torch.nn.init.xavier_normal_(self.fc4.weight)
 
         self.drop = nn.Dropout(p=0.2)  # 0.2
@@ -74,6 +104,7 @@ def conv_output_shape(h_w, kernel_size=1, stride=1, pad=0, dilation=1):
 
 
 class NetCNN2(nn.Module):
+
     def __init__(self,
                  out_channels,
                  out_channels2,
@@ -124,7 +155,7 @@ class NetCNN2(nn.Module):
         torch.nn.init.xavier_normal_(self.fc3.weight)
         self.fc3_bn = nn.BatchNorm1d(5)
 
-        self.fc4 = nn.Linear(10, 8)  # 100
+        self.fc4 = nn.Linear(10, 10)  # 100
         torch.nn.init.xavier_normal_(self.fc4.weight)
 
         self.drop = nn.Dropout(p=0.2)  # 0.2

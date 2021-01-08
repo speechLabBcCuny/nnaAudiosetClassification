@@ -3,10 +3,11 @@ import torch
 import librosa
 
 #mix two of them by time
-# time streching and 
+# time streching and
 
 # run probabilities on the background
-# 
+#
+
 
 def randomMerge(data, count=1, splitIndex=-1):
     """
@@ -43,7 +44,7 @@ def randomMerge(data, count=1, splitIndex=-1):
         second = augmentad[torch.randperm(augmentad.shape[0])[:left]].reshape(
             -1, *augmentad.shape[1:])
         if splitIndex == -1:
-            middle = torch.randint(0, sequence_Len, (1, ))[0]
+            middle = torch.randint(0, sequence_Len, (1,))[0]
         else:
             middle = splitIndex
         new[:, 0:middle], new[:, middle:] = first[:, 0:middle], second[:,
@@ -163,13 +164,11 @@ def randomAdd(data, y, count=1, unique=True):
     return NewOnes, NewOnesY
 
 
-def time_stretch(data,
-                 output_length,
-                 time_stretch_factor,
-                 singleElement=False):
+def time_stretch(data, output_length, time_stretch_factor, singleElement=False):
     """
 
   """
+
     def strecth(y, output_length, time_stretch_factor):
         dataAug = librosa.effects.time_stretch(y.reshape(-1),
                                                time_stretch_factor)
@@ -178,8 +177,7 @@ def time_stretch(data,
         if len(dataAug) > output_length:
             dataAug = dataAug[:output_length]
         else:
-            dataAug = np.pad(dataAug,
-                             (0, max(0, output_length - len(dataAug))),
+            dataAug = np.pad(dataAug, (0, max(0, output_length - len(dataAug))),
                              "constant")
 
         dataAug = dataAug.reshape(y.shape)
@@ -201,6 +199,7 @@ def pitch_shift(data, sr, pitch_shift_n_steps, singleElement=False):
     """
 
   """
+
     def shift(y, sr, pitch_shift_n_steps):
         dataAug = librosa.effects.pitch_shift(y.reshape(-1), sr,
                                               pitch_shift_n_steps)
@@ -240,6 +239,7 @@ def addNoise(data, noise_factor):
 class addNoiseClass(object):
     """
   """
+
     def __init__(self, noise_factor):
         self.noise_factor = noise_factor
 
@@ -252,6 +252,7 @@ class addNoiseClass(object):
 class pitch_shift_n_stepsClass(object):
     """
   """
+
     def __init__(self, sr, pitch_shift_n_steps):
         self.sr = sr
         self.pitch_shift_n_steps = pitch_shift_n_steps
@@ -269,6 +270,7 @@ class pitch_shift_n_stepsClass(object):
 class time_stretchClass(object):
     """
   """
+
     def __init__(self, output_length, time_stretch_factor, isRandom=False):
         self.time_stretch_factor = time_stretch_factor
         self.output_length = output_length
@@ -292,24 +294,31 @@ class time_stretchClass(object):
 
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
-    def __init__(self, maxMelLen):
+
+    def __init__(self, maxMelLen, sampling_rate):
+        # sr = 44100 etc
         self.maxMelLen = maxMelLen
+        self.sampling_rate = sampling_rate
 
     def __call__(self, sample):
         x, y = sample
 
-        mel = librosa.feature.melspectrogram(y=x.reshape(-1), sr=44100)
+        mel = librosa.feature.melspectrogram(y=x.reshape(-1),
+                                             sr=self.sampling_rate)
         an_x = librosa.power_to_db(mel, ref=np.max)
         an_x = an_x.astype("float32")
+        y = y.astype('float32')
         an_x = an_x[:, :self.maxMelLen]
         x = an_x.reshape(1, *an_x.shape[:])
 
-        return torch.from_numpy(x), torch.from_numpy(y)
+        return torch.from_numpy(x), torch.from_numpy(np.asarray(y))
+
 
 
 class shiftClass(object):
     """
   """
+
     def __init__(self, roll_rate, isRandom=False):
         self.roll_rate = roll_rate
         self.isRandom = isRandom
@@ -330,11 +339,11 @@ def createJamFiles():
 
     from pathlib import Path
 
-    import exp.runUtils
+    import exp.runutils
     jamFolder = Path("/scratch/enis/data/nna/labeling/splitsJams")
     sourcePath = Path("/scratch/enis/data/nna/labeling/splits")
 
-    humanresults = exp.runUtils.loadLabels(labelsbyhumanpath)  #  pylint: disable=E0602
+    humanresults = exp.runutils.loadLabels(labelsbyhumanpath)  #  pylint: disable=E0602
     for f in humanresults:
         # f="NIGLIQ2_20160702_002037_1368m_33s__1368m_43s.mp3"
         f = Path(f)

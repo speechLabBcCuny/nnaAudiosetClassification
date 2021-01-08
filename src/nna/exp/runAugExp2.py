@@ -1,6 +1,4 @@
 from pathlib import Path
-import pickle
-import argparse
 
 import numpy as np
 
@@ -10,7 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
 
-import librosa
 
 from sklearn.model_selection import train_test_split
 
@@ -22,7 +19,7 @@ import wandb
 
 import augmentations
 import modelArchs
-import runUtils
+import runutils
 # REPRODUCE
 
 torch.manual_seed(42)
@@ -40,26 +37,26 @@ def main():
 
     #   DEFAULT values
     local_config = {
-        "batch_size": 58,
-        "epochs": 1000,
-        "patience": -1,
-        "weight_decay": 0.001,
-        "augmentadSize": 200,
-        "CNNLayer_count": 1,
-        "CNN_filters_1": 45,
-        "CNN_filters_2": 64,
-        "device": 0,
+        'batch_size': 58,
+        'epochs': 1000,
+        'patience': -1,
+        'weight_decay': 0.001,
+        'augmentadSize': 200,
+        'CNNLayer_count': 1,
+        'CNN_filters_1': 45,
+        'CNN_filters_2': 64,
+        'device': 0,
         # augmentation params
-        "pitch_shift_n_steps": [3.5, 2.5, 0, -2.5, -3.5],
-        "time_stretch_factor": [0.8, 1.2],
-        "noise_factor": 0.001,
-        "roll_rate": 1.1,
-        # "aug_ID":3, # ["pitch_shift":0,"time_stretch":1,"noise_factor":2, "roll_rate":3]
-        #     "lr": lr,
-        #     "momentum": momentum,
+        'pitch_shift_n_steps': [3.5, 2.5, 0, -2.5, -3.5],
+        'time_stretch_factor': [0.8, 1.2],
+        'noise_factor': 0.001,
+        'roll_rate': 1.1,
+        # 'aug_ID':3, # ['pitch_shift':0,'time_stretch':1,'noise_factor':2, 'roll_rate':3]
+        #     'lr': lr,
+        #     'momentum': momentum,
     }
 
-    wandb_project_name = "pytorch-ignite-integration"
+    wandb_project_name = 'pytorch-ignite-integration'
     wandb.init(config=local_config, project=wandb_project_name)
     config = wandb.config
     # wandb.config.update(args) # adds all of the arguments as config variables
@@ -71,25 +68,25 @@ def main():
     }
 
     tagSet = [
-        "Songbird", "Water Bird", "Insect", "Running Water", "Rain", "Cable",
-        "Wind", "Aircraft"
+        'Songbird', 'Water Bird', 'Insect', 'Running Water', 'Rain', 'Cable',
+        'Wind', 'Aircraft'
     ]
 
     labelsbyhumanpath = Path('/scratch/enis/data/nna/labeling/results/')
     # splits_path= Path('/files/scratch/enis/data/nna/labeling/splits/')
-    sourcePath = Path("/scratch/enis/data/nna/labeling/splits/")
+    sourcePath = Path('/scratch/enis/data/nna/labeling/splits/')
 
     device = torch.device(
-        f"cuda:{config.device}" if torch.cuda.is_available() else "cpu")
+        f'cuda:{config.device}' if torch.cuda.is_available() else 'cpu')
 
     # RAW DATA
     # load labels for data
-    with open(labelsbyhumanpath / "np_array_Ymatrix.npy", 'rb') as f:
+    with open(labelsbyhumanpath / 'np_array_Ymatrix.npy', 'rb') as f:
         y_true = np.load(f)
 
         # ## load Dataset
         # # X.shape is (1300, 10, 44100)
-    with open(sourcePath / "np_array_Xmatrix_shortby441000.npy", 'rb') as f:
+    with open(sourcePath / 'np_array_Xmatrix_shortby441000.npy', 'rb') as f:
         X = np.load(f)
         #
         # ### split data
@@ -109,12 +106,12 @@ def main():
     #
 
     pitch = augmentations.pitch_shift_n_stepsClass(
-        44100, config["pitch_shift_n_steps"])
-    noise = augmentations.addNoiseClass(config["noise_factor"])
+        44100, config['pitch_shift_n_steps'])
+    noise = augmentations.addNoiseClass(config['noise_factor'])
     strech = augmentations.time_stretchClass(441000,
-                                             config["time_stretch_factor"],
+                                             config['time_stretch_factor'],
                                              isRandom=True)
-    shift = augmentations.shiftClass(config["roll_rate"], isRandom=True)
+    shift = augmentations.shiftClass(config['roll_rate'], isRandom=True)
     toTensor = augmentations.ToTensor(850)
 
     transformCompose = transforms.Compose([
@@ -126,15 +123,15 @@ def main():
     ])
 
     sound_datasets = {
-        phase: runUtils.audioDataset(XY[0], XY[1], transform=transformCompose)
+        phase: runutils.audioDataset(XY[0], XY[1], transform=transformCompose)
         for phase, XY in
-        zip(['train', 'val', "test"],
+        zip(['train', 'val', 'test'],
             [[X_train, y_train], [X_val, y_val], [X_test, y_test]])
     }
 
     dataloaders = {
         x: torch.utils.data.DataLoader(sound_datasets[x], **params)
-        for x in ['train', 'val', "test"]
+        for x in ['train', 'val', 'test']
     }
 
     h_w = [128, 850]
@@ -152,18 +149,18 @@ def main():
 
     model.float().to(device)  # Move model before creating optimizer
     optimizer = torch.optim.AdamW(model.parameters(),
-                                  weight_decay=config["weight_decay"])
+                                  weight_decay=config['weight_decay'])
 
     criterion = nn.BCEWithLogitsLoss()
-    # statHistory={"valLoss":[],"trainLoss":[],"trainAUC":[],"valAUC":[]}
+    # statHistory={'valLoss':[],'trainLoss':[],'trainAUC':[],'valAUC':[]}
 
     metrics = {
-        "loss": Loss(criterion),  # "accuracy": Accuracy(),
-        "ROC_AUC": ROC_AUC(runUtils.activated_output_transform),
+        'loss': Loss(criterion),  # 'accuracy': Accuracy(),
+        'ROC_AUC': ROC_AUC(runutils.activated_output_transform),
     }
 
-    print("ready ?")
-    runUtils.run(model, dataloaders, optimizer, criterion, metrics, device,
+    print('ready ?')
+    runutils.run(model, dataloaders, optimizer, criterion, metrics, device,
                  config, wandb_project_name)
 
 

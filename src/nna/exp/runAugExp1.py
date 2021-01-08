@@ -21,7 +21,7 @@ import wandb
 
 import augmentations
 import modelArchs
-import runUtils
+import runutils
 # REPRODUCE
 
 torch.manual_seed(42)
@@ -101,7 +101,19 @@ def main():
                                                       y_train,
                                                       test_size=0.25,
                                                       random_state=42)
-
+import torch
+import time
+b=[]
+m=100
+while True:
+    try:
+        sh=(250000,m)
+        bb=torch.rand(sh).to('cuda:1')
+        b.append(bb)
+    except:
+        m-=1
+        print(bb.shape)
+        time.sleep(60)
     ##### AUGMENTATIONS #######
     def augmentData(data, sr, config):
 
@@ -145,7 +157,7 @@ def main():
     y_train = np.concatenate([y_train for i in range(4)])
 
     XArrays = [X_val, X_test, X_train]
-    X_val, X_test, X_train = runUtils.clipped_mel_loop(XArrays, 850)
+    X_val, X_test, X_train = runutils.clipped_mel_loop(XArrays, 850)
 
     # # add channel dimension and turn data into float32
     XArrays = [X_train, X_test, X_val]
@@ -164,7 +176,7 @@ def main():
 
     # dataloaders
     sound_datasets = {
-        phase: runUtils.audioDataset(XY[0], XY[1])
+        phase: runutils.audioDataset(XY[0], XY[1])
         for phase, XY in
         zip(["train", "val", "test"],
             [[X_train, y_train], [X_val, y_val], [X_test, y_test]])
@@ -197,11 +209,11 @@ def main():
 
     metrics = {
         "loss": Loss(criterion),  # "accuracy": Accuracy(),
-        "ROC_AUC": ROC_AUC(runUtils.activated_output_transform),
+        "ROC_AUC": ROC_AUC(runutils.activated_output_transform),
     }
 
     print("ready ?")
-    runUtils.run(model, dataloaders, optimizer, criterion, metrics, device,
+    runutils.run(model, dataloaders, optimizer, criterion, metrics, device,
                  config, wandb_project_name)
 
 
