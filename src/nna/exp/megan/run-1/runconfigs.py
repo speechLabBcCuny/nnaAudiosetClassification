@@ -1,44 +1,50 @@
 """Configs for the run-1.
 """
 from pathlib import Path
+from unittest import expectedFailure
 
 from nna.params import EXCERPT_LENGTH
 
 PROJECT_NAME = 'megan'
+DATASET_NAME_V = 'megan_v1'
 
 #   DEFAULT values
 default_config = {
     'batch_size': 58,
-    'epochs': 1000,
+    'epochs': 2000,
     'patience': -1,
     'weight_decay': 0.001,
     'augmentadSize': 200,
     'CNNLayer_count': 1,
     'CNN_filters_1': 45,
     'CNN_filters_2': 64,
-    'device': 0,
+    'device': 1,
     # augmentation params
-    'pitch_shift_n_steps': 2.2,
-    'time_stretch_factor': 0.8,
+    'pitch_shift_n_steps': [3.5, 2.5, 0, -2.5, -3.5],
+    'time_stretch_factor': [0.8, 1.2],
     'noise_factor': 0.001,
     'roll_rate': 1.1,
     # ['pitch_shift':0,'time_stretch':1,'noise_factor':2, 'roll_rate':3]
-    'aug_ID': 3,
+    # 'aug_ID': 3,
     #     'lr': lr,
     #     'momentum': momentum,
 }
 
-TAXO_COUNT_LIMIT = 25
-SAMPLE_LENGTH_LIMIT = 10
 
+TAXO_COUNT_LIMIT = 25
+SAMPLE_LENGTH_LIMIT = 2
+SAMPLING_RATE = 48000
 TAXONOMY_FILE_PATH = Path(
     '/home/enis/projects/nna/src/nna/assets/taxonomy/taxonomy.yaml')
 
-src_path = '/scratch/enis/data/nna/labeling/megan/AudioSamplesPerSite/'
-MEGAN_LABELED_FILES_INFO_PATH = src_path + 'meganLabeledFiles_wlenV1.txt'
-resources_folder = ('/scratch/enis/archive/' +
-                    'forks/cramer2020icassp/resources/')
-CSV4MEGAN_EXCELL_CLEANED  = (resources_folder + 'Sheet1(1).csv')
+DATASET_FOLDER = '/scratch/enis/data/nna/labeling/megan/AudioSamplesPerSite/'
+MEGAN_LABELED_FILES_INFO_PATH = DATASET_FOLDER + 'meganLabeledFiles_wlenV1.txt'
+# resources_folder = ('/scratch/enis/archive/' +
+#                     'forks/cramer2020icassp/resources/')
+CSV4MEGAN_EXCELL_CLEANED  = (DATASET_FOLDER + 'Sheet1_my_copy_v1.csv')
+
+FILES_AS_NP_FILTERED = DATASET_FOLDER + 'files_as_np_filtered_v1.pkl'
+
 IGNORE_FILES = set([
     'S4A10268_20190610_103000_bio_anth.wav',  # has two topology bird/plane
 ])
@@ -70,3 +76,5 @@ EXCELL_NAMES2CODE = {
         'water': '2.2.0',
         'x': 'X.X.X',
     }
+    
+    
