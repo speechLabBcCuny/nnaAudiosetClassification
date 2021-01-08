@@ -1,0 +1,37 @@
+name: speechEnv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - pydub
+  - numpy
+  - scipy
+  - resampy
+  - pysoundfile
+  - google-cloud-storage
+  - tensorflow-gpu
+  - cudatoolkit=10.1
+  - mkl
+  - bokeh
+  - torchvision
+  - cudnn
+  - jupyter
+  - jupyterlab
+  - tabulate
+  - pv
+  - scikit-learn=0.21.3
+  - matplotlib
+  - seaborn
+  - pytorch
+  - nest-asyncio
+  - keras
+  - librosa
+  - line_profiler
+  - snakeviz
+  - nbresuse
+  - xeus-python
+  - ignite
+  - ffmpeg=4.3.1
+  - pandas==1.0.3
+prefix: /scratch/enis/conda/envs/speechEnv
