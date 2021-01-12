@@ -54,8 +54,8 @@ def load_file_info2dataset(megan_labeled_files_info_path, dataset_name_v=''):
 
 
 def load_labeled_info(csv4megan_excell, audio_dataset, ignore_files=None):
-    """# Read labeled info from spreat sheet
-# and remove samples with no audio file, also files given in ignore_files
+    """Read labeled info from spreat sheet
+        and remove samples with no audio file, also files given in ignore_files
     """
     if ignore_files is None:
         ignore_files = set()

@@ -38,10 +38,10 @@ class Audio():
         return f'{self.path}, length:{self.length}'
 
     def pick_channel_by_clipping(self, excerpt_length):
-        if len(self.data.shape)==1:
+        if len(self.data.shape) == 1:
             return None
         cleaner_channel_indexes = np.argmin(self.clipping, axis=1)
-        new_data = np.empty(self.data.shape[-1],dtype=self.data.dtype)
+        new_data = np.empty(self.data.shape[-1], dtype=self.data.dtype)
 
         excpert_len_jump = self.sr * excerpt_length
 
@@ -157,7 +157,6 @@ class Dataset(MutableMapping):
             self.store[key].data = sound_array
             self.store[key].sr = sr
 
-
     def pick_channel_by_clipping(self):
         for _, v in self.store.items():
             v.pick_channel_by_clipping(self.excerpt_length)
@@ -173,6 +172,8 @@ class Dataset(MutableMapping):
 
         with open(output_file_path, 'wb') as f:
             np.save(f, data_dict)
+
+
 # taxonomy YAML have an issue that leafes has a different structure then previous
 # orders, I should change that.
 class Taxonomy(MutableMapping):
@@ -336,6 +337,7 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
         row = dictinary with following keys
                 'Anthro/Bio','Category','Specific Category'
         excell_names2code = mapping from names to topology code
+
     '''
     if excell_names2code is None:
         excell_names2code = {
