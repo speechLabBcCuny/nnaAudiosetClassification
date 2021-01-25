@@ -45,18 +45,18 @@ def add_taxo_code2dataset(megan_data_sheet):
 
         todo remove try except
     '''
-    codest_dict = {}
+    taxo2loc_dict = {}
     for row in megan_data_sheet:
         try:
             taxonomy_code = dataimport.megan_excell_row2yaml_code(row, None)
             site_id = row['Site ID'].strip()
-            codest_dict.setdefault(taxonomy_code, Counter({}))
+            taxo2loc_dict.setdefault(taxonomy_code, Counter({}))
 
-            codest_dict[taxonomy_code] = codest_dict[taxonomy_code] + Counter(
-                {site_id: 1})
+            taxo2loc_dict[taxonomy_code] = taxo2loc_dict[
+                taxonomy_code] + Counter({site_id: 1})
         except:
             print(row)
-    return codest_dict
+    return taxo2loc_dict
 
 
 # %%
@@ -67,7 +67,7 @@ def approx_split_combinations(total):
     '''calculate posssible combinations that sums to  ~total (aproximate). 
 
         Distribution assumptions:
-            test~=valid, 
+            test~=valid,
             0.8~>train~>0.6
             0.4~>test,valid~>0.2
 
@@ -81,7 +81,8 @@ def approx_split_combinations(total):
         test_val_dist = i / 1000
         train_dist = 1 - (test_val_dist * 2)
         dist = np.array([train_dist, test_val_dist, test_val_dist])
-        bin_capacities = tuple(np.ceil(total * dist).astype('int')) # type: ignore
+        bin_capacities = tuple(np.ceil(total *
+                                       dist).astype('int'))  # type: ignore
         combinations.add(bin_capacities)
 
     #add some combinations that are test and valid
@@ -105,7 +106,7 @@ def approx_split_combinations(total):
 def JSD(P, Q):
     '''
 
-        todo: add reference and docs
+    from https://github.com/BirdVox/cramer2020icassp/blob/master/00_create_splits.py
     '''
     _P = P / norm(P, ord=1)
     _Q = Q / norm(Q, ord=1)
@@ -142,13 +143,11 @@ def multiple_knapsack_solve(codes_dict):
 
         Returns: a dict solution_per_taxonomy
             keys are same with codes_dict and values are possible solutions to
-            the knapsack problem. 
+            the knapsack problem.
 
     '''
-    total = 0
     solution_per_taxonomy = {}
     for k in codes_dict.keys():
-
         weights = list(codes_dict[k].values())
         values = list(codes_dict[k].values())
         if sum(weights) < 10:
@@ -160,91 +159,110 @@ def multiple_knapsack_solve(codes_dict):
             print('Error, number of elements less than 3', weights)
             continue
 
-        total = sum(weights)
+        bin_capacities_w_solutions = solve_knapsack4combinations(
+            weights, values)
 
-        combinations = approx_split_combinations(total)
+        solution_per_taxonomy[k] = (bin_capacities_w_solutions)
 
-        #         solutionPerCombination=[]
-        solution_per_taxonomy.setdefault(k, [])
-        for bin_capacities in combinations:
-
-            data = create_data_model(weights, values, bin_capacities)
-            # old version of ortools
-            # Create the mip solver with the CBC backend.
-            #             solver = pywraplp.Solver.CreateSolver('multiple_knapsack_mip', 'CBC')
-            # new version of ortools=>8.1
-            solver = pywraplp.Solver.CreateSolver('SCIP') # type: ignore
-
-            # Variables
-            # x[i, j] = 1 if item i is packed in bin j.
-            x = {}
-            for i in data['items']:
-                for j in data['bins']:
-                    x[(i, j)] = solver.IntVar(0, 1, 'x_%i_%i' % (i, j))
-
-            # Constraints
-            # Each item can be in at most one bin.
-            for i in data['items']:
-                solver.Add(sum(x[i, j] for j in data['bins']) <= 1)
-            # The amount packed in each bin cannot exceed its capacity.
-            for j in data['bins']:
-                solver.Add(
-                    sum(x[(i, j)] * data['weights'][i]
-                        for i in data['items']) <= data['bin_capacities'][j])
-
-            # Objective
-            objective = solver.Objective()
-
-            for i in data['items']:
-                for j in data['bins']:
-                    objective.SetCoefficient(x[(i, j)], data['values'][i])
-            objective.SetMaximization()
-
-            status = solver.Solve()
-
-            if status == pywraplp.Solver.OPTIMAL:
-                #                 if objective.Value()/sum(data['bin_capacities'])>0.90:
-                #                     continue
-
-                total += sum(data['weights'])
-
-                #                 print(codesDict[k])
-                #                 print('------------',k,'--------------')
-                #                 print('Total packed value:', objective.Value(),'/',sum(data['bin_capacities']))
-
-                #             print()
-                total_weight = 0
-                solution = [list() for i in range(len(data['bins']))]
-                for binIndex, j in enumerate(data['bins']):
-                    bin_weight = 0
-                    bin_value = 0
-                    #                     print('Bin ', j, '\n')
-                    for i in data['items']:
-                        if x[i, j].solution_value() > 0:
-                            solution[j].append(data['weights'][i])
-                            #                             print('Item', i, '- weight:', data['weights'][i], ' value:',
-                            #                                   data['values'][i])
-                            bin_weight += data['weights'][i]
-                            bin_value += data['values'][i]
-
-#                     print('Packed bin weight:', bin_weight,'/',data['bin_capacities'][binIndex])
-#                 print('bin capacity:',)
-#                 print('Packed bin value:', bin_value)
-                    total_weight += bin_weight
-#                 print('Total packed weight:', total_weight)
-                solution_per_taxonomy[k].append((bin_capacities, solution[:]))
-            else:
-                print('The problem does not have an optimal solution.')
-#             print('total',total)
     return solution_per_taxonomy
 
 
-# %%
+def solve_knapsack4combinations(weights, values):
+
+    total = sum(weights)
+    combinations = approx_split_combinations(total)
+    bin_capacities_w_solutions = []
+    for bin_capacities in combinations:
+        bin_capacities, solution = solve_knapsack(weights, values,
+                                                  bin_capacities)
+        if solution is not None:
+            bin_capacities_w_solutions.append((bin_capacities, solution))
+
+    return bin_capacities_w_solutions
+
+
+def solve_knapsack(weights, values, bin_capacities):
+
+    data = create_data_model(weights, values, bin_capacities)
+
+    # SETUP knapsack
+    # old version of ortools
+    # Create the mip solver with the CBC backend.
+    #             solver = pywraplp.Solver.CreateSolver('multiple_knapsack_mip', 'CBC')
+    # new version of ortools=>8.1
+    solver = pywraplp.Solver.CreateSolver('SCIP')  # type: ignore
+
+    # Variables
+    # x[i, j] = 1 if item i is packed in bin j.
+    knapsack_coefficients = {}
+    for i in data['items']:
+        for j in data['bins']:
+            knapsack_coefficients[(i,
+                                   j)] = solver.IntVar(0, 1, 'x_%i_%i' % (i, j))
+
+    # Constraints
+    # Each item can be in at most one bin.
+    for i in data['items']:
+        solver.Add(sum(knapsack_coefficients[i, j] for j in data['bins']) <= 1)
+    # The amount packed in each bin cannot exceed its capacity.
+    for j in data['bins']:
+        solver.Add(
+            sum(knapsack_coefficients[(i, j)] * data['weights'][i]
+                for i in data['items']) <= data['bin_capacities'][j])
+
+    # Objective
+    objective = solver.Objective()
+
+    for i in data['items']:
+        for j in data['bins']:
+            objective.SetCoefficient(knapsack_coefficients[(i, j)],
+                                     data['values'][i])
+    objective.SetMaximization()
+    status = solver.Solve()
+
+    return read_knapsack_solution(status, data, bin_capacities,
+                                  knapsack_coefficients)
+
+
+def read_knapsack_solution(status, data, bin_capacities, knapsack_coefficients):
+    if status == pywraplp.Solver.OPTIMAL:
+        total_weight = 0
+        solution = [list() for i in range(len(data['bins']))]
+        for binIndex, j in enumerate(data['bins']):
+            del binIndex
+            bin_weight = 0
+            bin_value = 0
+            for i in data['items']:
+                solution_value = knapsack_coefficients[i, j].solution_value()
+                if solution_value > 0:
+                    solution[j].append(data['weights'][i])
+                    bin_weight += data['weights'][i]
+                    bin_value += data['values'][i]
+
+            total_weight += bin_weight
+        return (bin_capacities, solution[:])
+    else:
+        print('The problem does not have an optimal solution.')
+        return None, None
 
 
 # %%
-def find_best_solution(codes_dict):
+def find_best_solution_per_taxo(item_weights_by_taxo,
+                                solution_per_taxonomy,
+                                expected_dist=None):
     '''
+    
+    Args:
+        item_weights_by_taxo: dict, keys are taxonomies, values are
+                             dict such as item:weight.
+        solution_per_taxonomy: a dict, keys are taxonomies, values are
+            list of solutions. Each solution is a list with two items which are:
+            list of bin size dist,list of item weights in each bin. 
+                {'1.0.0':[((35, 7, 7), [[1, 2, 1, 1, 1, 1, 5, 1, 11, 1, 5, 3, 1], [7], [6]]),
+                        ((36, 8.0, 8.0), [[1, 2, 1, 1, 1, 1, 5, 1, 11, 1, 5, 3, 1], [7], [6]]),
+                        ((30, 11.0, 11.0), [[1, 2, 1, 1, 1, 1, 5, 1, 6, 11], [1, 5, 3, 1], [7]]),
+                        ...
+                }
 
     Return:
         {'1.0.0': [0.0026258626328006605,
@@ -255,57 +273,184 @@ def find_best_solution(codes_dict):
             [[4, 4, 3, 5, 2, 5, 2, 2], [5, 2, 3], [5, 4]]], ...}
 
     '''
-    expectedDist = [0.6, 0.2, 0.2]
+    if expected_dist is None:
+        expected_dist = [0.6, 0.2, 0.2]
+
     results = []
     best_solution_per_taxonomy = {}
 
-    for taxoKey in solutionPerTaxonomy:
-        found = False
-        total = sum(codes_dict[taxoKey].values())
+    for taxo_key in solution_per_taxonomy:
+        item_weights = item_weights_by_taxo[taxo_key]
+        solutions = [m[1] for m in solution_per_taxonomy[taxo_key]]
 
-        for a_solution in solutionPerTaxonomy[taxoKey]:
-            if total == sum([sum(m) for m in a_solution[1]]):
-                found = True
-        if found is False:
-            print(codes_dict[taxoKey].values())
-            print(total)
-
-    #         for i in solutionPerTaxonomy[taxoKey]:
-    #             print(i[0],,sum([sum(m) for m in i[1]]))
-
-        smallest_cost = 999999
-        best_comb = None
-        best_dist = None
-        for a_solution in solutionPerTaxonomy[taxoKey]:
-            #         print(dist=[sum(m) for m in i[1]])
-            dist = [sum(m) for m in a_solution[1]]
-            cost = JSD(expectedDist, dist)
-            if cost < smallest_cost and total - sum(dist) == 0:
-                smallest_cost = cost
-                best_comb = a_solution[1]
-                best_dist = [sum(m) for m in a_solution[1]]
-
-        # sort best_dist and best_comb
-        combined_sorted = sorted(list(zip(best_dist, best_comb)), reverse=True) # type: ignore
-        a, b = [], []
-        for m in combined_sorted:
-            a.append(m[0])
-            b.append(m[1])
-        best_dist, best_comb = a, b
+        smallest_cost, best_dist, best_comb = pick_solution_by_bin_sum_distr(
+            item_weights, solutions, expected_dist)
 
         results.append([smallest_cost, best_dist, best_comb])
 
-        best_solution_per_taxonomy[taxoKey] = [
+        best_solution_per_taxonomy[taxo_key] = [
             smallest_cost, best_dist, best_comb
         ]
     return results, best_solution_per_taxonomy
 
 
+def pick_solution_by_bin_sum_distr(item_weights, solutions, expected_dist):
+    '''Given a distribution of total weight in each bin, find closest solution.
+        
+        We want to divide data into bins/knapsacks but we are not strict on
+        the size of the bins, but we want to pick the closest one. 
+        Here we use JSD metric to find closest distribution.
+
+        Args:
+            item_weights: dict from items/location to corresponding weights 
+            solutions: weights of possible solutions in each bin
+                        [[[1, 2, 1, 1, 1, 1, 5, 1, 11, 1, 5, 3, 1], [7], [6]],
+                        [[1, 2, 1, 1, 1, 1, 5, 1, 6, 11], [1, 5, 3, 1], [7]]...]
+
+    '''
+    found = False
+    total = sum(item_weights.values())
+
+    for a_solution in solutions:
+        if total == sum([sum(m) for m in a_solution]):
+            found = True
+            break
+    if found is False:
+        print(item_weights.values())
+        print(total)
+
+    smallest_cost = float('Inf')
+    best_comb = None
+    best_dist = None
+    for a_solution in solutions:
+        #         print(dist=[sum(m) for m in i[1]])
+        dist = [sum(m) for m in a_solution]
+        cost = JSD(expected_dist, dist)
+        if cost < smallest_cost and total - sum(dist) == 0:
+            smallest_cost = cost
+            best_comb = a_solution
+            best_dist = [sum(m) for m in a_solution]
+
+    # sort best_dist and best_comb
+    combined_sorted = sorted(
+        list(zip(best_dist, best_comb)),  # type: ignore
+        reverse=True)
+    best_dist, best_comb = list(zip(*combined_sorted))
+
+    return smallest_cost, best_dist, best_comb
+
+
+def pick_solution_by_item_distr(item_weights, solutions, location2taxo_dict,
+                                target_dist):
+    '''Pick best solution has closest item dist between bins.
+    '''
+    best_sol = None
+    lowest_cost = float('Inf')
+    target_array = np.array(list(target_dist.values()))
+    target_array = target_array/np.sum(target_array)
+
+    for sol in solutions:
+        #
+        bins_as_taxo_dist = map_weight_sol2taxo_dist_sol(
+            item_weights, sol, location2taxo_dict)
+        # turn Counters into array with same order of target_dist
+        bins_as_taxo_array = []
+        for a_bin in bins_as_taxo_dist:
+            bin_array = [a_bin.get(k, 0) for k in target_dist.keys()]
+            bins_as_taxo_array.append(bin_array)
+        
+        cost, _ = calculate_item_distr_distance(bins_as_taxo_array,
+                                                target_array)
+        if lowest_cost > cost:
+            best_sol = sol
+            lowest_cost = cost
+
+    return best_sol, lowest_cost
+
+
+def map_weight_sol2taxo_dist_sol(item_weights, solution, location2taxo_dict):
+
+    solution_by_location_name = map_weights2indexes(item_weights, solution)
+    # go from items/locations to taxonomy Counter
+    # bins_w_taxo_dist = [list() for m in range(len(solution_by_location_name))]
+    bins_as_taxo_dist = []
+    for a_bin in (solution_by_location_name):
+        tmp_c = Counter()
+        for loc_name in a_bin:
+            tmp_c += location2taxo_dict[loc_name]
+        bins_as_taxo_dist.append(tmp_c)
+    return bins_as_taxo_dist
+
+
+def reverse_taxo2loc_dict(taxo2loc_dict):
+    '''reverse dict with keys of taxonomy and values with counter of locations.
+
+    Args:
+        taxo2loc_dict: {'1.0.0': Counter({'45': 1,
+                                        '50': 2,
+                                        '48': 1,}),
+                        '3.0.0': Counter({'45': 4,
+                                        '20': 4,})..}
+    returns:
+        {'45': Counter({'1.0.0': 1, '3.0.0': 4, 'X.X.X': 4}),
+        '50': Counter({'1.0.0': 2, '1.1.10': 5, '1.1.0': 48, '1.3.0': 17}),}
+
+    '''
+    location2taxo_dict = {}
+    for code, source_counter in taxo2loc_dict.items():
+        for source, count in source_counter.items():
+            location2taxo_dict.setdefault(source, Counter())
+            location2taxo_dict[source] += Counter({code: count})
+    return location2taxo_dict
+
+
+def calculate_item_distr_distance(bins, target_distr):
+    '''calculate largest distance between bins and target_distr
+
+        Args:
+            bins: list of lists, [[item1_count,...],[item1_count,...],[item1_count,...]..]
+                 inner list contains count of each item in the bin. Bins has to 
+                 have same length with target_distr and each index should 
+                 correspond to same item.
+
+    '''
+
+    for a_bin in bins:
+        assert len(a_bin) == len(target_distr)
+
+    all_costs = []
+    for a_bin in bins:
+        cost = JSD(a_bin, target_distr)
+        all_costs.append(cost)
+
+    return max(all_costs), all_costs
+
+
 # %%
+
+
 def knapsack_index2location_name(codesDict, best_solution_per_taxonomy):
     '''Replace indexes of locations with location names. 
+
+        Important thing to keep in mind is that knapsack solver does not return
+        indexes of possible items, it returns weights and there can be multiple
+        items with same weight. So we just assign first one with that weight
+        to one of the bins.
+
+        Args:
+            codesDict:{'1.0.0': Counter({'45': 1,
+                                        '50': 2,
+                                        '48': 1,
+                                        '39': 1,
+                                        '30': 1,}
+                        '3.0.0': Counter({'45': 4,}
+                                                ...}
+            best_solution_per_taxonomy:{taxo:[cost,bins_dist,[bin1,bin2,[item_weights]]}
+                    {'1.0.0': [0.00015203111926031642,
+                    [29, 9, 9],
+                    [[6, 11, 5, 7], [5, 3, 1], [1, 2, 1, 1, 1, 1, 1, 1]]],}
         
-        returns:
+        returns: {taxo:[[train],[test],[valid]]}
             {'1.0.0': [['44', '46', '17', '14'],
                 ['11', '34', '27'],
                 ['31', '50', '18', '12', '30', '39', '48', '45']],
@@ -314,26 +459,40 @@ def knapsack_index2location_name(codesDict, best_solution_per_taxonomy):
                 ['32', '45']],
                 ...}
     '''
-    solReverse = {i: {} for i in codesDict.keys()}
-    for taxo, counter in codesDict.items():
-        counter = dict(counter)
-        for x, y in counter.items():
-            solReverse[taxo].setdefault(y, []).append(x)
-
-    best_solution_per_taxonomy_by_location = {
-        i: None for i in best_solution_per_taxonomy.keys()
-    }
-    for taxo, data in best_solution_per_taxonomy.items():
-        #     print(taxo,data)
-        comb = data[2]
-        train, test, val = comb[:]
-        combLocation = [[] for i in range(len(comb))]
-        for i, dataSet in enumerate(comb):
-            for v in dataSet:
-                location = solReverse[taxo][v].pop()
-                combLocation[i].append(location)
-        best_solution_per_taxonomy_by_location[taxo] = combLocation # type: ignore
+    best_solution_per_taxonomy_by_location = {}
+    for taxo in best_solution_per_taxonomy.keys():
+        item_weights = codesDict[taxo]
+        knapsack_sol_weights = best_solution_per_taxonomy[taxo][2]
+        knapsack_sol_indexes = map_weights2indexes(item_weights,
+                                                   knapsack_sol_weights)
+        best_solution_per_taxonomy_by_location[taxo] = knapsack_sol_indexes
     return best_solution_per_taxonomy_by_location
+
+
+def map_weights2indexes(item_weights, knapsack_sol_weights):
+    '''Weights to index of items. 
+
+        args:
+            item_weights: item IDs to weights
+                            {'45': 1,
+                                '50': 2,
+                                '48': 1},
+            knapsack_solution: [[item_weights],[item_weights] ... for each bin]
+        returns:[[item indexes],[item indexes] ... for each bin] 
+    '''
+    counter = dict(item_weights)
+    weight2indexes = {}
+    for x, y in counter.items():
+        weight2indexes.setdefault(y, []).append(x)
+
+    knapsack_sol_indexes = [[] for i in range(len(knapsack_sol_weights))]
+    for i, a_set_of_weights in enumerate(knapsack_sol_weights):
+        for a_weight in a_set_of_weights:
+            item_index = weight2indexes[a_weight].pop()
+            knapsack_sol_indexes[i].append(item_index)
+
+    return knapsack_sol_indexes
+
 
 # %%
 # excellNames2code
@@ -389,26 +548,42 @@ def results2file_names_like_cramer(
 # birdvox-cls-valid
 # load files with librosa, sample to
 
-# %%
-
-codest_dict2 = add_taxo_code2dataset(reader)
-total2 = 110
-dist2 = np.array([0.6, 0.2, 0.2])
-#test
-# np.ceil(total*dist).astype('int')
-solutionPerTaxonomy = multiple_knapsack_solve(codest_dict2)
-results2, BestSolutionPerTaxonomy2 = find_best_solution(codest_dict2)
 
 # %%
+def main():
+    taxo2loc_dict = add_taxo_code2dataset(reader)
+    total2 = 110
+    dist2 = np.array([0.6, 0.2, 0.2])
+    #test
+    # np.ceil(total*dist).astype('int')
+    solution_per_taxonomy = multiple_knapsack_solve(taxo2loc_dict)
+    results2, best_solution_per_taxo = find_best_solution_per_taxo(
+        taxo2loc_dict, solution_per_taxonomy)
 
-results2 = sorted(results2, reverse=True)
-[i[1] for i in results2]
-# len(results),len(codesDict.keys())
+    # %%
 
-BestSolutionPerTaxonomyLocation2 = knapsack_index2location_name(codest_dict2, BestSolutionPerTaxonomy2)
-# BestSolutionPerTaxonomyLocation
-results2file_names_like_cramer(BestSolutionPerTaxonomyLocation2)
+    results2 = sorted(results2, reverse=True)
 
-# %%
+    best_solution_per_taxo_w_loc_name = knapsack_index2location_name(
+        taxo2loc_dict, best_solution_per_taxo)
+    # BestSolutionPerTaxonomyLocation
+    results2file_names_like_cramer(best_solution_per_taxo_w_loc_name)
 
-# %%
+    # %%
+    ###############
+    # understand and run
+    item_weights = taxo2loc_dict['all']
+    solutions = [m[1] for m in solution_per_taxonomy['all']]
+
+    location2taxo_dict = reverse_taxo2loc_dict(taxo2loc_dict)
+
+    # taxo2loc_dict
+
+    target_dist = {
+        'dict with all taxo keys, values are proportions to total value': 0
+    }
+
+    cost, sol = pick_solution_by_item_distr(item_weights, solutions,
+                                            location2taxo_dict, target_dist)
+
+    ###############
