@@ -115,16 +115,18 @@ def add_taxo_code2dataset(megan_data_sheet, audio_dataset):
         taxonomy_code = dataimport.megan_excell_row2yaml_code(
             row, audio_dataset.excell_names2code)
         audio_sample = audio_dataset[row['File Name']]
+        site_id = row['Site ID'].strip()
+        audio_sample.location_id = site_id
         audio_sample.taxo_code = taxonomy_code
 
 
 def del_samples_not_labeled(audio_dataset, megan_data_sheet):
-    """ remove files from dataset that are not in the labeled list 
-        
+    """ remove files from dataset that are not in the labeled list
+
         we have some audio files in the original folder but
         they are not samples but original big recordings etc
         remove anything that is not in the list
-    
+
     """
 
     megan_data_sheet_file_names = {row['File Name'] for row in megan_data_sheet}

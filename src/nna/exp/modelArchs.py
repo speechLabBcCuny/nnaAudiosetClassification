@@ -27,7 +27,7 @@ class testModel(nn.Module):
         x = torch.sigmoid(x)
         #         x = F.log_softmax(x,dim=1)
         return x
-        
+
 
 
 class NetCNN1(nn.Module):

@@ -71,15 +71,15 @@
         1.2.3:
             - cervids # 
         1.2.4:
-            - canids # (Rose-breasted grosbeak)
+            - canids 
         1.2.5:
-            - mustelids # (Rose-breasted grosbeak)
+            - mustelids 
         1.2.6:
-            - felids # (Rose-breasted grosbeak)
+            - felids 
         1.2.7:
-            - lagomorphs # (Rose-breasted grosbeak)
+            - lagomorphs # 
         1.2.8:
-            - shrews # (Rose-breasted grosbeak)
+            - shrews #
         1.2.X:
             - unknown-mammal
     '1.3': # Insect

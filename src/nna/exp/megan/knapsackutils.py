@@ -550,40 +550,83 @@ def results2file_names_like_cramer(
 
 
 # %%
-def main():
-    taxo2loc_dict = add_taxo_code2dataset(reader)
-    total2 = 110
-    dist2 = np.array([0.6, 0.2, 0.2])
-    #test
-    # np.ceil(total*dist).astype('int')
-    solution_per_taxonomy = multiple_knapsack_solve(taxo2loc_dict)
-    results2, best_solution_per_taxo = find_best_solution_per_taxo(
-        taxo2loc_dict, solution_per_taxonomy)
+def main(version="split_by_distr"):
+    if version == "split_per_taxo":
+        taxo2loc_dict = add_taxo_code2dataset(reader)
+        total2 = 110
+        dist2 = np.array([0.6, 0.2, 0.2])
+        #test
+        # np.ceil(total*dist).astype('int')
+        solution_per_taxonomy = multiple_knapsack_solve(taxo2loc_dict)
+        results2, best_solution_per_taxo = find_best_solution_per_taxo(
+            taxo2loc_dict, solution_per_taxonomy)
 
-    # %%
+        # %%
 
-    results2 = sorted(results2, reverse=True)
+        results2 = sorted(results2, reverse=True)
 
-    best_solution_per_taxo_w_loc_name = knapsack_index2location_name(
-        taxo2loc_dict, best_solution_per_taxo)
-    # BestSolutionPerTaxonomyLocation
-    results2file_names_like_cramer(best_solution_per_taxo_w_loc_name)
+        best_solution_per_taxo_w_loc_name = knapsack_index2location_name(
+            taxo2loc_dict, best_solution_per_taxo)
+        # BestSolutionPerTaxonomyLocation
+        results2file_names_like_cramer(best_solution_per_taxo_w_loc_name)
 
     # %%
     ###############
-    # understand and run
-    item_weights = taxo2loc_dict['all']
-    solutions = [m[1] for m in solution_per_taxonomy['all']]
+    # TODO pick_solution_by_item_distr is calling map_weight_sol2taxo_dist_sol 
+            # first improve that
+    # TODO improve map_weight_sol2taxo_dist_sol so it returns all possible combinations
 
-    location2taxo_dict = reverse_taxo2loc_dict(taxo2loc_dict)
+    elif version =="split_by_distr":
+        #load excell
+        taxo2loc_dict = add_taxo_code2dataset(reader)
 
-    # taxo2loc_dict
+        #merge taxo counters
+        a=list(taxo2loc_dict.values())
+        all_taxo=Counter()
+        for m in a:
+            all_taxo+=m
 
-    target_dist = {
-        'dict with all taxo keys, values are proportions to total value': 0
-    }
+        # weights and values for knapsack
+        # counts of taxonomies are weights
+        # bins are train,validation,test
+        weights = list(all_taxo.values())
+        values = weights
 
-    cost, sol = pick_solution_by_item_distr(item_weights, solutions,
-                                            location2taxo_dict, target_dist)
+        #solve knapsack possible distributions around ~(60,20,20)
+        bin_capacities_w_solutions = solve_knapsack4combinations(weights,values)
 
+        # remove bin_capacity info from solutions
+        solutions = [solution for bin_capacity,solution in bin_capacities_w_solutions]
+
+        # switch dict keys with key of value dicts
+        item_weights=all_taxo
+        location2taxo_dict = reverse_taxo2loc_dict(taxo2loc_dict)
+
+        dataset_taxo_distr = {k:sum(v.values()) for k,v in  taxo2loc_dict.items()}
+
+        target_dist = dataset_taxo_distr
+
+        best_sol, lowest_cost = pick_solution_by_item_distr(item_weights, solutions, location2taxo_dict, target_dist)
+
+        solution_by_location_name = map_weights2indexes(item_weights, best_sol)
+
+        # print solutions
+        solution_by_taxo_dist=[]
+        for sol_bin in solution_by_location_name:
+            taxo_counter = [location2taxo_dict[loc] for loc in sol_bin]
+            tc=Counter()
+            for c in taxo_counter:
+                tc+=c
+            solution_by_taxo_dist.append(tc)
+            
+
+        t_dist = {}
+        for taxo in taxo2loc_dict.keys():
+            train=solution_by_taxo_dist[0][taxo]
+            val=solution_by_taxo_dist[1][taxo]
+            test = solution_by_taxo_dist[2][taxo]
+            total = (train+val+test)
+            t_dist[taxo]=(train/total,val/total,test/total)
+            print(f"{taxo} : {train/total:1.2}, {val/total:1.2}, {test/total:1.2}, {total}")
+        return solution_by_location_name
     ###############

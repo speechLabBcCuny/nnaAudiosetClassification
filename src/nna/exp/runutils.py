@@ -68,7 +68,10 @@ def run(model,
         device,
         config,
         wandb_project_name,
-        run_name=None):
+        run_name=None,
+        checkpoints_dir=None,
+        wandb_logger_ins=None,
+        taxo_names=None):
 
     train_loader = dataloaders['train']
     val_loader = dataloaders['val']
@@ -88,38 +91,72 @@ def run(model,
                                                        device=device)
     validation_evaluator.logger = setup_logger('Val Evaluator')
 
-    best_ROC_AUC = [0]
-    best_epoch = [0]
+    # best_ROC_AUC -> [mean,min]
+    best_ROC_AUC = [0,0]
+    best_epoch = [0,0]
 
-    @trainer.on(Events.EPOCH_COMPLETED, best_ROC_AUC, best_epoch)
-    def compute_metrics(engine, best_ROC_AUC, best_epoch):
+    @trainer.on(Events.EPOCH_COMPLETED, best_ROC_AUC, best_epoch,taxo_names)
+    def compute_metrics(engine, best_ROC_AUC, best_epoch,taxo_names=None):
         train_evaluator.run(train_loader)
         validation_evaluator.run(val_loader)
-        roc_auc_array = validation_evaluator.state.metrics['ROC_AUC']
+        roc_auc_array_val = validation_evaluator.state.metrics['ROC_AUC']
+        roc_auc_array_train = train_evaluator.state.metrics['ROC_AUC']
+
         print('train loss', train_evaluator.state.metrics['loss'])
         print('val loss', validation_evaluator.state.metrics['loss'])
-        print('validation roc auc', roc_auc_array, engine.state.epoch)
-        current_roc_auc = np.mean(roc_auc_array)
-        current_roc_auc = current_roc_auc.item()
-        if current_roc_auc > best_ROC_AUC[0]:
-            best_ROC_AUC[0] = current_roc_auc
+        print('validation roc auc', roc_auc_array_val, engine.state.epoch)
+        print('train roc auc', roc_auc_array_train, engine.state.epoch)
+
+        current_train_roc_auc_mean = np.mean(roc_auc_array_train)
+        current_train_roc_auc_mean = current_train_roc_auc_mean.item()
+
+        current_val_roc_auc_mean = np.mean(roc_auc_array_val)
+        current_val_roc_auc_mean = current_val_roc_auc_mean.item()
+
+        current_val_roc_auc_min = np.min(roc_auc_array_val)
+        current_val_roc_auc_min = current_val_roc_auc_min.item()
+
+        if current_val_roc_auc_mean > best_ROC_AUC[0]:
+            best_ROC_AUC[0] = current_val_roc_auc_mean
             best_epoch[0] = engine.state.epoch
             wandb_logger_ins.log(
                 {
-                    'best_ROC_AUC': best_ROC_AUC[0],
-                    'best_Epoch': best_epoch[0]
+                    'best_mean_ROC_AUC': best_ROC_AUC[0],
+                    'best_mean_Epoch': best_epoch[0]
                 },
                 step=trainer.state.iteration)
-        
+    
+        if current_val_roc_auc_min > best_ROC_AUC[1]:
+            best_ROC_AUC[1] = current_val_roc_auc_min
+            best_epoch[1] = engine.state.epoch
+            wandb_logger_ins.log(
+                {
+                    'best_min_ROC_AUC': best_ROC_AUC[1],
+                    'best_min_Epoch': best_epoch[1]
+                },
+                step=trainer.state.iteration)
         #log epochs seperatly to use in X axis 
         wandb_logger_ins.log({'epoch': engine.state.epoch},
                              step=trainer.state.iteration)
+        wandb_logger_ins.log({'val_roc_auc_mean': current_val_roc_auc_mean},
+                             step=trainer.state.iteration)
+        wandb_logger_ins.log({'train_roc_auc_mean': current_train_roc_auc_mean},
+                             step=trainer.state.iteration)
 
-    wandb_logger_ins = wandb_logger.WandBLogger(
-        project=wandb_project_name,
-        name=run_name,
-        config=config,
-    )
+        if taxo_names is None:
+            taxo_names = [f'class_{k}' for k in range(len(roc_auc_array_val))]
+
+        for i,taxo_name in enumerate(taxo_names): # type: ignore
+            wandb_logger_ins.log({f'val_roc_auc_{taxo_name}': roc_auc_array_val[i]},
+                             step=trainer.state.iteration)
+
+    
+    if wandb_logger_ins is None:
+        wandb_logger_ins = wandb_logger.WandBLogger(
+            project=wandb_project_name,
+            # name=run_name,
+            config=config,
+        )
 
     wandb_logger_ins.attach_output_handler(
         trainer,
@@ -152,13 +189,22 @@ def run(model,
     def score_function2(engine):
         print('loss', engine.state.metrics['loss'])
         return engine.state.metrics['loss']
+    
+    def score_funtion_min(engine):
+        return np.min(engine.state.metrics['ROC_AUC']).item()
+
+
+    if checkpoints_dir is None:
+        checkpoint_dir = wandb_logger_ins.run.dir
+    else:
+        checkpoint_dir = checkpoints_dir / wandb_logger_ins.run.name
 
     model_checkpoint = ModelCheckpoint(
-        wandb_logger_ins.run.dir,
+        checkpoint_dir,
         n_saved=2,
         filename_prefix='best',
-        score_function=score_function,
-        score_name='ROC_AUC',
+        score_function=score_funtion_min,
+        score_name='min_ROC_AUC',
         # to take the epoch of the `trainer`L
         global_step_transform=global_step_from_engine(trainer),
     )
@@ -207,7 +253,7 @@ def run(model,
 
 class audioDataset(Dataset):
 
-    def __init__(self, X, y, transform=None):
+    def __init__(self, X, y=None, transform=None):
         '''
     Args:
 
@@ -222,8 +268,10 @@ class audioDataset(Dataset):
         return self.X.shape[0]
 
     def __getitem__(self, idx):
-
-        sample = self.X[idx], self.y[idx]
+        if self.y is None:
+            sample =  self.X[idx], torch.zeros((2))
+        else:
+            sample = self.X[idx], self.y[idx]
 
         if self.transform:
             sample = self.transform(sample)
