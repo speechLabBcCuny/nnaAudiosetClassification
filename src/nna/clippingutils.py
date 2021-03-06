@@ -45,9 +45,9 @@ import pickle
 from pathlib import Path
 from typing import List, Tuple, Union
 
-import librosa
+# import librosa
 import numpy as np
-from pydub import AudioSegment
+# from pydub import AudioSegment
 
 
 def load_audio(
@@ -74,6 +74,7 @@ def load_audio(
 
     filepath = str(filepath)
     if backend == "librosa":
+        import librosa
         if dtype in (np.float32, np.float64):
             sound_array, sr = librosa.load(filepath,
                                            mono=False,
@@ -101,6 +102,8 @@ def load_audio(
             # sound_array = sound_array * 32768
             # sound_array = sound_array.astype(np.int16)
     elif backend == "pydub":
+        from pydub import AudioSegment
+        AudioSegment.converter = '/home/enis/sbin/ffmpeg'
         sound_array = AudioSegment.from_file(filepath)
         sr = sound_array.frame_rate
         sound_array = sound_array.get_array_of_samples()
@@ -170,6 +173,20 @@ def run_task_save(allfiles: List[Union[str, Path]],
                 files_w_errors: List[(index, a_file_path, exception),]
 
     """
+
+    clipping_threshold_str = str(clipping_threshold)
+    clipping_threshold_str = clipping_threshold_str.replace(".", ",")
+    filename = "{}_{}.pkl".format(area_id, clipping_threshold_str)
+    error_filename = "{}_{}_error.pkl".format(area_id, clipping_threshold_str)
+    results_folder = Path(results_folder)
+    output_file_path = results_folder / filename
+    error_file_path = results_folder / error_filename
+    if output_file_path.exists():
+        print(f'Clipping results for {filename} exists at {results_folder}.' +
+              ' Not calculating.')
+        return {},[]
+
+
     files_w_errors = []
     all_results_dict = {}
     allfiles = [str(i) for i in allfiles]
@@ -196,15 +213,8 @@ def run_task_save(allfiles: List[Union[str, Path]],
         # print(e)
         # files_w_errors.append((i, audio_file, e))
     # SAVE RESULTS
-    clipping_threshold_str = str(clipping_threshold)
-    clipping_threshold_str = clipping_threshold_str.replace(".", ",")
-    filename = "{}_{}.pkl".format(area_id, clipping_threshold_str)
-    error_filename = "{}_{}_error.pkl".format(area_id, clipping_threshold_str)
-    results_folder = Path(results_folder)
-    results_folder.mkdir(parents=True, exist_ok=True)
 
-    output_file_path = results_folder / filename
-    error_file_path = results_folder / error_filename
+    results_folder.mkdir(parents=True, exist_ok=True)
     if save:
         with open(output_file_path, "wb") as f:
             np.save(f, all_results_dict)

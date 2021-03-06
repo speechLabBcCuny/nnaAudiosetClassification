@@ -97,13 +97,17 @@ def test_get_clipping_percent(sound_array_path, threshold, expected):
             from nna import clippingutils
             import numpy as np
             from testparams import SOUND_EXAMPLES
+            from pathlib import Path
 
             filepath = SOUND_EXAMPLES / "10seconds.mp3"
+            input_folder = Path('./data/inputs_outputs/clippingutils/')
+            input_folder = input_folder / 'get_clipping_percent/inputs/'
+            input_folder.mkdir(exist_ok=True)
+            input_file = input_folder / '10seconds.mp3_sound_array.npy'
             sound_array, sr = clippingutils.load_audio(filepath,
                     dtype = np.int16,
                     backend="pydub",)
-            np.save("./data/inputs_outputs/clippingutils/get_clipping_percent/"+
-            "inputs/10seconds.mp3_sound_array.npy",sound_array)
+            np.save(str(input_file),sound_array)
            ```
     """
 
