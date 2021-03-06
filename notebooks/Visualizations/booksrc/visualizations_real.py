@@ -1,53 +1,12 @@
 "Place Holder"
-
-from numpy import linspace
 import pandas as pd
-
-from scipy import stats
-import time
-import copy
-
-import csv
-from pathlib import Path
-from os import listdir
-import pickle
-
-from tabulate import tabulate
-
-from datetime import timedelta
 import datetime
 
-from pytz import timezone
-import itertools
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-import matplotlib.ticker as ticker
-import matplotlib.dates as mdates
-from matplotlib.ticker import NullFormatter
-from matplotlib.colors import Normalize
 import matplotlib.pylab as pl
-from matplotlib.collections import LineCollection
+import nna
 
 # In[4]:
 
-from nna.pre_process_func import read_queue
-from nna.fileUtils import read_file_properties
-from nna.labeling_utils import load_labels
-from nna.visutils import get_cycle, create_time_index, file2TableDict, reverse_df_dict
-
-import nna
-
-linestyle_str = [
-    ("solid", "solid"),  # Same as (0, ()) or '-'
-    ("dotted", "dotted"),  # Same as (0, (1, 1)) or '.'
-    ("dashed", "dashed"),  # Same as '--'
-    ("dashdot", "dashdot"),  # Same as '-.
-    ("densely dotted", (0, (1, 1))),
-    ("densely dashed", (0, (5, 1))),
-    ("densely dashdotted", (0, (3, 1, 1, 1))),
-    ("densely dashdotdotted", (0, (3, 1, 1, 1, 1, 1)))
-]
 
 data_folder = "/home/enis/projects/nna/data/"
 results_folder = "/home/enis/projects/nna/results/"
