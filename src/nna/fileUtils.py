@@ -83,12 +83,12 @@ def standard_path_style(
         return None
     generated_path = Path(parent_path) / str(row_region) / str(
         row_location_id) / str(row_year)
-        
+
     if sub_directory_addon:
-        sub_directory_name = "_".join([file_name.stem,sub_directory_addon])
+        sub_directory_name = "_".join([file_name.stem, sub_directory_addon])
         generated_path = generated_path / sub_directory_name
     if file_name_addon:
-        file_name = "_".join([file_name.stem,file_name_addon])
+        file_name = "_".join([file_name.stem, file_name_addon])
         generated_path = generated_path / file_name
     return generated_path
 
@@ -517,8 +517,9 @@ def find_files(location, start_time, end_time, length, file_properties_df):
     return sorted_filtered, start_time, end_time
 
 
-def find_filesfunc_inputs(location, start_time, end_time, length, buffer,
-                          file_properties_df):
+def find_filesfunc_inputs(location, region, start_time, end_time, length,
+                          buffer, file_properties_df):
+    del region
 
     if location in file_properties_df["site_id"].values:
         loc_key = "site_id"
@@ -530,6 +531,7 @@ def find_filesfunc_inputs(location, start_time, end_time, length, buffer,
         for site_name, site_id in set(
                 zip(file_properties_df.site_name, file_properties_df.site_id)):
             print(site_name, "---", site_id)
+        return None, None, None, None, None,
 
     if not start_time:
         print("start time value should be given")
@@ -564,41 +566,44 @@ def find_filesfunc_inputs(location, start_time, end_time, length, buffer,
 
 
 # from nna.fileUtils import find_filesv2
-def find_filesv2(location, start_time, end_time, length, buffer,
-                 file_properties_df):
+def find_filesv2(location, region, start_time, end_time, length, buffer,
+                 file_properties_df,only_continuous=True):
     #     print(start_time,end_time)
-    output = find_filesfunc_inputs(location, start_time, end_time, length,
-                                   buffer, file_properties_df)
+    output = find_filesfunc_inputs(location, region, start_time, end_time,
+                                   length, buffer, file_properties_df)
     start_time, end_time, loc_key, start_time_org, end_time_org = output
 
     # sorted here
     file_properties_df = file_properties_df.sort_values(by=["timestamp"])
 
-    site_filtered = file_properties_df[file_properties_df[loc_key] == location]
+    site_filtered = file_properties_df[file_properties_df['region'] == region]
+    site_filtered = site_filtered[site_filtered[loc_key] == location]
 
     # first and last recordings from selected site
     first = site_filtered["timestamp"][0]
     last = site_filtered["timestampEnd"][-1]
     #     print("first,last",first,last)
     #######
-    # if query before all recordings
+    # if query before all recordings, return empty
     if first > end_time:
         return (site_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
-#    if query all after recordings
+#    if query all after recordings, return empty
     elif last < start_time:
         return (site_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
 
-
 # if   TODO thing about this, if we wanna keep overlapping parts !
     elif start_time < first:
+        print('start<first')
         return (site_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
     elif end_time > last:
+        print('end>last')
         return (site_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
-    # make sure start or end time time are withing possible range
+
+    # make sure start or end time are within possible range
     beginning, end = max(start_time, first), min(end_time, last)
     start_file = site_filtered[
         site_filtered["timestamp"] <= beginning].iloc[-1:]
@@ -613,27 +618,33 @@ def find_filesv2(location, start_time, end_time, length, buffer,
         time_site_filtered["timestampEnd"] >= beginning]
 
     sorted_filtered = time_site_filtered.sort_values(by=["timestamp"])
-
+    if len(sorted_filtered.index) == 0:
+        # print('56')
+        return (sorted_filtered[0:0], start_time, end_time, start_time_org,
+                end_time_org)
     # if   TODO thing about this, if we wanna keep overlapping parts !
-    if len(sorted_filtered.index) > 1:
+    if len(sorted_filtered.index) > 1 and only_continuous:
 
         timestamps, timestamp_ends = site_filtered["timestamp"], site_filtered[
             "timestampEnd"]
         i = 0
         while i < len(sorted_filtered.index):
+            # if recordings are not continues
             if timestamps[i + 1] != timestamp_ends[i]:
+                print('123')
                 return site_filtered[
                     0:0], start_time, end_time, start_time_org, end_time_org
             i += 1
-    if len(sorted_filtered.index) == 0:
-        return (sorted_filtered[0:0], start_time, end_time, start_time_org,
-                end_time_org)
-    resultfirst, resultlast = sorted_filtered["timestamp"][0], sorted_filtered[
+
+    first_result_start, last_result_end = sorted_filtered["timestamp"][0], sorted_filtered[
         "timestampEnd"][-1]
-    if resultfirst <= start_time and resultlast >= end_time:
+    # if query starts after first result does and ends before last result does
+    if first_result_start <= start_time and last_result_end >= end_time:
+        print('...')
         return (sorted_filtered, start_time, end_time, start_time_org,
                 end_time_org)
     else:
+        # print('elseeee')
         return (sorted_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
 
@@ -711,6 +722,7 @@ def display_audio(tmpfolder, file_name, file_extension):
 
 
 def query_audio(location,
+                region,
                 start_time,
                 end_time,
                 length,
@@ -720,16 +732,27 @@ def query_audio(location,
                 display_flag=True,
                 save=True,
                 tmp_folder="./tmp_audio_excerpt/"):
+    '''Find audio segment,trim segment and name according to found time.
 
-    output = find_filesv2(location, start_time, end_time, length, 0,
-                          file_properties_df)
+        Audio can be found in given 'exact' time. 
+            If buffer is bigger than 0 then it can be found 'earlier' or 'later'
+            on of these words is placed in tmp audio file name accordingly.
+            ex: f'{filename}_exact_{start_time.strftime(%Y-%m-%d_%H:%M:%S)}'
+
+        Args:
+
+        Returns: File df with entries corresponding to the query.
+
+    '''
+    output = find_filesv2(location, region, start_time, end_time, length, 0,
+                          file_properties_df,only_continuous=False)
     sorted_filtered, start_time, end_time, start_time_org, end_time_org = output
 
     # if there is no file without buffer then search again with buffer
     if len(sorted_filtered.index) == 0 and buffer > 0:
 
-        output = find_filesv2(location, start_time_org, end_time_org, length,
-                              buffer, file_properties_df)
+        output = find_filesv2(location, region, start_time_org, end_time_org,
+                              length, buffer, file_properties_df,only_continuous=False)
         (sorted_filtered, start_time, end_time, start_time_org,
          end_time_org) = output
 
@@ -738,6 +761,7 @@ def query_audio(location,
         closestRight = sorted_filtered[
             sorted_filtered["timestamp"] > end_time_org][:1]
         if len(sorted_filtered.index) == 0:
+            return sorted_filtered
             print("Recording not found")
         elif len(closestLeft.index) == 0:
             start_time = closestRight["timestamp"][0]
@@ -783,7 +807,10 @@ def findPhoto(location,
               timestamp,
               imgOnlyDate,
               buffer=datetime.timedelta(seconds=1)):
-    """
+    """Find photo in a location with given timestamp
+    
+    Does not support region filtering.
+
   Example
   --------
   import datetime
@@ -846,6 +873,7 @@ def findPhoto(location,
 
 
 def QuickQuery_audio(location,
+                     region,
                      start_time,
                      imgOnlyDate,
                      file_properties_df,
@@ -864,6 +892,7 @@ def QuickQuery_audio(location,
     tmp_folder = "/home/enis/projects/nna/data/tmp/"
 
     output = query_audio(location,
+                         region,
                          start_time,
                          end_time,
                          length,
