@@ -25,6 +25,7 @@ def mock_file_properties_df(
     index_length: int = 100,
     semantic_errors: bool = False,
     structural_errors: bool = False,
+    region_location_count: int=-1,
 ):
     """Generate a file_properties_df pd.DataFrame storing original file info.
 
@@ -85,7 +86,8 @@ def mock_file_properties_df(
     data_df: Dict[Path():Dict] = {}
     for _ in range(index_length):
         random_path, mock_row = mock_file_properties_df_row(
-            random_src_paths, acceptable_years, recorder_id_list)
+            random_src_paths, acceptable_years, recorder_id_list,
+            region_location_count=region_location_count)
         data_df[random_path] = mock_row
 
     df_dict = pd.DataFrame.from_dict(data_df, orient='index')
@@ -95,7 +97,7 @@ def mock_file_properties_df(
 
 def mock_file_properties_df_row(
         random_src_paths: List[str], acceptable_years: List[str],
-        recorder_id_list: List[str]) -> Tuple[Path, Dict]:
+        recorder_id_list: List[str],region_location_count=-1) -> Tuple[Path, Dict]:
     """Generate a random row of file_properties_df.
 
         Given options for src_path, years and recorder_id, create a random
@@ -105,7 +107,10 @@ def mock_file_properties_df_row(
             (index: Path,row: Dict)
     """
     src_path = random.choice(random_src_paths)
-    region, location_id = random.choice(EXISTING_REGION_LOCATIONID)
+    if region_location_count>0:
+        region, location_id = random.choice(EXISTING_REGION_LOCATIONID[:region_location_count])
+    else:
+        region, location_id = random.choice(EXISTING_REGION_LOCATIONID)
     year_file = random.choice(acceptable_years)
     first_day_year = datetime.datetime(int(year_file), 1, 1, 00, 00)
     # # 31449600 seconds = 364 days

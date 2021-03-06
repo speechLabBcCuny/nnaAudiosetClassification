@@ -20,7 +20,6 @@ IO_visutils_path = INPUTS_OUTPUTS_PATH / 'visutils'
 
 
 def test_get_cycle():
-
     output = visutils.get_cycle('tab20c')
     assert isinstance(output, cycler.Cycler)
     assert output.keys == {'color'}
@@ -351,67 +350,71 @@ def test_export_raw_results_2_csv():
     return csv_files_written, no_result_paths
 
 
-# def test_vis_preds_with_clipping():
+def test_vis_preds_with_clipping():
+    '''Test vis generation.
 
-#     func_output_path = IO_visutils_path / 'vis_preds_with_clipping' / 'outputs'
-#     func_input_path = IO_visutils_path / 'vis_preds_with_clipping' / 'inputs'
-#     clipping_results_path = func_input_path / 'clipping_files'
-#     clipping_results_path.mkdir(parents=True, exist_ok=True)
+        Requires manual inspection of generated graphs.
+    
+    '''
+    func_output_path = IO_visutils_path / 'vis_preds_with_clipping' / 'outputs'
+    func_input_path = IO_visutils_path / 'vis_preds_with_clipping' / 'inputs'
+    clipping_results_path = func_input_path / 'clipping_files'
+    clipping_results_path.mkdir(parents=True, exist_ok=True)
 
-#     row_count = 100
-#     tag_names = ['XXX']
-#     id2name = {'XXX': 'XXX_name'}
+    row_count = 100
+    tag_names = ['XXX']
+    id2name = {'XXX': 'XXX_name'}
 
-#     channel_count = 1
-#     input_data_freq = "10S"
-#     output_data_freq = '270min'
+    channel_count = 1
+    input_data_freq = '10S'
+    output_data_freq = '270min'
 
-#     file_properties_df = mock_data.mock_file_properties_df(row_count)
-#     # selected_location_ids = list(set(file_properties_df.locationId.values))
-#     region_location = zip(list(file_properties_df.region.values),
-#                           list(file_properties_df.locationId.values))
-#     region_location = list(set(region_location))
+    file_properties_df = mock_data.mock_file_properties_df(row_count,region_location_count=1)
+    # selected_location_ids = list(set(file_properties_df.locationId.values))
+    region_location = zip(list(file_properties_df.region.values),
+                            list(file_properties_df.locationId.values))
+    region_location = list(set(region_location))
 
-#     def ones(i):
-#         del i
-#         return 1
+    def ones(i):
+        del i
+        return 1
 
-#     fill_value_func = ones
+    fill_value_func = ones
 
-#     for tag_name in tag_names:
-#         resulting_output_file_paths = mock_data.mock_results_4input_files(
-#             file_properties_df,
-#             fill_value_func,
-#             func_input_path,
-#             results_tag_id=tag_name,
-#             channel_count=channel_count,
-#         )
-#         del resulting_output_file_paths
+    for tag_name in tag_names:
+        resulting_output_file_paths = mock_data.mock_results_4input_files(
+            file_properties_df,
+            fill_value_func,
+            func_input_path,
+            results_tag_id=tag_name,
+            channel_count=channel_count,
+        )
+        del resulting_output_file_paths
 
-#     cmap = pl.cm.tab10
-#     a_cmap = cmap
-#     my_cmaps = visutils.add_normal_dist_alpha(a_cmap)
-#     for region, location_id in region_location:
-#         print(region, location_id)
-#         file_prop_df_filtered = file_properties_df[file_properties_df.region ==
-#                                                    region]
-#         file_prop_df_filtered = file_properties_df[file_properties_df.locationId
-#                                                    == location_id]
-#         region_location_name = '_'.join([region, location_id])
-#         _ = mock_data.mock_clipping_results_dict_file(
-#             file_prop_df_filtered,
-#             region_location_name,
-#             clipping_results_path,
-#         )
-#         visutils.vis_preds_with_clipping(region,
-#                                          location_id,
-#                                          file_prop_df_filtered,
-#                                          input_data_freq,
-#                                          output_data_freq,
-#                                          tag_names,
-#                                          my_cmaps,
-#                                          func_input_path,
-#                                          clipping_results_path,
-#                                          func_output_path,
-#                                          id2name,
-#                                          clipping_threshold=1.0)
+    cmap = pl.cm.tab10
+    a_cmap = cmap
+    my_cmaps = visutils.add_normal_dist_alpha(a_cmap)
+    for region, location_id in region_location[0:1]:
+        print(region, location_id)
+        file_prop_df_filtered = file_properties_df[file_properties_df.region ==
+                                                    region]
+        file_prop_df_filtered = file_properties_df[file_properties_df.locationId
+                                                    == location_id]
+        region_location_name = '_'.join([region, location_id])
+        _ = mock_data.mock_clipping_results_dict_file(
+            file_prop_df_filtered,
+            region_location_name,
+            clipping_results_path,
+        )
+        visutils.vis_preds_with_clipping(region,
+                                            location_id,
+                                            file_prop_df_filtered,
+                                            input_data_freq,
+                                            output_data_freq,
+                                            tag_names,
+                                            my_cmaps,
+                                            func_input_path,
+                                            clipping_results_path,
+                                            func_output_path,
+                                            id2name,
+                                            clipping_threshold=1.0)
