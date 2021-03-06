@@ -1,7 +1,7 @@
 """Visualizations functions
 
 """
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, Callable, Any
 from pathlib import Path
 from matplotlib.pyplot import contour
 
@@ -202,8 +202,17 @@ def prob2binary(
     """
     if len(result.shape) > 1 and result.shape[-1] != channel:
         raise ValueError(
-            "input array should have same dimension size with channel")
+            f"input array should have same dimension size with channel," +
+            f"given channel count is {channel}, but array has shape of {result.shape}"
+        )
+    if len(result.shape) == 1 and channel > 1:
+        raise ValueError(
+            f"for input array with single dimension," +
+            f"given channel count should be 1, but it is {channel}. " +
+            f"Shape of array is {result.shape}")
+
     if channel == 2:
+        # print(result.shape)
         result = np.max(result, axis=1)
     if channel > 2:
         raise NotImplementedError(
@@ -231,8 +240,14 @@ def load_data_of_row(
 ):
     """Load data belonging to a sound file (row from file_properties_df).
     """
+
     if gathered_results_per_tag:
-        a_key = next(iter(gathered_results_per_tag))
+        if afile is None:
+            raise ValueError(
+                'afile parameter of load_data_of_row cannot be ' +
+                'None if gathered_results_per_tag being used rather than result_path'
+            )
+        a_key = next(iter(gathered_results_per_tag[model_tag_name]))
         if isinstance(a_key, str):
             afile_as_key = str(afile)
         elif isinstance(a_key, Path):
@@ -243,6 +258,9 @@ def load_data_of_row(
                 gathered_results_per_tag has a key which is not Path or str")
         data = gathered_results_per_tag[model_tag_name].get(
             afile_as_key, np.empty(0))[:]
+        # print(model_tag_name)
+        # print(type(model_tag_name))
+        # print(f"gathered_results_per_tag,{gathered_results_per_tag}")
 
     else:
         check_folder = fileUtils.standard_path_style(
@@ -254,6 +272,7 @@ def load_data_of_row(
         all_segments = fileUtils.list_files(check_folder_str)
         all_segments.sort()
         if not all_segments:
+            print(f"empty all segments folder,{check_folder_str}")
             data = np.empty(0)
         else:
             data = load_npy_files(all_segments)
@@ -284,6 +303,7 @@ def afile_df_2_counts_sums(globalindex, df_afile, df_count, df_sums):
     # df_afile_grouped = df_afile.groupby([pd.Grouper(freq=freq)])
     # counts=df_afile_grouped.count()
     # sums=df_afile_grouped.sum()
+    # print(df_afile)
     # print(df_afile.index)
     global_index_start = globalindex.searchsorted(df_afile.index[0],)
     if global_index_start != 0:
@@ -317,7 +337,8 @@ def file2TableDict(  # pylint: disable=invalid-name
         channel: int = 1,
         gathered_results_per_tag: Union[Dict, None] = None,
         result_path: Union[str, None] = None,
-        prob2binary_flag: bool = True) -> Tuple[Dict, List]:
+        prob2binary_flag: bool = True,
+        pre_process_func: Callable = None) -> Tuple[Dict, List]:
     """Reduce results by dataFreq from multiple files into a pd.DataFrame.
 
         For all selected_areas (locationId), finds results for each tag from
@@ -364,30 +385,34 @@ def file2TableDict(  # pylint: disable=invalid-name
     for location_id, _, df_afile in load_data_yield(
             model_tag_names, file_properties_df, input_data_freq,
             prob2binary_threshold, channel, gathered_results_per_tag,
-            result_path, prob2binary_flag):
+            result_path, prob2binary_flag, pre_process_func):
         # if file could not be loaded
         if location_id is None:
             no_result_paths.append(df_afile)
             continue
-        if location_id_prev != location_id:
-            if location_id_prev is not None:
-                df_dict[location_id_prev] = (
-                    df_count.copy(),  #type: ignore
-                    df_sums.copy(),  #type: ignore
-                )  #type: ignore
+        try:
+            if location_id_prev != location_id:
+                if location_id_prev is not None:
+                    df_dict[location_id_prev] = (
+                        df_count.copy(),  #type: ignore
+                        df_sums.copy(),  #type: ignore
+                    )  #type: ignore
 
-            #init for next location_id
-            location_id_prev = location_id
-            df_sums = pd.DataFrame(index=global_index,
-                                   columns=model_tag_names).fillna(0)
-            df_count = pd.DataFrame(index=global_index,
-                                    columns=model_tag_names).fillna(0)
+                #init for next location_id
+                location_id_prev = location_id
+                df_sums = pd.DataFrame(index=global_index,
+                                       columns=model_tag_names).fillna(0)
+                df_count = pd.DataFrame(index=global_index,
+                                        columns=model_tag_names).fillna(0)
 
-        df_count, df_sums = afile_df_2_counts_sums(
-            global_index,
-            df_afile,
-            df_count,  #type: ignore
-            df_sums)  #type: ignore
+            df_count, df_sums = afile_df_2_counts_sums(
+                global_index,
+                df_afile,
+                df_count,  #type: ignore
+                df_sums)  #type: ignore
+        except:
+            no_result_paths.append(df_afile)
+            continue
 
     # last results
     if location_id is not None:
@@ -402,7 +427,8 @@ def load_data_yield(tag_names: List[str],
                     channel: int = 1,
                     gathered_results_per_tag: Union[Dict, None] = None,
                     result_path: Union[str, None] = None,
-                    prob2binary_flag: bool = True):
+                    prob2binary_flag: bool = True,
+                    pre_process_func: Callable = None):
     """Iterates location_ids, tag_names then yield the loaded file.
     """
     if (gathered_results_per_tag is None) and (result_path is None):
@@ -418,24 +444,35 @@ def load_data_yield(tag_names: List[str],
                                                      == location_id]
         for a_tag_name in tag_names:
             for afile, row in filtered_by_location_id.iterrows():
-                afile = Path(afile)
-                data = load_data_of_row(result_path, row, a_tag_name,
-                                        gathered_results_per_tag, afile)
 
-                if data.size == 0:
-                    yield (None, None, afile)
-
-                if prob2binary_flag:
-                    data = prob2binary(
-                        data,
-                        threshold=prob2binary_threshold,
-                        channel=channel,
-                    )
                 try:
-                    df_afile = row_data_2_df(row, data, input_data_freq,
-                                             a_tag_name)
-                    yield location_id, a_tag_name, df_afile
-                except:
+                    afile = Path(afile)
+                    data = load_data_of_row(result_path, row, a_tag_name,
+                                            gathered_results_per_tag, afile)
+
+                    if data.size == 0:
+                        yield (None, None, afile)
+                    if pre_process_func is not None:
+                        data = pre_process_func(data)
+
+                    if prob2binary_flag:
+                        # print(afile,)
+                        data = prob2binary(
+                            data,
+                            threshold=prob2binary_threshold,
+                            channel=channel,
+                        )
+                    try:
+                        df_afile = row_data_2_df(row, data, input_data_freq,
+                                                 a_tag_name)
+                        yield location_id, a_tag_name, df_afile
+                    except Exception as e:
+                        print(e)
+                        print(afile, row, data.shape, input_data_freq,
+                              a_tag_name)
+                        yield None, None, afile
+                except Exception as e:
+                    print(e)
                     print(afile, row, data.shape, input_data_freq, a_tag_name)
                     yield None, None, afile
 
@@ -481,11 +518,14 @@ def export_raw_results_2_csv(output_folder_path,
                              gathered_results_per_tag=None,
                              result_files_folder=None,
                              prob2binary_flag=True):
-    """Export results to a csv file without any grouping.
+    """Export results to a csv file without any grouping/reducing.
+
+        Combine all results of a speficic location given tag into a csv file.
     """
-    if output_data_freq != "10S":
+    if output_data_freq != input_data_freq:
         raise ValueError(
-            "this function does not do aggregation, set dataFreq to 10S")
+            f"this function does not do aggregation, set dataFreq to" +
+            f" same with input_data_freq which is {input_data_freq}")
     output_folder_path = Path(output_folder_path)
 
     def export_list_of_df_2csv(df_raw_list, csv_files_written, location_id,
@@ -539,11 +579,13 @@ def export_raw_results_2_csv(output_folder_path,
     return csv_files_written, no_result_paths
 
 
-def add_normal_dist_alpha(a_cmap):
+def add_normal_dist_alpha(a_cmap, alpha_range=None):
     # Choose colormap
     # cmap = pl.cm.tab10
     # cmap = aCmap
     # Get the colormap colors
+    if alpha_range is None:
+        alpha_range = [0.1, 0.9]
     my_cmap = a_cmap(np.arange(a_cmap.N))
     my_cmaps = []
     for clr in my_cmap:
@@ -552,7 +594,8 @@ def add_normal_dist_alpha(a_cmap):
             "red": [[0.0, r, r], [1.0, r, r]],
             "green": [[0.0, g, g], [1.0, g, g]],
             "blue": [[0.0, b, b], [1.0, b, b]],
-            "alpha": [[0, 0.9, 0.9], [1, 0.1, 0.1]]
+            "alpha": [[0, alpha_range[1], alpha_range[1]],
+                      [1, alpha_range[0], alpha_range[0]]]
         }
 
         newcmp = LinearSegmentedColormap("testCmap", segmentdata=cdict, N=100)
@@ -594,7 +637,9 @@ def vis_preds_with_clipping(region,
                             clipping_results_path,
                             vis_file_path,
                             id2name,
-                            clipping_threshold: float = 1.0):
+                            clipping_threshold: float = 1.0,
+                            prob2binary_flag: bool = False,
+                            pre_process_func: Callable = None):
 
     ########     LOAD tag data     #########
 
@@ -604,7 +649,8 @@ def vis_preds_with_clipping(region,
         input_data_freq=input_data_freq,
         output_data_freq=output_data_freq,
         result_path=result_path,
-        prob2binary_flag=False,
+        prob2binary_flag=prob2binary_flag,
+        pre_process_func=pre_process_func,
     )
     df_count, df_sums = df_dict[location_id]
     df_freq = df_sums / df_count
@@ -613,7 +659,7 @@ def vis_preds_with_clipping(region,
     ########     LOAD Clipping     #########
     gathered_results = {}
 
-    region_location_name = "_".join([region, location_id])
+    region_location_name = "-".join([region, location_id])
     gathered_results = load_clipping_2dict(
         region_location_name,
         clipping_results_path,
@@ -732,8 +778,6 @@ def create_figure(location_id, months, months_time, my_cmaps, cord_list,
             # add collection to axes
             ax[monthi].add_collection(lc)
 
-
-#             break
 
 # add legend and set names of the lines
     ax[0].legend(labels=[id2name.get(x[0], x[0][1:]) for x in cord_list],
