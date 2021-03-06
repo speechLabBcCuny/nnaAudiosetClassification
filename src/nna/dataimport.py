@@ -30,6 +30,8 @@ class Audio():
         self.clipping = clipping
         self.data = np.empty(0)  # suppose to be np.array
         self.sr: Optional[int] = None  # sampling rate
+        self.location_id = None # 
+        self.samples = []
 
     def __str__(self,):
         return str(self.name)
@@ -40,6 +42,7 @@ class Audio():
     def pick_channel_by_clipping(self, excerpt_length):
         if len(self.data.shape) == 1:
             return None
+
         cleaner_channel_indexes = np.argmin(self.clipping, axis=1)
         new_data = np.empty(self.data.shape[-1], dtype=self.data.dtype)
 
@@ -54,6 +57,16 @@ class Audio():
 
         self.data = new_data[:]
 
+    def load_data(
+        self,
+        dtype=np.int16,
+    ):
+        sound_array, sr = nna.clippingutils.load_audio(self.path,
+                                                               dtype=dtype,
+                                                               backend='pydub')
+
+        self.data = sound_array
+        self.sr = sr
 
 class Dataset(MutableMapping):
     """A dictionary that holds data points."""
@@ -154,6 +167,7 @@ class Dataset(MutableMapping):
                                                                backend='pydub')
             else:
                 sound_array, sr = data
+            
             self.store[key].data = sound_array
             self.store[key].sr = sr
 
