@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import timedelta
+from datetime import datetime
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -17,6 +18,7 @@ import matplotlib.ticker as ticker
 import matplotlib.dates as mdates
 from matplotlib.colors import Normalize
 from matplotlib.collections import LineCollection
+import matplotlib.patches as mpatches
 import cycler
 
 # from nna.fileUtils import list_files
@@ -25,10 +27,10 @@ from nna import fileUtils
 
 # https://stackoverflow.com/questions/30079590/use-matplotlib-color-map-for-color-cycle
 def get_cycle(
-    cmap: Union[matplotlib.colors.Colormap, str, None],
+    cmap: Union[matplotlib.colors.Colormap, str, None],  #type: ignore
     color_count: int = None,
-    use_index: str = "auto",
-) -> cycler.cycler:
+    use_index: Union[str, bool] = "auto",
+) -> cycler.cycler:  #type: ignore
     """Cycle colors to use with  matplotlib.
 
     Usage:
@@ -59,26 +61,26 @@ def get_cycle(
                 "Pastel1", "Pastel2", "Paired", "Accent", "Dark2", "Set1",
                 "Set2", "Set3", "tab10", "tab20", "tab20b", "tab20c"
             ]
-        cmap = matplotlib.cm.get_cmap(cmap)
+        cmap = matplotlib.cm.get_cmap(cmap)  #type: ignore
     if not color_count:
-        color_count = cmap.N
+        color_count = cmap.N  #type: ignore
     if use_index == "auto":
-        if cmap.N > 100:
+        if cmap.N > 100:  #type: ignore
             use_index = False
         elif isinstance(cmap, LinearSegmentedColormap):
             use_index = False
         elif isinstance(cmap, ListedColormap):
             use_index = True
     if use_index:
-        ind = np.arange(int(color_count)) % cmap.N
-        return plt.cycler("color", cmap(ind))
+        ind = np.arange(int(color_count)) % cmap.N  #type: ignore
+        return plt.cycler("color", cmap(ind))  #type: ignore
     else:
-        colors = cmap(np.linspace(0.2, 1, color_count))
-        return plt.cycler("color", colors)
+        colors = cmap(np.linspace(0.2, 1, color_count))  #type: ignore
+        return plt.cycler("color", colors)  #type: ignore
 
 
 def time_index_by_close_recordings(file_properties_df,
-                                   max_time_distance_allowed=5):
+                                   max_time_distance_allowed=5) -> pd.Series:
     """Cal time indexes of bins with recordings not far to each other more than.
 
         This function is for creating a time index of bins used to group data
@@ -123,9 +125,8 @@ def time_index_by_close_recordings(file_properties_df,
     return file_time_index_series
 
 
-def create_time_index(
-        file_properties_df,
-        output_data_freq) -> Tuple[pd.DataFrame, pd.Timestamp, pd.Timestamp]:
+def create_time_index(file_properties_df,
+                      output_data_freq) -> Union[pd.Series, pd.DatetimeIndex]:
     """Create time index boundaries of the bins with size of frequency.
 
         Generate a time index as boundary of the bins to gather data by time.
@@ -147,7 +148,7 @@ def create_time_index(
         times = sorted(file_properties_df["timestamp"].values)
         all_start = times[0]
         all_end = times[-1]
-        all_end_padded = all_end + pd.tseries.frequencies.to_offset(
+        all_end_padded = all_end + pd.tseries.frequencies.to_offset(  #type: ignore
             output_data_freq)
         globalindex = pd.date_range(all_start,
                                     all_end_padded,
@@ -157,8 +158,8 @@ def create_time_index(
 
 
 # result_path="/scratch/enis/data/nna/real/"
-def load_npy_files(all_segments: Union[List[Union[str, Path]], Union[str,
-                                                                     Path]],):
+def load_npy_files(all_segments: Union[List[Path], List[str], Union[str,
+                                                                    Path]],):
     """Load list of numpy files and concatanate in order.
         args:
             all_segments: list of npy file paths or single path
@@ -166,10 +167,10 @@ def load_npy_files(all_segments: Union[List[Union[str, Path]], Union[str,
             np.Array
     """
     if not isinstance(all_segments, list):
-        all_segments = [all_segments]
+        all_segments = [all_segments]  #type: ignore
 
     results = []
-    for filename in all_segments:
+    for filename in all_segments:  #type: ignore
         filename = Path(filename)
         if not filename.exists():
             raise FileNotFoundError(f"file does not exists: {str(filename)} ")
@@ -185,11 +186,11 @@ def load_npy_files(all_segments: Union[List[Union[str, Path]], Union[str,
 
 
 def prob2binary(
-    result: np.array,
+    result: np.ndarray,
     threshold: float = 0.5,
     channel: int = 1,
     segment_len=1,
-) -> np.array:
+) -> np.ndarray:
     """Applies threshold to group of values, calculate single.
 
             ! padds array so it is length is divisible by segment_len
@@ -227,7 +228,7 @@ def prob2binary(
                         constant_values=(0, 0))
 
     result = result[:(result.size // segment_len) * segment_len]
-    result = result.reshape(segment_len, -1).max(axis=0)
+    result = np.reshape(result, (segment_len, -1)).max(axis=0)
     return result
 
 
@@ -237,7 +238,7 @@ def load_data_of_row(
     model_tag_name,
     gathered_results_per_tag=None,
     afile=None,
-):
+) -> np.ndarray:
     """Load data belonging to a sound file (row from file_properties_df).
     """
 
@@ -289,7 +290,8 @@ def row_data_2_df(file_object, data, input_data_freq, model_tag_name):
 
     # file_object = file_properties_df.loc[afile]
     start = file_object.timestamp
-    input_freq_offset = pd.tseries.frequencies.to_offset(input_data_freq)
+    input_freq_offset = pd.tseries.frequencies.to_offset( #type: ignore
+        input_data_freq)  
     end = start + (input_freq_offset * (len(data) - 1))
     index = pd.date_range(start, end, freq=input_data_freq)
     df_afile = pd.DataFrame(data, index=index, columns=[model_tag_name])
@@ -393,7 +395,7 @@ def file2TableDict(  # pylint: disable=invalid-name
         try:
             if location_id_prev != location_id:
                 if location_id_prev is not None:
-                    df_dict[location_id_prev] = (
+                    df_dict[location_id_prev] = (  #type: ignore
                         df_count.copy(),  #type: ignore
                         df_sums.copy(),  #type: ignore
                     )  #type: ignore
@@ -473,7 +475,8 @@ def load_data_yield(tag_names: List[str],
                         yield None, None, afile
                 except Exception as e:
                     print(e)
-                    print(afile, row, data.shape, input_data_freq, a_tag_name)
+                    print(afile, row, data.shape, input_data_freq, #type: ignore
+                          a_tag_name)  #type: ignore
                     yield None, None, afile
 
 
@@ -598,7 +601,7 @@ def add_normal_dist_alpha(a_cmap, alpha_range=None):
                       [1, alpha_range[0], alpha_range[0]]]
         }
 
-        newcmp = LinearSegmentedColormap("testCmap", segmentdata=cdict, N=100)
+        newcmp = LinearSegmentedColormap("testCmap", segmentdata=cdict, N=100) #type: ignore
         my_cmaps.append(newcmp)
     return my_cmaps
 
@@ -622,39 +625,86 @@ file_properties_df, region_location_name,
                  (region_location_name + f"_{clipping_threshold_str}.pkl"))
     results_dict = np.load(file_name, allow_pickle=True)
     results_dict = results_dict[()]
-    gathered_results.update(results_dict)
+    gathered_results.update(results_dict)  #type: ignore
     return gathered_results
 
 
-def vis_preds_with_clipping(region,
-                            location_id,
-                            file_prop_df_filtered,
-                            input_data_freq,
-                            output_data_freq,
-                            model_tag_names,
-                            my_cmaps,
-                            result_path,
-                            clipping_results_path,
-                            vis_file_path,
-                            id2name,
-                            clipping_threshold: float = 1.0,
-                            prob2binary_flag: bool = False,
-                            pre_process_func: Callable = None):
+def load_cached_preds(cached_pred, region, location_id, prob2binary_flag,
+                      output_data_freq):
+    # Check if input data matches parameters
+    cached_pred = Path(cached_pred)
+    stem_split = cached_pred.stem.split('_')
+    params = {i.split('=')[0]: i.split('=')[1] for i in stem_split if '=' in i}
+    params['prob2binary'] = params.get('prob2binary', 'False')
 
+    if not params['prob2binary'] == str(prob2binary_flag):
+        raise ValueError(
+            f'cache file parameter (prob2binary) is different {stem_split}')
+
+    if not params['output-data-freq'] == output_data_freq:
+        raise ValueError(
+            f'cache file parameter (output_data_freq) is different {stem_split}'
+        )
+    if not Path(cached_pred).parts[-4] == region:
+        raise ValueError(
+            f'cache file parameter (region) is different {stem_split}')
+    if not Path(cached_pred).parts[-3] == location_id:
+        raise ValueError(
+            f'cache file parameter (location_id) is different {stem_split}')
+
+    # load data
+    data = pd.read_csv(cached_pred)
+    data['TimeStamp'] = pd.to_datetime(data['TimeStamp'],
+                                       format='%Y-%m-%d_%H:%M:%S')
+    data = data.set_index('TimeStamp')
+    return data
+
+
+def vis_preds_with_clipping(
+    region,
+    location_id,
+    file_prop_df_filtered,
+    input_data_freq,
+    output_data_freq,
+    model_tag_names,
+    my_cmaps,
+    result_path,
+    clipping_results_path,
+    vis_file_path,
+    id2name,
+    clipping_threshold: float = 1.0,
+    prob2binary_flag: bool = False,
+    pre_process_func: Callable = None,
+    classname2colorindex=None,
+    cached_pred: Union[str, Path] = '',
+):
+    '''
+
+
+    Args:
+        cached_pred: Path to csv file with predictions(df_freq). Columns are each class
+                    rows are samples. 
+    '''
+    if not prob2binary_flag:
+        print('WARNING: prob2binary_flag is False,' +
+              'Make sure input data is binary not probability')
     ########     LOAD tag data     #########
-
-    df_dict, no_result_paths = file2TableDict(
-        model_tag_names,
-        file_prop_df_filtered,
-        input_data_freq=input_data_freq,
-        output_data_freq=output_data_freq,
-        result_path=result_path,
-        prob2binary_flag=prob2binary_flag,
-        pre_process_func=pre_process_func,
-    )
-    df_count, df_sums = df_dict[location_id]
-    df_freq = df_sums / df_count
-    df_freq = df_freq * 100
+    if not cached_pred:
+        df_dict, no_result_paths = file2TableDict(
+            model_tag_names,
+            file_prop_df_filtered,
+            input_data_freq=input_data_freq,
+            output_data_freq=output_data_freq,
+            result_path=result_path,
+            prob2binary_flag=prob2binary_flag,
+            pre_process_func=pre_process_func,
+        )
+        df_count, df_sums = df_dict[location_id]
+        df_freq = df_sums / df_count
+        df_freq = df_freq * 100
+    else:
+        df_freq = load_cached_preds(cached_pred, region, location_id,
+                                    prob2binary_flag, output_data_freq)
 
     ########     LOAD Clipping     #########
     gathered_results = {}
@@ -695,12 +745,32 @@ def vis_preds_with_clipping(region,
     data_figure_parts_by_year = divide_data_into_months(df_freq,)
     ### create figure per year
     cord_list = [(i, (0, 0)) for i in df_freq.columns]
-    for year, months_time_in_ayear, months_in_ayear in data_figure_parts_by_year:  #pylint: disable=line-too-long
-        create_figure(location_id, months_in_ayear, months_time_in_ayear,
-                      my_cmaps, cord_list, vis_file_path, region, year,
-                      output_data_freq, id2name)
+    # turn taxo_id or coding to label names
+    labels = [id2name.get(x[0], x[0]) for x in cord_list]
+    if classname2colorindex is None:
+        my_cmaps_ordered = my_cmaps[:]
+    else:
+        my_cmaps_ordered = [
+            my_cmaps[classname2colorindex.get(label, -1)] for label in labels
+        ]
 
-    return no_result_paths
+    figures_axes = []
+    for year, months_time_in_ayear, months_in_ayear in data_figure_parts_by_year:  #pylint: disable=line-too-long
+        print(year, months_time_in_ayear)
+        fig, ax = create_figure(
+            location_id,
+            months_in_ayear,
+            months_time_in_ayear,
+            my_cmaps_ordered,
+            cord_list,
+            vis_file_path,
+            region,
+            year,
+            output_data_freq,
+        )
+        figures_axes.append((fig, ax))
+
+    return figures_axes, no_result_paths
 
 
 def divide_data_into_months(df_freq,):
@@ -735,8 +805,16 @@ def divide_data_into_months(df_freq,):
     return data_figure_parts_by_year
 
 
-def create_figure(location_id, months, months_time, my_cmaps, cord_list,
-                  vis_file_path, region_name, year, freq, id2name):
+def create_figure(location_id,
+                  months,
+                  months_time,
+                  my_cmaps,
+                  cord_list,
+                  vis_file_path,
+                  region_name,
+                  year,
+                  freq,
+                  save_fig=True):
     #     plt.rcParams["axes.prop_cycle"] = get_cycle("tab10",N=8)
     vmin, vmax = 0, 100
     normalize = Normalize(vmin=vmin, vmax=vmax)
@@ -778,21 +856,23 @@ def create_figure(location_id, months, months_time, my_cmaps, cord_list,
             # add collection to axes
             ax[monthi].add_collection(lc)
 
+            # we move adding legend out of this function, because of extra colors added later
+    # # add legend and set names of the lines
 
-# add legend and set names of the lines
-    ax[0].legend(labels=[id2name.get(x[0], x[0][1:]) for x in cord_list],
-                 loc="upper left",
-                 borderpad=0.2,
-                 labelspacing=0.2,
-                 fontsize=28,
-                 frameon=True)  # frameon=False to remove frame.
 
-    # set colours of the lines on the legend
-    leg = ax[0].get_legend()
-    for i, (col, (lat, long)) in enumerate(cord_list):
-        if col == "Clipping":
-            continue
-        leg.legendHandles[i].set_color(my_cmaps[i](vmin)[:-1])
+#     ax[0].legend(labels=[id2name.get(x[0], x[0][1:]) for x in cord_list],
+#                  loc="upper left",
+#                  borderpad=0.2,
+#                  labelspacing=0.2,
+#                  fontsize=28,
+#                  frameon=True)  # frameon=False to remove frame.
+
+#     set colours of the lines on the legend
+#     leg = ax[0].get_legend()
+#     for i, (col, (lat, long)) in enumerate(cord_list):
+#         if col == "Clipping":
+#             continue
+#         leg.legendHandles[i].set_color(my_cmaps[i](vmin)[:-1])
 
     ax[-1].set_xlabel("Day Number", fontsize=32)
 
@@ -819,6 +899,7 @@ def create_figure(location_id, months, months_time, my_cmaps, cord_list,
         an_ax.tick_params(labelsize=25, which="major")
 
         # TODO figure out why we need to autoscale_view
+        # it autoscale the view limits using the data limits
         an_ax.autoscale_view()
 
     plt.tight_layout()
@@ -829,12 +910,151 @@ def create_figure(location_id, months, months_time, my_cmaps, cord_list,
         "Site {}, Normalized Bi-270min Frequency [%]".format(location_id),
         fontsize=48)
     #     plt.show()
+    if save_fig:
+        fig_dir = Path(vis_file_path) / ("Freq-" + freq) / region_name
+        fig_dir.mkdir(parents=True, exist_ok=True)
+        fig_path = fig_dir / ("_".join([location_id, str(year)]) + "." + "png")
 
-    fig_dir = Path(vis_file_path) / ("Freq-" + freq) / region_name
-    fig_dir.mkdir(parents=True, exist_ok=True)
-    fig_path = fig_dir / ("_".join([location_id, str(year)]) + "." + "png")
+        fig.savefig(fig_path)
+        print(f'figured saved to {fig_path}')
 
-    fig.savefig(fig_path)
-    #     fig.show()
-    #     fig.savefig("test" +'.png')
-    plt.close(fig)
+    return fig, ax
+
+
+def add_equally_spaced_bars(
+    letters,
+    y_multi_labels_by_month,
+    x_multi_label_by_month,
+    ax,
+    color_indexes,
+    norm_cmaps,
+    bar_heights=1,
+    bar_widths=0.03,
+):
+    # divide a bar into N equal parts, each part representing one class by it's opacity 0,1
+
+    #  # instantiate a second axes that shares the same x-axis
+    # colors = plt.cm.BuPu(np.linspace(0.1, 1, (10)))
+
+    # norm_cmaps = add_normal_dist_alpha(cmap,alpha_range=[0,1])
+
+    vmin, vmax = 0, 3
+    normalize = Normalize(vmin=vmin, vmax=vmax)
+
+    ax_i = 0
+    y_offset = list(range(len(letters)))
+    bar_heights = 1
+    bar_widths = 0.03
+    for month_i in range(12):
+        data = y_multi_labels_by_month[month_i]
+        x_multi_label = x_multi_label_by_month[month_i]
+        if not data:
+            continue
+        twin_ax = ax[ax_i].twinx()
+        # Get some pastel shades for the colors
+
+        n_rows = len(data)
+
+        # Plot bars
+        cell_text = []
+        data = np.array(data)
+        for row in range(n_rows):
+            coordinates_x = x_multi_label[row]
+            colors = [
+                norm_cmaps[color_indexes[i]](1 - normalize(v))
+                for i, v in enumerate(data[row])
+            ]
+            twin_ax.bar(coordinates_x,
+                        bar_heights,
+                        width=bar_widths,
+                        bottom=y_offset,
+                        color=colors)
+        ax_i += 1
+    #
+    for _, an_ax in enumerate(ax):
+        an_ax.autoscale_view()
+
+    return norm_cmaps
+
+
+def add_legend(
+    ax,
+    classname2colorindex,
+    cmaps,
+    legend_ax_index=0,
+):
+    patchList = []
+    for label, color_i in classname2colorindex.items():
+        data_key = mpatches.Patch(color=cmaps[color_i](3), label=label)
+        patchList.append(data_key)
+
+    ax[legend_ax_index].legend(handles=patchList,
+                               loc="upper left",
+                               borderpad=0.2,
+                               labelspacing=0.2,
+                               fontsize=32,
+                               frameon=True)
+
+
+def load_enis_labels4bars(csv_path, classname2colorindex):
+
+    with open(csv_path, 'r') as f:
+        data_csv = f.readlines()
+        data_csv = [i.strip() for i in data_csv]
+
+    clean_csv = []
+    for line in data_csv:
+        line = line.split(' ---')
+        if len(line) < 2:
+            continue
+        line1 = [i for i in line[1].split(',') if i]
+
+        clean_csv.append((line[0], line1))
+
+    letter2name = {
+        'F': 'aircraft',
+        'A': 'auto',
+        'W': 'wind',
+        'R': 'running water',
+        'RW': 'running water',
+        #  'O':'Owl',
+        'P': 'grouse-ptarmigan',
+        'D': 'duck-goose-swan',
+        'DGS': 'duck-goose-swan',
+        'S': 'songbirds',
+        'M': 'mammal',
+        'I': 'insect'
+    }
+
+    letters = list(letter2name.keys())
+    letters = list(reversed(letters))
+    clean_csv2 = []
+    # letters[letters.index('RW')] = 'R'
+    # letters[letters.index('DGS')] = 'D'
+    # letters[letters.index('O')] = 'S'
+    y_multi_labels = []
+    x_multi_label = []
+    for line in clean_csv:
+        multi_label_v = [0 for i in letters]
+        line1 = [i.replace('RW', 'R') for i in line[1]]
+        line1 = [i.replace('DGS', 'D') for i in line1]
+        line1 = [i for i in line1 if '?' not in i]
+        line1 = [i for i in line1 if 'O' not in i]
+        for i in line1:
+            multi_label_v[letters.index(i[0])] = len(i)
+        y_multi_labels.append(multi_label_v)
+        x_multi_label.append(datetime.strptime(line[0], "%Y-%m-%d %H:%M:%S"))
+
+    y_multi_labels_by_month = [[] for i in range(12)]
+    x_multi_label_by_month = [[] for i in range(12)]
+    for x, y in zip(x_multi_label, y_multi_labels):
+        y_multi_labels_by_month[x.month - 1].append(y)
+        x_multi_label_by_month[x.month - 1].append(x.replace(month=7,
+                                                             year=2019))
+
+    color_indexes = [classname2colorindex[letter2name[l]] for l in letters]
+
+    return letters, y_multi_labels_by_month, x_multi_label_by_month, classname2colorindex, color_indexes
+
+
+# len(y_multi_labels),len(clean_csv)
