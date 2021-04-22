@@ -128,7 +128,8 @@ def cut_random_file(input_mp3_file,
                     split_folder="./splits",
                     total_minute=49 * 60,
                     depth=0,
-                    backend="ffmpeg"):
+                    backend="ffmpeg",
+                    backend_path=''):
 
     start_minute = random.randint(0, total_minute)
     start_second = random.randint(0, 59)
@@ -146,7 +147,8 @@ def cut_random_file(input_mp3_file,
                       split_folder,
                       start_time,
                       end_time,
-                      backend=backend)
+                      backend=backend,
+                      backend_path=backend_path)
 
     if result == 0 and depth < 3:
         print(input_mp3_file, start_time, end_time)
@@ -163,6 +165,7 @@ def splitmp3(input_mp3_file,
              end_time,
              depth=5,
              backend="ffmpeg",
+             backend_path='',
              outputSuffix=None):
     # -f increases precision (ONLY mp3)
     # -t
@@ -170,9 +173,12 @@ def splitmp3(input_mp3_file,
     # input
     # end time minute.seconds
     # start_time
+    if backend_path=='':
+        backend_path=backend
+    
     if backend == "mp3splt":
         cmd = [
-            'mp3splt', '-f', '-d', split_folder, input_mp3_file, start_time,
+            backend_path, '-f', '-d', split_folder, input_mp3_file, start_time,
             end_time
         ]
     elif backend == "ffmpeg":
@@ -187,7 +193,8 @@ def splitmp3(input_mp3_file,
             wholepath.stem + "_" + start_minute + "m_" + start_second + "s__" +
             end_minute + "m_" + end_second + "s" + outputSuffix)
         cmd = [
-            'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
+            # 'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
+            backend_path, '-strict', '-2',
             '-ss',
             str(start_time), '-t',
             str(end_time - start_time), "-i",

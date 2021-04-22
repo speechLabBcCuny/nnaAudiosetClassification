@@ -19,15 +19,17 @@ def setup_configs(args):
     id2name = {}
     versiontag = args.versiontag
 
-    id2name={'1-0-0': 'biophony',
-     '1-1-0': 'bird',
-     '1-1-10': 'songbirds',
-     '1-1-7': 'duck-goose-swan',
-     '0-0-0': 'anthrophony',
-     '1-3-0': 'insect',
-     '1-1-8': 'grouse-ptarmigan',
-     '0-2-0': 'aircraft',
-     '3-0-0': 'silence'}
+    id2name = {
+        '1-0-0': 'biophony',
+        '1-1-0': 'bird',
+        '1-1-10': 'songbirds',
+        '1-1-7': 'duck-goose-swan',
+        '0-0-0': 'anthrophony',
+        '1-3-0': 'insect',
+        '1-1-8': 'grouse-ptarmigan',
+        '0-2-0': 'aircraft',
+        '3-0-0': 'silence'
+    }
 
     generic_id2name = list(id2name.items())
     id2name = {}
@@ -59,13 +61,12 @@ class pathMap():
         self.input_dir = scratch + 'real/'
 
         if args.output_folder != '':
-            out_dir = Path(args.output_folder)
+            out_dir = Path(self.output_dir)
             out_dir = (out_dir / args.region / args.location / 'aggregated')
             self.export_output_path = out_dir
         else:
             out_dir = Path(args.output_folder)
-            out_dir = (out_dir / args.region / args.location /
-                       'aggregated')
+            out_dir = (out_dir / args.region / args.location / 'aggregated')
             self.export_output_path = out_dir
 
         self.file_properties_df_path = args.file_database
@@ -154,7 +155,7 @@ def df_export_csv(results, pathmap, config):
                       header=col_names,
                       float_format='%.3f',
                       date_format='%Y-%m-%d_%H:%M:%S')
-
+            print(filename)
         files.append(csv_file_name)
 
     return files
@@ -197,7 +198,7 @@ def main(args):
 #         self.file_database = file_database
 #         self.output_folder = output_folder
 
-# args= Args('anwr','49','./','/home/enis/projects/nna/data/allFields_dataV4.pkl',)
+# args= Args('anwr','49','./','/scratch/enis/data/nna/database/allFields_dataV4.pkl',)
 
 # results,no_result,files = main(args)
 
@@ -257,7 +258,7 @@ if __name__ == '__main__':
         '--file_database',
         help='path to file_properties_df_path',
         required=False,
-        default='/home/enis/projects/nna/data/allFields_dataV4.pkl')
+        default='/scratch/enis/data/nna/database/allFields_dataV5.pkl')
 
     args = parser.parse_args()
 

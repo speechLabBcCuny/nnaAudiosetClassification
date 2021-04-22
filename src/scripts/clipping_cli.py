@@ -12,12 +12,12 @@
             parallel --csv -P 40 -n 1 -q python clipping_cli.py \
             --region {1} --location {2} --output_folder \
             '/scratch/enis/data/nna/clipping_info/all-merged_2021-02-10/' \
-            --file_database '/home/enis/projects/nna/data/allFields_dataV4.pkl' >>logs_2021-02-10.txt 2>&1 
+            --file_database '/scratch/enis/data/nna/database/allFields_dataV4.pkl' >>logs_2021-02-10.txt 2>&1 
 
     # How to filter a dataframe by another and create list of locations to process
         import pandas as pd
 
-        latest_path = "/home/enis/projects/nna/data/allFields_dataV4.pkl"
+        latest_path = "/scratch/enis/data/nna/database/allFields_dataV4.pkl"
         latest = pd.read_pickle(latest_path)
 
         older_path = "/home/enis/projects/nna/data/prudhoeAndAnwr4photoExp_dataV1.pkl"

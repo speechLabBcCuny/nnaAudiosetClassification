@@ -151,9 +151,9 @@ def get_clipping_percent(sound_array: np.array,
     return results
 
 
-def run_task_save(allfiles: List[Union[str, Path]],
+def run_task_save(input_files: List[Union[str, Path]],
                   area_id: str,
-                  results_folder: Union[str, Path],
+                  results_folder: Union[str, Path,],
                   clipping_threshold: float,
                   segment_len: int = 10,
                   audio_load_backend: str = "pydub",
@@ -178,20 +178,41 @@ def run_task_save(allfiles: List[Union[str, Path]],
     clipping_threshold_str = clipping_threshold_str.replace(".", ",")
     filename = "{}_{}.pkl".format(area_id, clipping_threshold_str)
     error_filename = "{}_{}_error.pkl".format(area_id, clipping_threshold_str)
-    results_folder = Path(results_folder)
-    output_file_path = results_folder / filename
-    error_file_path = results_folder / error_filename
-    if output_file_path.exists():
-        print(f'Clipping results for {filename} exists at {results_folder}.' +
-              ' Not calculating.')
-        return {},[]
+    if results_folder:
+        results_folder = Path(results_folder)
+        output_file_path = results_folder / filename
+        error_file_path = results_folder / error_filename
+    else:
+        output_file_path = Path('')
+    input_files = [str(i) for i in input_files]
+
+    if results_folder and output_file_path.exists():
+        print(f'Clipping file for {filename} exists at {results_folder}.' +
+              ' Checking existing results.')
+        prev_results_dict = np.load(str(output_file_path), allow_pickle=True)
+        prev_results_dict = dict(prev_results_dict[()]) 
+        prev_results_keys = {str(i) for i in prev_results_dict.keys()}
+        input_result_keys = set(input_files)
+        new_result_keys = input_result_keys.difference(prev_results_keys)
+        if len(new_result_keys) > 0:
+            print(f'{len(new_result_keys)} number of files missing results' +
+                  ', calculating only those.')
+        else:
+            print('No new file from existing results, will exit.')
+        file2process = new_result_keys
+        all_results_dict = prev_results_dict
+    else:
+        file2process = input_files
+        all_results_dict = {}
 
 
+    # return {},[]
+    # we need to merge this one as well TODO
     files_w_errors = []
-    all_results_dict = {}
-    allfiles = [str(i) for i in allfiles]
+    
+    
     # CALCULATE RESULTS
-    for _, audio_file in enumerate(allfiles):
+    for _, audio_file in enumerate(file2process):
         # try:
         y, sr = load_audio(audio_file,
                            dtype=np.int16,
