@@ -60,7 +60,7 @@ class pathMap():
         self.output_dir = scratch + 'real/'
         self.input_dir = scratch + 'real/'
 
-        if args.output_folder != '':
+        if args.output_folder == '':
             out_dir = Path(self.output_dir)
             out_dir = (out_dir / args.region / args.location / 'aggregated')
             self.export_output_path = out_dir
@@ -115,36 +115,43 @@ def export_files2table_dict(region_location, config, file_properties_df,
                                         location_id]
         filtered_files = filtered_files[filtered_files.durationSec > 0]
 
-        df_dict, no_result_paths = visutils.file2TableDict(
-            config['id2name'].keys(),
-            filtered_files,
-            config['input_data_freq'],
-            config['output_data_freq'],
-            result_path=pathmap.input_dir,
-            prob2binary_flag=config['prob2binary'],
-            pre_process_func=sigmoid,
-        )
+        # year is an integer here
+        years = np.array([ i.year for i in  filtered_files.timestamp])
+        years_set = set(years)
 
-        no_result[(region, location_id)] = no_result_paths
+        for year in years_set:
+            filtered_by_year = filtered_files[years==year]
 
-        results[(region, location_id)] = df_dict.copy()
+            df_dict, no_result_paths = visutils.file2TableDict(
+                config['id2name'].keys(),
+                filtered_by_year,
+                config['input_data_freq'],
+                config['output_data_freq'],
+                result_path=pathmap.input_dir,
+                prob2binary_flag=config['prob2binary'],
+                pre_process_func=sigmoid,
+            )
+
+            no_result[(region, location_id, year)] = no_result_paths
+
+            results[(region, location_id, year)] = df_dict.copy()
 
     return results, no_result
 
 
 def df_export_csv(results, pathmap, config):
     files = []
-    for region, location in results.keys():
-        df_count, df_sums = results[(region, location)][location]
+    for region, location, year in results.keys():
+        df_count, df_sums = results[(region, location, year)][location]
         df_prob = df_sums / df_count
 
         csv_file_name = "_".join(
             (config['versiontag'], f'prob2binary={config["prob2binary"]}',
              f'output-data-freq={config["output_data_freq"]}'))
 
-        pathmap.export_output_path.mkdir(exist_ok=True, parents=True)
-
-        csv_file_name = pathmap.export_output_path / csv_file_name
+        output_path = (pathmap.export_output_path / str(year))
+        output_path.mkdir(exist_ok=True, parents=True)
+        csv_file_name = output_path / csv_file_name
 
         col_names = [config['id2name'][col] for col in list(df_prob.columns)]
         for df, name_str in ((df_sums, 'sums'), (df_count, 'counts'), (df_prob,
