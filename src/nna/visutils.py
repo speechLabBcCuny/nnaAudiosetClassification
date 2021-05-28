@@ -630,8 +630,8 @@ file_properties_df, region_location_name,
 
 
 def load_cached_preds(cached_pred, region, location_id, prob2binary_flag,
-                      output_data_freq):
-    # Check if input data matches parameters
+                      output_data_freq,version='V0'):
+    # Check if input data matches parameters which stored in the filename
     cached_pred = Path(cached_pred)
     stem_split = cached_pred.stem.split('_')
     params = {i.split('=')[0]: i.split('=')[1] for i in stem_split if '=' in i}
@@ -645,12 +645,24 @@ def load_cached_preds(cached_pred, region, location_id, prob2binary_flag,
         raise ValueError(
             f'cache file parameter (output_data_freq) is different {stem_split}'
         )
-    if not Path(cached_pred).parts[-4] == region:
+    
+    cached_pred_parts = Path(cached_pred).parts
+    if version=='V0':
+        region_index=-4
+        location_id_index=-3
+    elif version=='V1':
+        #now we have year 
+        region_index=-5
+        location_id_index=-4
+    else:
         raise ValueError(
-            f'cache file parameter (region) is different {stem_split}')
-    if not Path(cached_pred).parts[-3] == location_id:
+            f'Unknown version for load_cached_preds function {version}')
+    if not cached_pred_parts[region_index] == region:
         raise ValueError(
-            f'cache file parameter (location_id) is different {stem_split}')
+            f'cache file parameter (region) is different {cached_pred_parts}')
+    if not cached_pred_parts[location_id_index] == location_id:
+        raise ValueError(
+            f'cache file parameter (location_id) is different {cached_pred_parts}')
 
     # load data
     data = pd.read_csv(cached_pred)
@@ -677,6 +689,8 @@ def vis_preds_with_clipping(
     pre_process_func: Callable = None,
     classname2colorindex=None,
     cached_pred: Union[str, Path] = '',
+    cached_pred_version:str='V0',
+    save_fig=True,
 ):
     '''
 
@@ -704,7 +718,7 @@ def vis_preds_with_clipping(
         df_freq = df_freq * 100
     else:
         df_freq = load_cached_preds(cached_pred, region, location_id,
-                                    prob2binary_flag, output_data_freq)
+                                    prob2binary_flag, output_data_freq,version=cached_pred_version)
 
     ########     LOAD Clipping     #########
     gathered_results = {}
@@ -767,6 +781,7 @@ def vis_preds_with_clipping(
             region,
             year,
             output_data_freq,
+            save_fig=save_fig,
         )
         figures_axes.append((fig, ax))
 
