@@ -9,7 +9,7 @@ from setuptools import setup
 requirements = [
     'pandas==1.0.3',
     'pydub==0.23.1',
-    'pillow==7.1.1',
+    'pillow==8.2.0',
     'tensorflow-gpu==1.14.0',
     'numpy==1.19',
     'scikit-learn==0.21.3',
@@ -17,7 +17,7 @@ requirements = [
     'keras==2.3.1',
     'matplotlib==3.1.1',
     'pydub==0.23.1',
-    'pillow==7.1.1',
+    'pillow==8.2.0',
     'pyyaml==5.3.1',
     'sqlite==3.33',
     'pysoundfile==0.10.2',
