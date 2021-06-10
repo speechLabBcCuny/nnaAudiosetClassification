@@ -520,7 +520,8 @@ def export_raw_results_2_csv(output_folder_path,
                              channel=1,
                              gathered_results_per_tag=None,
                              result_files_folder=None,
-                             prob2binary_flag=True):
+                             prob2binary_flag=True,
+                             pre_process_func: Callable = None):
     """Export results to a csv file without any grouping/reducing.
 
         Combine all results of a speficic location given tag into a csv file.
@@ -540,7 +541,9 @@ def export_raw_results_2_csv(output_folder_path,
             output_folder_path.mkdir(exist_ok=True, parents=True)
             df_raw.to_csv((output_folder_path / csv_file_name),
                           index_label="TimeStamp",
-                          header=[tag_name])
+                          header=[tag_name],
+                          float_format='%.3f',
+                          date_format='%Y-%m-%d_%H:%M:%S')
             csv_files_written.append((output_folder_path / csv_file_name))
         return csv_files_written
 
@@ -555,7 +558,7 @@ def export_raw_results_2_csv(output_folder_path,
     for location_id, tag_name, df_afile in load_data_yield(
             tag_names, file_properties_df, input_data_freq, raw2prob_threshold,
             channel, gathered_results_per_tag, result_files_folder,
-            prob2binary_flag):
+            prob2binary_flag,pre_process_func):
         # no results, yields None,None,df_afile
         if location_id is None:
             no_result_paths.append(df_afile)
