@@ -103,24 +103,32 @@ def sigmoid(data):
 
 
 # %%
+
+
+def filter_files(file_properties_df, region, location_id):
+    # print(region, all_regions.index(region),'location_id',location_id)
+
+    filtered_files = file_properties_df[file_properties_df.region == region]
+    filtered_files = filtered_files[filtered_files.locationId == location_id]
+    filtered_files = filtered_files[filtered_files.durationSec > 0]
+
+    # year is an integer here
+    years = np.array([i.year for i in filtered_files.timestamp])
+    years_set = set(years)
+
+    return filtered_files, years, years_set
+
+
 def export_files2table_dict(region_location, config, file_properties_df,
                             pathmap):
 
     no_result = {}
     results = {}
     for region, location_id in region_location:
-        # print(region, all_regions.index(region),'location_id',location_id)
-        filtered_files = file_properties_df[file_properties_df.region == region]
-        filtered_files = filtered_files[filtered_files.locationId ==
-                                        location_id]
-        filtered_files = filtered_files[filtered_files.durationSec > 0]
-
-        # year is an integer here
-        years = np.array([ i.year for i in  filtered_files.timestamp])
-        years_set = set(years)
-
+        filtered_files, years, years_set = filter_files(file_properties_df,
+                                                        region, location_id)
         for year in years_set:
-            filtered_by_year = filtered_files[years==year]
+            filtered_by_year = filtered_files[years == year]
 
             df_dict, no_result_paths = visutils.file2TableDict(
                 config['id2name'].keys(),
@@ -133,8 +141,38 @@ def export_files2table_dict(region_location, config, file_properties_df,
             )
 
             no_result[(region, location_id, year)] = no_result_paths
-
             results[(region, location_id, year)] = df_dict.copy()
+
+    return results, no_result
+
+
+def export_raw_results_2_csv(region_location, config, file_properties_df,
+                             pathmap):
+
+    no_result = {}
+    results = {}
+    for region, location_id in region_location:
+        filtered_files, years, years_set = filter_files(file_properties_df,
+                                                        region, location_id)
+        for year in years_set:
+            filtered_by_year = filtered_files[years == year]
+
+            output_path = (pathmap.export_output_path / str(year))
+            output_path.mkdir(exist_ok=True, parents=True)
+
+            csv_files_written, no_result_paths = visutils.export_raw_results_2_csv(
+                output_path,
+                config['id2name'].keys(),
+                filtered_by_year,
+                config['input_data_freq'],
+                config['output_data_freq'],
+                channel=1,
+                result_files_folder=pathmap.input_dir,
+                prob2binary_flag=config['prob2binary'],
+                pre_process_func=sigmoid)
+
+            no_result[(region, location_id, year)] = no_result_paths
+            results[(region, location_id, year)] = csv_files_written
 
     return results, no_result
 
@@ -173,6 +211,7 @@ def main(args):
     pathmap, config = setup_configs(args)
     location = args.location
     region = args.region
+    raw_export = args.raw_export
     # versiontag = args.versiontag
     # prob2binary = args.prob2binary
     # output_data_freq = args.output_data_freq
@@ -184,13 +223,20 @@ def main(args):
         region_location = None
 
     region_location, file_properties_df = setup(args, pathmap, region_location)
+    if raw_export:
+        results, no_result = export_raw_results_2_ccsv(region_location, config,
+                                                      file_properties_df,
+                                                      pathmap)
+        return results, no_result, list(results.values())
+    else:
+        results, no_result = export_files2table_dict(region_location, config,
+                                                     file_properties_df,
+                                                     pathmap)
 
-    results, no_result = export_files2table_dict(region_location, config,
-                                                 file_properties_df, pathmap)
+        files = df_export_csv(results, pathmap, config)
+        return results, no_result, files
 
-    files = df_export_csv(results, pathmap, config)
-
-    return results, no_result, files
+    
 
 
 # %%
@@ -241,6 +287,15 @@ if __name__ == '__main__':
         required=True)
 
     parser.add_argument(
+        "--raw_export",
+        type=str2bool,
+        required=False,
+        help=
+        'if set True, outputs are not aggregated, they are exported as it is,\
+         False by default, reuqires that output and input data frequencies are same',
+        default=False)
+
+    parser.add_argument(
         "--prob2binary",
         type=str2bool,
         required=True,
@@ -270,3 +325,59 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(args)
+
+# output_folder_path = '/home/enis/projects/nna/results/ExternalProject/megan/export_raw_v7'
+# merge_folder = '/home/enis/projects/nna/results/ExternalProject/megan/merge_folder_v7'
+
+# # %%
+# def export_raw_results_2_csv(region_location, config, file_properties_df,
+#                              pathmap):
+
+#     for region, location_id in region_location:
+#         print(region, location_id)
+#         filtered_files = file_properties_df[file_properties_df.region == region]
+#         filtered_files = filtered_files[filtered_files.locationId ==
+#                                         location_id]
+# #         filtered_files = filtered_files[filtered_files.durationSec > 0]
+
+#         csv_files_written, no_result_paths = visutils.export_raw_results_2_csv(
+#             output_folder_path,
+#             config['id2name'].keys(),
+#             filtered_by_year,
+#             config['input_data_freq'],
+#             config['output_data_freq'],
+#             channel=1,
+#             result_files_folder=pathmap.input_dir,
+#             prob2binary_flag=config['prob2binary'],
+#             pre_process_func=sigmoid)
+# #         print(len(no_result_paths))
+
+#     no_result = {}
+#     results = {}
+#     for region, location_id in region_location:
+#         # print(region, all_regions.index(region),'location_id',location_id)
+#         filtered_files = file_properties_df[file_properties_df.region == region]
+#         filtered_files = filtered_files[filtered_files.locationId ==
+#                                         location_id]
+#         filtered_files = filtered_files[filtered_files.durationSec > 0]
+
+#         # year is an integer here
+#         years = np.array([ i.year for i in  filtered_files.timestamp])
+#         years_set = set(years)
+
+#         for year in years_set:
+#             filtered_by_year = filtered_files[years==year]
+
+#             df_dict, no_result_paths = visutils.file2TableDict(
+#                 config['id2name'].keys(),
+#                 filtered_by_year,
+#                 config['input_data_freq'],
+#                 config['output_data_freq'],
+#                 result_path=pathmap.input_dir,
+#                 prob2binary_flag=config['prob2binary'],
+#                 pre_process_func=sigmoid,
+#             )
+
+#             no_result[(region, location_id, year)] = no_result_paths
+
+#             results[(region, location_id, year)] = df_dict.copy()
