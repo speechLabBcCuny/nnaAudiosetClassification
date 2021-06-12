@@ -286,8 +286,6 @@ class Taxonomy(MutableMapping):
             else:
                 d[key.split('.')[-1]] = val
         return d
-
-
 # tax={'0': {'0.0': {'0.0.0': ['other-anthrophony']},
 #   '0.1': {'0.1.0': ['other-car'],
 #    '0.1.1': ['truck'],
@@ -340,44 +338,7 @@ class Taxonomy(MutableMapping):
 # pprint(t.edges)
 # pprint(list(t.items()))
 
-
-def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
-    '''Megan style labels to nna yaml topology V1.
-
-    Row is a mapping, with 3 topology levels, function starts from most specific
-    category and goes to most general one, when a mapping is found, returns
-    corresponding code such as 0.2.0 for plane.
-
-    Args:
-        row = dictinary with following keys
-                'Anthro/Bio','Category','Specific Category'
-        excell_names2code = mapping from names to topology code
-
-    '''
-    if excell_names2code is None:
-        excell_names2code = {
-            'anth': '0.0.0',
-            'auto': '0.1.0',
-            'bio': '1.0.0',
-            'bird': '1.1.0',
-            'bug': '1.3.0',
-            'dgs': '1.1.7',
-            'flare': '0.4.0',
-            'fox': '1.2.4',
-            'geo': '2.0.0',
-            'grouse': '1.1.8',
-            'loon': '1.1.3',
-            'mam': '1.2.0',
-            'plane': '0.2.0',
-            'ptarm': '1.1.8',
-            'rain': '2.1.0',
-            'seab': '1.1.5',
-            'silence': '3.0.0',
-            'songbird': '1.1.10',
-            'unknown': 'X.X.X',
-            'water': '2.2.0',
-            'x': 'X.X.X',
-        }
+def row2yaml_codev1(row, excell_names2code):
     if row['Specific Category'] in ['Songb', 'SongB']:
         row['Specific Category'] = 'Songbird'
 
@@ -414,4 +375,125 @@ def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
     else:
         print(code)
         raise ValueError(f'row does not belong to any toplogy: {row}')
+
     return yaml_code
+
+
+def row2yaml_codev2(row, excell_names2code):
+    '''
+        
+    
+    '''
+    # we are hard coding this because this function for a specific template
+    #
+    yaml_codes = []
+    excell_class_names = {
+        'bird', 'mam', 'loon', 'helo', 'auto', 'jet', 'corv', 'dgs', 'flare',
+        'bio', 'bear', 'crane', 'fly', 'airc', 'hum', 'truck', 'rain', 'bug',
+        'mosq', 'geo', 'mach', 'woof', 'deer', 'water', 'anth', 'songb', 'woop',
+        'car', 'rapt', 'sil', 'seab', 'wind', 'owl', 'meow', 'mous', 'prop',
+        'grous', 'weas', 'hare', 'shrew'
+    }
+    row_lower = {k.lower():v  for k,v in row.items()}
+
+    for excell_class_name in excell_class_names:
+        # value is 1 or 0
+        class_exists_or_not = row_lower.get(excell_class_name, None)
+        # print(class_exists_or_not)
+        class_exists_or_not = str(class_exists_or_not)
+        if class_exists_or_not == '1':
+            yaml_code = excell_names2code[excell_class_name]
+            yaml_codes.append(yaml_code)
+
+    if len(yaml_codes) != len(set(yaml_codes)):
+        print('yaml_codes: ', yaml_codes)
+        raise Exception('input excell have non-unique class names')
+
+    yaml_codes.sort()
+    return yaml_codes
+
+
+def megan_excell_row2yaml_code(row: Dict,
+                               excell_names2code: Dict = None,
+                               version='V1'):
+    '''Megan style labels to nna yaml topology V1.
+
+    Row is a mapping, with 3 topology levels, function starts from most specific
+    category and goes to most general one, when a mapping is found, returns
+    corresponding code such as 0.2.0 for plane.
+
+    Args:
+        row = dictinary with following keys
+                'Anthro/Bio','Category','Specific Category'
+        excell_names2code = mapping from names to topology code
+        version = Version of the function, 
+            v1: single taxonomy per sample
+            v2: multi taxonomy per sample, returns a list
+
+    '''
+    if excell_names2code is None:
+        excell_names2code = {
+            'anth': '0.0.0',
+            'auto': '0.1.0',
+            'car': '0.1.0',
+            'truck': '0.1.1',
+            'prop': '0.2.1',
+            'helo': '0.2.2',
+            'jet': '0.2.3',
+            'mach': '0.3.0',
+            'bio': '1.0.0',
+            'bird': '1.1.0',
+            'crane': '1.1.11',
+            'corv': '1.1.12',
+            'hum': '1.1.1',
+            'shorb': '1.1.2',
+            'rapt': '1.1.4',
+            'owl': '1.1.6',
+            'woop': '1.1.9',
+            'bug': '1.3.0',
+            'dgs': '1.1.7',
+            'flare': '0.4.0',
+            'fox': '1.2.4',
+            'geo': '2.0.0',
+            'grouse': '1.1.8',
+            'grous': '1.1.8',
+            'loon': '1.1.3',
+            'mam': '1.2.0',
+            'bear': '1.2.2',
+            'plane': '0.2.0',
+            'ptarm': '1.1.8',
+            'rain': '2.1.0',
+            'seab': '1.1.5',
+            'mous': '1.2.1',
+            'bear': '1.2.2',
+            'deer': '1.2.3',
+            'woof': '1.2.4',
+            'weas': '1.2.5',
+            'meow': '1.2.6',
+            'hare': '1.2.7',
+            'shrew': '1.2.8',
+            'fly': '1.3.2',
+            'silence': '3.0.0',
+            'sil': '3.0.0',
+            'songbird': '1.1.10',
+            'songb': '1.1.10',
+            'unknown': 'X.X.X',
+            'water': '2.2.0',
+            'x': 'X.X.X',
+            'airc': '0.2.0',
+            'mosq': '1.3.1',
+            'wind': '2.3.0',
+        }
+
+    if version == 'V1':
+        yaml_code = row2yaml_codev1(row, excell_names2code)
+    elif version == 'V2':
+        # returns a list
+        yaml_code = row2yaml_codev2(row, excell_names2code)
+    else:
+        raise ValueError(
+            f'This version is not implemented at megan_excell_row2yaml_code {version}'
+        )
+
+    return yaml_code
+
