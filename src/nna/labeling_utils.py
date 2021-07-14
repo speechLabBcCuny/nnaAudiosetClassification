@@ -15,10 +15,8 @@ import csv
 
 from .fileUtils import save_to_csv
 
-import librosa as librosa
 import numpy as np
 import matplotlib.pyplot as plt
-import librosa.display
 
 # mp3_file_path=f[0]
 
@@ -202,9 +200,10 @@ def splitmp3(input_mp3_file,
             str(output_file)
         ]
     else:
-        print(
+        raise Exception(
             "{} is not supported as backend, available ones are mp3splt and ffmpeg"
             .format(backend))
+        
     # custom name (@f_@n+@m:@s+@M:@S)
     # cmd+=["-o","temp"+str(file_index)]
 
@@ -237,6 +236,10 @@ def splitmp3(input_mp3_file,
 
 def play_html_modify(mp3file, items):
     out = items["mp3_output"]
+    import librosa as librosa
+    import librosa.display
+
+
     with out:
         clear_output()
         # displayed=display(HTML("<audio controls  loop autoplay><source src={} type='audio/{}'></audio>".format(mp3file,mp3file.suffix[1:])))
