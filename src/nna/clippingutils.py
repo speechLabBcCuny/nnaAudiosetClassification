@@ -41,6 +41,7 @@ We assume clipping happens when sample's value is +1 or -1 (threshold).
     ```
 """
 
+from argparse import ArgumentError
 import pickle
 from pathlib import Path
 from typing import List, Tuple, Union
@@ -180,10 +181,13 @@ def run_task_save(input_files: List[Union[str, Path]],
     error_filename = "{}_{}_error.pkl".format(area_id, clipping_threshold_str)
     if results_folder:
         results_folder = Path(results_folder)
+        results_folder.mkdir(parents=True, exist_ok=True)
         output_file_path = results_folder / filename
         error_file_path = results_folder / error_filename
     else:
-        output_file_path = Path('')
+        output_file_path = Path('.') / filename
+        error_file_path = Path('.') / error_filename
+
     input_files = [str(i) for i in input_files]
 
     if results_folder and output_file_path.exists():
@@ -235,7 +239,6 @@ def run_task_save(input_files: List[Union[str, Path]],
         # files_w_errors.append((i, audio_file, e))
     # SAVE RESULTS
 
-    results_folder.mkdir(parents=True, exist_ok=True)
     if save:
         with open(output_file_path, "wb") as f:
             np.save(f, all_results_dict)
