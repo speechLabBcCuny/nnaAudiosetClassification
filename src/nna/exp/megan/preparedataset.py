@@ -32,8 +32,8 @@ def load_file_info2dataset(megan_labeled_files_info_path, dataset_name_v=''):
     with open(megan_labeled_files_info_path, 'r') as f:
         lines = f.readlines()
         lines = [i.strip().split(',') for i in lines]
-        for i in lines:
-            audio_dataset[i[0]] = dataimport.Audio(i[0], float(i[1]))
+        for fname,length in lines:
+            audio_dataset[fname] = dataimport.Audio(fname, float(length))
 
     # path has to be inque but is file names are unique ?
     assert len(set([i.name for i in audio_dataset.values()
