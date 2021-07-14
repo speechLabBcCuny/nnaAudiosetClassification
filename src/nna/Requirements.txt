@@ -3,3 +3,7 @@ tensorflow==1.15.2
 numpy
 pytorch==1.1.0
 resampy
+# visualizations
+cycler
+matplotlib
+ipython
