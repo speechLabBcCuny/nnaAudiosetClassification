@@ -8,6 +8,10 @@ import datetime
 from pathlib import Path
 import numpy as np
 
+import glob
+import csv
+
+
 # %%
 
 
@@ -72,6 +76,8 @@ class pathMap():
         self.file_properties_df_path = args.file_database
 
         self.export_output_path = Path(self.export_output_path)
+        self.source_folder_path = scratch + 'results/csv_export_raw/'
+        self.merge_folder = scratch + 'results/csv_export_raw_merged/'
 
 
 def setup(args, pathmap, region_location):
@@ -177,6 +183,40 @@ def export_raw_results_2_csv(region_location, config, file_properties_df,
     return results, no_result
 
 
+
+def merge_raw_csv_files(versiontag, region_location, source_folder_path,
+                        merge_folder, id2name):
+    assert str(source_folder_path[-1]) == '/'
+    for region, location in region_location:
+        # location_csv_files=glob.glob(f'export_raw_v6/{i[1]}*')
+        year_folders = glob.glob(
+            f'{source_folder_path}{versiontag}/{region}/{location}/aggregated/*'
+        )
+
+        for year in year_folders:
+            lineDicts = {}
+
+            csv_files = glob.glob(year + '/*')
+            for csv_file in csv_files:
+                with open(csv_file, 'r') as csvf_handle:
+                    rr = csv.reader(csvf_handle)
+                    lines = list(rr)
+                    headers, lines = lines[0], lines[1:]
+                    lineDict = dict(lines)
+                    lineDicts[headers[1]] = lineDict
+
+            aa = pd.DataFrame(data=lineDicts,
+                              columns=sorted(list(lineDicts.keys())))
+            aa = aa.rename(columns=id2name,)
+            aa.index.name = 'TIMESTAMP'
+            year_str = Path(year).stem
+            output_csv_path = f'{merge_folder}{versiontag}/{region}/{location}/{year_str}/{versiontag}.csv'
+            Path(output_csv_path).parent.mkdir(exist_ok=True, parents=True)
+            aa.to_csv(output_csv_path)
+            print(output_csv_path)
+            del aa
+
+
 def df_export_csv(results, pathmap, config):
     files = []
     for region, location, year in results.keys():
@@ -212,6 +252,7 @@ def main(args):
     location = args.location
     region = args.region
     raw_export = args.raw_export
+    raw_csv_merge = args.raw_csv_merge
     # versiontag = args.versiontag
     # prob2binary = args.prob2binary
     # output_data_freq = args.output_data_freq
@@ -224,10 +265,15 @@ def main(args):
 
     region_location, file_properties_df = setup(args, pathmap, region_location)
     if raw_export:
-        results, no_result = export_raw_results_2_ccsv(region_location, config,
+        results, no_result = export_raw_results_2_csv(region_location, config,
                                                       file_properties_df,
                                                       pathmap)
         return results, no_result, list(results.values())
+    elif raw_csv_merge:
+
+        merge_raw_csv_files(config['versiontag'], region_location,
+                            pathmap.source_folder_path, pathmap.merge_folder,
+                            config['id2name'])
     else:
         results, no_result = export_files2table_dict(region_location, config,
                                                      file_properties_df,
@@ -235,8 +281,6 @@ def main(args):
 
         files = df_export_csv(results, pathmap, config)
         return results, no_result, files
-
-    
 
 
 # %%
@@ -321,6 +365,12 @@ if __name__ == '__main__':
         help='path to file_properties_df_path',
         required=False,
         default='/scratch/enis/data/nna/database/allFields_dataV5.pkl')
+    parser.add_argument("--raw_csv_merge",
+                        type=str2bool,
+                        required=False,
+                        help='if set True, raw csv exports are merged, check \
+         False by default, reuqires that output and input data frequencies are same',
+                        default=False)
 
     args = parser.parse_args()
 
