@@ -45,7 +45,7 @@ def load_all_rawcsv_as_df(reg_loc,merged_out_dir,versiontag,):
 
 def pick_confidents(pred_for_year, label_to_sample, confidence_threshold,
                     related_cols, count_from_each_year,
-                    unrelated_label_threshold):
+                    unrelated_label_thresholds):
     '''
     Filter by label's confidence, sum of other's confidence, and per year
 
@@ -55,7 +55,7 @@ def pick_confidents(pred_for_year, label_to_sample, confidence_threshold,
 
     pred_confident = filter_other_high_preds(pred_confident, label_to_sample,
                                              related_cols,
-                                             unrelated_label_threshold)
+                                             unrelated_label_thresholds)
 
     pred_confident = pred_confident.sort_values(by='sum', ascending=True)
     pred_confident = pred_confident.iloc[:count_from_each_year]
@@ -75,8 +75,13 @@ def filter_other_high_preds(
     pred_confident,
     targe_label,
     related_cols,
-    unrelated_label_threshold=0.5,
+    labels_threholds=None,
 ):
+    '''
+        Filter sample out if other labels has high confidence.
+    '''
+    if labels_threholds is None:
+        labels_threholds = {'default':'0.5'}
 
     unrelated_ones = pred_confident.drop(columns=related_cols[targe_label])
     unrelated_ones = unrelated_ones.drop(columns=[
@@ -89,21 +94,18 @@ def filter_other_high_preds(
         unrelated_ones = unrelated_ones.drop(columns=['silence'])
 
     # remove samples that has other unrelated sounds
-    if 'anthrophony' in unrelated_ones.columns:
-        #         print(unrelated_ones.columns)
-        pred_confident = pred_confident[unrelated_ones['anthrophony'] < 0.08]
-    if 'bird' in unrelated_ones.columns:
-        pred_confident = pred_confident[unrelated_ones['bird'] < 0.37]
-    if 'songbirds' in unrelated_ones.columns:
-        pred_confident = pred_confident[unrelated_ones['songbirds'] < 0.12]  #12
-    pred_confident = pred_confident[unrelated_ones.max(
-        axis=1) < unrelated_label_threshold]
+    for col in unrelated_ones.columns:
+        threshold = labels_threholds.get(col,labels_threholds['default'])
+        pred_confident = pred_confident[unrelated_ones[col] < threshold]
+    # pred_confident = pred_confident[unrelated_ones.max(
+    #     axis=1) < unrelated_label_threshold]
+
     return pred_confident
 
 
 def load_filter_csv(new_data_classes_counts, reg_loc_per_set, merged_out_dir,
                     versiontag, confidence_threshold, related_cols,
-                    count_from_each_year, unrelated_label_threshold):
+                    count_from_each_year, unrelated_label_thresholds):
     '''
     Iterate all files, load with get_csv_into_pd and filter with pick_confidents
 
@@ -132,7 +134,7 @@ def load_filter_csv(new_data_classes_counts, reg_loc_per_set, merged_out_dir,
                                                  confidence_threshold,
                                                  related_cols,
                                                  count_from_each_year,
-                                                 unrelated_label_threshold)
+                                                 unrelated_label_thresholds)
                 confident_preds_dict[label_to_sample].append(
                     pred_confident.copy())
                 print(
