@@ -164,7 +164,11 @@ def splitmp3(input_mp3_file,
              depth=5,
              backend="ffmpeg",
              backend_path='',
-             outputSuffix=None):
+             outputSuffix=None,
+             dry_run=False,
+             stereo2mono=False,
+             overwrite=True,
+             sampling_rate=None):
     # -f increases precision (ONLY mp3)
     # -t
     # -d folder
@@ -175,6 +179,10 @@ def splitmp3(input_mp3_file,
         backend_path=backend
     
     if backend == "mp3splt":
+        if stereo2mono:
+            raise NotImplementedError('stereo to mono not implemented for mp3splt')
+        if overwrite:
+            raise NotImplementedError('overwrite not implemented for mp3splt')
         cmd = [
             backend_path, '-f', '-d', split_folder, input_mp3_file, start_time,
             end_time
@@ -190,15 +198,22 @@ def splitmp3(input_mp3_file,
         output_file = Path(split_folder) / (
             wholepath.stem + "_" + start_minute + "m_" + start_second + "s__" +
             end_minute + "m_" + end_second + "s" + outputSuffix)
+
         cmd = [
             # 'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
             backend_path, '-strict', '-2',
-            '-ss',
-            str(start_time), '-t',
-            str(end_time - start_time), "-i",
-            str(input_mp3_file),
-            str(output_file)
+            '-ss', str(start_time),
+            '-t', str(end_time - start_time),
+            '-i',str(input_mp3_file),
         ]
+        if stereo2mono:
+            cmd.extend(['-ac','1'])
+        if overwrite:
+            cmd.extend(['-y'])
+        if sampling_rate is not None:
+            cmd.extend(['-ar',str(sampling_rate)])
+        cmd.append(str(output_file))
+
     else:
         raise Exception(
             "{} is not supported as backend, available ones are mp3splt and ffmpeg"
@@ -206,6 +221,8 @@ def splitmp3(input_mp3_file,
         
     # custom name (@f_@n+@m:@s+@M:@S)
     # cmd+=["-o","temp"+str(file_index)]
+    if dry_run:
+        return cmd
 
     proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
