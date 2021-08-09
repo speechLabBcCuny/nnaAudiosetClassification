@@ -212,7 +212,7 @@ def match_path_info2row(path_info: Dict,
         path_info.get("locationId", ""))
     is_year = file_properties_df.year == path_info.get("year", "")
 
-    truth_table = is_region & is_location_id & is_year
+    truth_table = (is_region & is_location_id & is_year)
     filtered_properties = file_properties_df[truth_table]
 
     for row in filtered_properties.iterrows():
@@ -398,6 +398,32 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
     return file_properties, exceptions
 
 
+def change_sampling_rate(input_file, output_file, sampling_rate):
+    input_file = str(input_file)
+    output_file = str(output_file)
+    if input_file == output_file:
+        raise Exception("input and output file are the same")
+    cmd = [
+        'ffmpeg', '-i',
+        str(input_file), '-y', '-ar',
+        str(sampling_rate),
+        str(output_file)
+    ]
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    o, e = proc.communicate()
+
+    if proc.returncode != 0:
+        print("---------")
+        print(cmd)
+        print('Output: ' + o.decode('ascii'))
+        print('Error: ' + e.decode('ascii'))
+        return 0
+    else:
+        return output_file
+
+
 # example usage in ../notebooks/Labeling/save_file_properties.ipynb
 def getLength(
     input_video,
@@ -566,8 +592,14 @@ def find_filesfunc_inputs(location, region, start_time, end_time, length,
 
 
 # from nna.fileUtils import find_filesv2
-def find_filesv2(location, region, start_time, end_time, length, buffer,
-                 file_properties_df,only_continuous=True):
+def find_filesv2(location,
+                 region,
+                 start_time,
+                 end_time,
+                 length,
+                 buffer,
+                 file_properties_df,
+                 only_continuous=True):
     #     print(start_time,end_time)
     output = find_filesfunc_inputs(location, region, start_time, end_time,
                                    length, buffer, file_properties_df)
@@ -592,6 +624,7 @@ def find_filesv2(location, region, start_time, end_time, length, buffer,
     elif last < start_time:
         return (site_filtered[0:0], start_time, end_time, start_time_org,
                 end_time_org)
+
 
 # if   TODO thing about this, if we wanna keep overlapping parts !
     elif start_time < first:
@@ -636,11 +669,11 @@ def find_filesv2(location, region, start_time, end_time, length, buffer,
                     0:0], start_time, end_time, start_time_org, end_time_org
             i += 1
 
-    first_result_start, last_result_end = sorted_filtered["timestamp"][0], sorted_filtered[
-        "timestampEnd"][-1]
+    first_result_start, last_result_end = sorted_filtered["timestamp"][
+        0], sorted_filtered["timestampEnd"][-1]
     # if query starts after first result does and ends before last result does
     if first_result_start <= start_time and last_result_end >= end_time:
-        print('...')
+        # print('...')
         return (sorted_filtered, start_time, end_time, start_time_org,
                 end_time_org)
     else:
@@ -744,15 +777,27 @@ def query_audio(location,
         Returns: File df with entries corresponding to the query.
 
     '''
-    output = find_filesv2(location, region, start_time, end_time, length, 0,
-                          file_properties_df,only_continuous=False)
+    output = find_filesv2(location,
+                          region,
+                          start_time,
+                          end_time,
+                          length,
+                          0,
+                          file_properties_df,
+                          only_continuous=False)
     sorted_filtered, start_time, end_time, start_time_org, end_time_org = output
 
     # if there is no file without buffer then search again with buffer
     if len(sorted_filtered.index) == 0 and buffer > 0:
 
-        output = find_filesv2(location, region, start_time_org, end_time_org,
-                              length, buffer, file_properties_df,only_continuous=False)
+        output = find_filesv2(location,
+                              region,
+                              start_time_org,
+                              end_time_org,
+                              length,
+                              buffer,
+                              file_properties_df,
+                              only_continuous=False)
         (sorted_filtered, start_time, end_time, start_time_org,
          end_time_org) = output
 
