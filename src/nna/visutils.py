@@ -1,9 +1,9 @@
 '''Visualizations functions
 
 '''
-from typing import Dict, List, Union, Tuple, Callable, Any
+from typing import Dict, List, Union, Tuple, Callable
 from pathlib import Path
-from matplotlib.pyplot import contour
+# from matplotlib.pyplot import contour
 
 import numpy as np
 import pandas as pd
@@ -204,12 +204,12 @@ def prob2binary(
     '''
     if len(result.shape) > 1 and result.shape[-1] != channel:
         raise ValueError(
-            f'input array should have same dimension size with channel,' +
-            f'given channel count is {channel}, but array has shape of {result.shape}'
+            'input array should have same dimension size with channel,given ' +
+            f'channel count is {channel}, but array has shape of {result.shape}'
         )
     if len(result.shape) == 1 and channel > 1:
         raise ValueError(
-            f'for input array with single dimension,' +
+            'for input array with single dimension,' +
             f'given channel count should be 1, but it is {channel}. ' +
             f'Shape of array is {result.shape}')
 
@@ -245,10 +245,9 @@ def load_data_of_row(
 
     if gathered_results_per_tag:
         if afile is None:
-            raise ValueError(
-                'afile parameter of load_data_of_row cannot be ' +
-                'None if gathered_results_per_tag being used rather than result_path'
-            )
+            raise ValueError('afile parameter of load_data_of_row cannot be ' +
+                             'None if gathered_results_per_tag being' +
+                             ' used rather than result_path')
         a_key = next(iter(gathered_results_per_tag[model_tag_name]))
         if isinstance(a_key, str):
             afile_as_key = str(afile)
@@ -413,7 +412,7 @@ def file2TableDict(  # pylint: disable=invalid-name
                 df_afile,
                 df_count,  #type: ignore
                 df_sums)  #type: ignore
-        except:
+        except:  # pylint: disable=bare-except
             no_result_paths.append(df_afile)
             continue
 
@@ -469,17 +468,17 @@ def load_data_yield(tag_names: List[str],
                         df_afile = row_data_2_df(row, data, input_data_freq,
                                                  a_tag_name)
                         yield location_id, a_tag_name, df_afile
-                    except Exception as e:
+                    except Exception as e:  #pylint: disable=W0703
                         print(e)
                         print(afile, row, data.shape, input_data_freq,
                               a_tag_name)
                         yield None, None, afile
-                except Exception as e:
+                except Exception as e:  #pylint: disable=W0703
                     print(e)
                     print(
                         afile,
                         row,
-                        data.shape,
+                        data.shape,  #type: ignore
                         input_data_freq,  #type: ignore
                         a_tag_name)  #type: ignore
                     yield None, None, afile
@@ -533,7 +532,7 @@ def export_raw_results_2_csv(output_folder_path,
     '''
     if output_data_freq != input_data_freq:
         raise ValueError(
-            f'this function does not do aggregation, set dataFreq to' +
+            'this function does not do aggregation, set dataFreq to' +
             f' same with input_data_freq which is {input_data_freq}')
     output_folder_path = Path(output_folder_path)
 
@@ -609,8 +608,10 @@ def add_normal_dist_alpha(a_cmap, alpha_range=None):
                       [1, alpha_range[0], alpha_range[0]]]
         }
 
-        newcmp = LinearSegmentedColormap('testCmap', segmentdata=cdict,
-                                         N=100)  #type: ignore
+        newcmp = LinearSegmentedColormap(
+            'testCmap',
+            segmentdata=cdict,  #type: ignore
+            N=100)
         my_cmaps.append(newcmp)
     return my_cmaps
 
@@ -674,14 +675,13 @@ def load_cached_preds(cached_pred,
         raise ValueError(
             f'cache file parameter (region) is different {cached_pred_parts}')
     if not cached_pred_parts[location_id_index] == location_id:
-        raise ValueError(
-            f'cache file parameter (location_id) is different {cached_pred_parts}'
-        )
+        raise ValueError(('cache file parameter' +
+                          f'(location_id) is different {cached_pred_parts}'))
 
     # load data
     data = pd.read_csv(cached_pred)
-    data['TimeStamp'] = pd.to_datetime(data['TimeStamp'],
-                                       format='%Y-%m-%d_%H:%M:%S')
+    data['TimeStamp'] = pd.to_datetime(  # type: ignore
+        data['TimeStamp'], format='%Y-%m-%d_%H:%M:%S')
     data = data.set_index('TimeStamp')
     return data
 
@@ -710,8 +710,8 @@ def vis_preds_with_clipping(
 
 
     Args:
-        cached_pred: Path to csv file with predictions(df_freq). Columns are each class
-                    rows are samples. 
+        cached_pred: Path to csv file with predictions(df_freq).
+                    Columns are each class rows are samples.
     '''
     if not prob2binary_flag:
         print('WARNING: prob2binary_flag is False,' +
@@ -812,25 +812,28 @@ def divide_data_into_months(df_freq,):
     months_time = [pd.Timestamp(i) for i in months_time]
 
     months_time_str = [
-        '{}-{}'.format(month.year, month.month) for month in months_time
+        '{}-{}'.format(month.year, month.month)  #type: ignore
+        for month in months_time
     ]
     months = [df_freq.loc[month:month] for month in months_time_str]
     ##### align all months
     for i, month in enumerate(months):
         months[i] = month.rename(index=lambda x: x.replace(month=7, year=2019))
 
-    unique_years = np.unique([month.year for month in months_time])
+    unique_years = np.unique([
+        month.year for month in months_time  #type: ignore
+    ])
     data_figure_parts_by_year = []
     for year in unique_years:
         months_in_ayear = [
             months[i]
             for i, month in enumerate(months_time)
-            if month.year == year
+            if month.year == year  #type: ignore
         ]
         months_time_in_ayear = [
             months_time[i]
             for i, month in enumerate(months_time)
-            if month.year == year
+            if month.year == year  #type: ignore
         ]
         data_figure_parts_by_year.append(
             (year, months_time_in_ayear, months_in_ayear))
@@ -874,10 +877,10 @@ def create_figure(location_id,
                 continue
             #convert dates to numbers first
             inxval = mdates.date2num(month[col].index.to_pydatetime())
-            points = np.array([inxval, month[col].values]).T.reshape(-1, 1, 2)
+            points = np.array([inxval, month[col].values]).T.reshape(-1, 1, 2)  # pylint: disable=too-many-function-args
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
             lc = LineCollection(
-                segments,
+                segments,  #type: ignore
                 cmap=my_cmaps[i],
                 norm=normalize,
                 linewidth=3,
@@ -889,7 +892,8 @@ def create_figure(location_id,
             # add collection to axes
             ax[monthi].add_collection(lc)
 
-            # we move adding legend out of this function, because of extra colors added later
+            # we move adding legend out of this function,
+            #  because of extra colors added later
     # # add legend and set names of the lines
 
 
@@ -964,7 +968,8 @@ def add_equally_spaced_bars(
     bar_heights=1,
     bar_widths=0.03,
 ):
-    # divide a bar into N equal parts, each part representing one class by it's opacity 0,1
+    # divide a bar into N equal parts, each part representing
+    # one class by it's opacity 0,1
 
     #  # instantiate a second axes that shares the same x-axis
     # colors = plt.cm.BuPu(np.linspace(0.1, 1, (10)))
@@ -989,7 +994,7 @@ def add_equally_spaced_bars(
         n_rows = len(data)
 
         # Plot bars
-        cell_text = []
+        # cell_text = []
         data = np.array(data)
         for row in range(n_rows):
             coordinates_x = x_multi_label[row]
@@ -1016,12 +1021,13 @@ def add_legend(
     cmaps,
     legend_ax_index=0,
 ):
-    patchList = []
+    patch_list = []
     for label, color_i in classname2colorindex.items():
-        data_key = mpatches.Patch(color=cmaps[color_i](3), label=label)
-        patchList.append(data_key)
+        data_key = mpatches.Patch(color=cmaps[color_i](3),
+                                  label=label)  #type: ignore
+        patch_list.append(data_key)
 
-    ax[legend_ax_index].legend(handles=patchList,
+    ax[legend_ax_index].legend(handles=patch_list,
                                loc='upper left',
                                borderpad=0.2,
                                labelspacing=0.2,
@@ -1061,7 +1067,7 @@ def load_enis_labels4bars(csv_path, classname2colorindex):
 
     letters = list(letter2name.keys())
     letters = list(reversed(letters))
-    clean_csv2 = []
+    # clean_csv2 = []
     # letters[letters.index('RW')] = 'R'
     # letters[letters.index('DGS')] = 'D'
     # letters[letters.index('O')] = 'S'
@@ -1087,7 +1093,5 @@ def load_enis_labels4bars(csv_path, classname2colorindex):
 
     color_indexes = [classname2colorindex[letter2name[l]] for l in letters]
 
-    return letters, y_multi_labels_by_month, x_multi_label_by_month, classname2colorindex, color_indexes
-
-
-# len(y_multi_labels),len(clean_csv)
+    return (letters, y_multi_labels_by_month, x_multi_label_by_month,
+            classname2colorindex, color_indexes)
