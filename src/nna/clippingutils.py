@@ -107,9 +107,11 @@ def load_audio(
         AudioSegment.converter = '/home/enis/sbin/ffmpeg'
         sound_array = AudioSegment.from_file(filepath)
         sr = sound_array.frame_rate
+        channels = sound_array.channels
         sound_array = sound_array.get_array_of_samples()
         sound_array = np.array(sound_array)
-        sound_array = sound_array.reshape(-1, 2).T
+        if channels == 2:
+            sound_array = sound_array.reshape((-1, 2)).T
         if dtype in (np.float32, np.float64):
             sound_array = sound_array.astype(dtype)
             # this was a BUG, keeping here to understand why I did that
