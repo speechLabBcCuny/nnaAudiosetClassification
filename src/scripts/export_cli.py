@@ -1,5 +1,7 @@
 '''
 * applies sigmoid by default
+* input directory is hard coded TODO
+* source_folder_path and merged_folder_path are hard coded TODO
 '''
 # %%
 import pandas as pd
@@ -10,7 +12,6 @@ import numpy as np
 
 import glob
 import csv
-
 
 # %%
 
@@ -34,11 +35,40 @@ def setup_configs(args):
         '0-2-0': 'aircraft',
         '3-0-0': 'silence'
     }
+# model # 3rk9ayjc, validation
 
+# label               F-1 score    threshold
+# ----------------  -----------  -----------
+# biophony                0.942        0.43
+# insect                  0.531        0.402
+# bird                    0.917        0.425
+# songbirds               0.775        0.376
+# duck-goose-swan         0.366        0.548
+# anthrophony             0.514        0.548
+# grouse-ptarmigan        0.571        0.899
+# aircraft                0.571        0.764
+# silence                 0.358        0.561
+    prob2binary_thresholds_dict = {
+        '1-0-0': 0.43,
+        '1-1-0': 0.425,
+        '1-1-10': 0.376,
+        '1-1-7': 0.548,
+        '0-0-0': 0.548,
+        '1-3-0': 0.402,
+        '1-1-8': 0.899,
+        '0-2-0': 0.764,
+        '3-0-0': 0.561,
+    }
     generic_id2name = list(id2name.items())
     id2name = {}
     for k, v in generic_id2name:
         id2name[f'{versiontag}-{k}'] = v
+        prob2binary_thresholds_dict[
+            f'{versiontag}-{k}'] = prob2binary_thresholds_dict[k]
+        del prob2binary_thresholds_dict[k]
+
+    print(prob2binary_thresholds_dict)
+    config['prob2binary_threshold'] = prob2binary_thresholds_dict
 
     config['id2name'] = id2name
     config['input_data_freq'] = args.input_data_freq
@@ -62,22 +92,25 @@ class pathMap():
 
         # source of the input files
         self.output_dir = scratch + 'real/'
-        self.input_dir = scratch + 'real/'
+        
+        # self.input_dir = scratch + 'real/'
+        self.input_dir = scratch + 'audio_collars/'
 
         if args.output_folder == '':
             out_dir = Path(self.output_dir)
-            out_dir = (out_dir / args.region / args.location / 'aggregated')
+            out_dir = (out_dir / args.region / args.location)
             self.export_output_path = out_dir
         else:
             out_dir = Path(args.output_folder)
-            out_dir = (out_dir / args.region / args.location / 'aggregated')
+            out_dir = (out_dir / args.region / args.location)
             self.export_output_path = out_dir
 
         self.file_properties_df_path = args.file_database
 
         self.export_output_path = Path(self.export_output_path)
-        self.source_folder_path = scratch + 'results/csv_export_raw/'
-        self.merge_folder = scratch + 'results/csv_export_raw_merged/'
+        self.export_output_path.mkdir(parents=True, exist_ok=True)
+        self.source_folder_path = scratch + 'results/csv_export_raw/audio_collars/'
+        self.merge_folder = scratch + 'results/csv_export_raw_merged/audio_collars/'
 
 
 def setup(args, pathmap, region_location):
@@ -141,6 +174,7 @@ def export_files2table_dict(region_location, config, file_properties_df,
                 filtered_by_year,
                 config['input_data_freq'],
                 config['output_data_freq'],
+                prob2binary_threshold=config['prob2binary_threshold'],
                 result_path=pathmap.input_dir,
                 prob2binary_flag=config['prob2binary'],
                 pre_process_func=sigmoid,
@@ -183,15 +217,13 @@ def export_raw_results_2_csv(region_location, config, file_properties_df,
     return results, no_result
 
 
-
 def merge_raw_csv_files(versiontag, region_location, source_folder_path,
                         merge_folder, id2name):
     assert str(source_folder_path[-1]) == '/'
     for region, location in region_location:
         # location_csv_files=glob.glob(f'export_raw_v6/{i[1]}*')
         year_folders = glob.glob(
-            f'{source_folder_path}{versiontag}/{region}/{location}/aggregated/*'
-        )
+            f'{source_folder_path}{versiontag}/{region}/{location}/*')
 
         for year in year_folders:
             lineDicts = {}
@@ -202,7 +234,7 @@ def merge_raw_csv_files(versiontag, region_location, source_folder_path,
                     rr = csv.reader(csvf_handle)
                     lines = list(rr)
                     headers, lines = lines[0], lines[1:]
-                    lineDict = dict(lines)
+                    lineDict = dict(lines)  # type: ignore
                     lineDicts[headers[1]] = lineDict
 
             aa = pd.DataFrame(data=lineDicts,
@@ -217,31 +249,42 @@ def merge_raw_csv_files(versiontag, region_location, source_folder_path,
             del aa
 
 
+
+
+def get_cached_file_name(config, df_type='prob'):
+
+    csv_file_name_parts = (config['versiontag'],
+                           f'prob2binary={config["prob2binary"]}',
+                           f'output-data-freq={config["output_data_freq"]}',
+                           df_type)
+    csv_file_name = '_'.join(csv_file_name_parts)
+
+    csv_file_name = csv_file_name + '.csv'
+
+    return csv_file_name
+
+
 def df_export_csv(results, pathmap, config):
     files = []
     for region, location, year in results.keys():
         df_count, df_sums = results[(region, location, year)][location]
         df_prob = df_sums / df_count
 
-        csv_file_name = "_".join(
-            (config['versiontag'], f'prob2binary={config["prob2binary"]}',
-             f'output-data-freq={config["output_data_freq"]}'))
-
         output_path = (pathmap.export_output_path / str(year))
         output_path.mkdir(exist_ok=True, parents=True)
-        csv_file_name = output_path / csv_file_name
 
         col_names = [config['id2name'][col] for col in list(df_prob.columns)]
         for df, name_str in ((df_sums, 'sums'), (df_count, 'counts'), (df_prob,
                                                                        'prob')):
-            filename = str(csv_file_name) + f'_{name_str}.csv'
+            csv_file_name = get_cached_file_name(config, df_type=name_str)
+            filename = str(output_path / csv_file_name)
             df.to_csv(filename,
-                      index_label="TimeStamp",
+                      index_label='TimeStamp',
                       header=col_names,
                       float_format='%.3f',
                       date_format='%Y-%m-%d_%H:%M:%S')
             print(filename)
-        files.append(csv_file_name)
+            files.append(csv_file_name)
 
     return files
 

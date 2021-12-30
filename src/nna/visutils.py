@@ -335,7 +335,7 @@ def file2TableDict(  # pylint: disable=invalid-name
         file_properties_df: pd.DataFrame,
         input_data_freq: str = '10S',
         output_data_freq: str = '10S',
-        prob2binary_threshold: float = 0.5,
+        prob2binary_threshold: Union[float, Dict[str, float]] = 0.5,
         channel: int = 1,
         gathered_results_per_tag: Union[Dict, None] = None,
         result_path: Union[str, None] = None,
@@ -358,8 +358,9 @@ def file2TableDict(  # pylint: disable=invalid-name
                                 given areas.
             input_data_freq = '10S': Freq of the data provided.
             output_data_freq = '10S': Freq of the output data.
-            dataThreshold=0.5: if results are in probability, then threshold
-                            used to calculate 0/1.
+            prob2binary_threshold=0.5: if results are in probability, then
+                            threshold used to calculate 0/1. V2: now threshold
+                            can be a list of thresholds for each model_tag_name.
             channel=1: number of the channels of the data, # of dimensions
             gathered_results_perTag=None: Results stored in a
                                         dict['tag_name':
@@ -425,7 +426,7 @@ def file2TableDict(  # pylint: disable=invalid-name
 def load_data_yield(tag_names: List[str],
                     file_properties_df: pd.DataFrame,
                     input_data_freq: str = '10S',
-                    prob2binary_threshold: float = 0.5,
+                    prob2binary_threshold: Union[float, Dict[str, float]] = 0.5,
                     channel: int = 1,
                     gathered_results_per_tag: Union[Dict, None] = None,
                     result_path: Union[str, None] = None,
@@ -445,6 +446,13 @@ def load_data_yield(tag_names: List[str],
         filtered_by_location_id = file_properties_df[file_properties_df.site_id
                                                      == location_id]
         for a_tag_name in tag_names:
+            # prob2threshold for each tag might be different
+            # then we expect a dict with keys are tag_names and values are
+            # thresholds
+            if isinstance(prob2binary_threshold, dict):
+                prob2binary_threshold_tag = prob2binary_threshold[a_tag_name]
+            else:
+                prob2binary_threshold_tag = prob2binary_threshold
             for afile, row in filtered_by_location_id.iterrows():
 
                 try:
@@ -461,7 +469,7 @@ def load_data_yield(tag_names: List[str],
                         # print(afile,)
                         data = prob2binary(
                             data,
-                            threshold=prob2binary_threshold,
+                            threshold=prob2binary_threshold_tag,
                             channel=channel,
                         )
                     try:
@@ -668,6 +676,10 @@ def load_cached_preds(cached_pred,
         #now we have year
         region_index = -5
         location_id_index = -4
+    elif version == 'V2':
+        #now we have year but removed aggregated 
+        region_index = -4
+        location_id_index = -3
     else:
         raise ValueError(
             f'Unknown version for load_cached_preds function {version}')
@@ -705,6 +717,7 @@ def vis_preds_with_clipping(
     cached_pred: Union[str, Path] = '',
     cached_pred_version: str = 'V0',
     save_fig=True,
+    channel=2,
 ):
     '''
 
@@ -756,7 +769,7 @@ def vis_preds_with_clipping(
         input_data_freq=input_data_freq,
         output_data_freq=output_data_freq,
         prob2binary_threshold=0.01,
-        channel=2,
+        channel=channel,
         gathered_results_per_tag=gathered_results_per_tag,
         result_path=None,
     )
@@ -782,13 +795,17 @@ def vis_preds_with_clipping(
     if classname2colorindex is None:
         my_cmaps_ordered = my_cmaps[:]
     else:
-        my_cmaps_ordered = [
-            my_cmaps[classname2colorindex.get(label, -1)] for label in labels
-        ]
+        my_cmaps_ordered = []
+        for label in labels:
+            the_cmap = my_cmaps[classname2colorindex.get(label, -1)]
+            if the_cmap==-1:
+                print(label, 'not found in my_cmaps')
+            my_cmaps_ordered.append(the_cmap)
 
     figures_axes = []
+    # return data_figure_parts_by_year
     for year, months_time_in_ayear, months_in_ayear in data_figure_parts_by_year:  #pylint: disable=line-too-long
-        print(year, months_time_in_ayear)
+        # print(year, months_time_in_ayear)
         fig, ax = create_figure(
             location_id,
             months_in_ayear,
