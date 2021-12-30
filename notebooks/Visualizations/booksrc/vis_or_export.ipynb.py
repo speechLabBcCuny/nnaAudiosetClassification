@@ -29,20 +29,20 @@ class pathMap():
     def __init__(self) -> None:
         scratch = '/scratch/enis/data/nna/'
         home = '/home/enis/projects/nna/'
-        self.data_folder = home + 'data/'
+        self.data_folder = scratch + 'database/'
 
 #         self.exp_dir = '/home/enis/projects/nna/src/nna/exp/megan/run-3/'
 
         self.clipping_results_path = Path(scratch +
-                                          'clipping_info/all_data_2021-02-08/')
+                                          'clipping_info/all_data_2021-02-10/')
 
         self.output_dir = scratch + 'real/'
 
-        self.file_properties_df_path = self.data_folder + '/allFields_dataV4.pkl'
+        self.file_properties_df_path = self.data_folder + '/allFields_dataV5.pkl'
         # weather_cols=[]
 
         self.results_folder = home + 'results/'
-        self.vis_output_path = self.results_folder + 'vis/multi9-V1/'
+        self.vis_output_path = self.results_folder + 'vis/182tahb6-V1/'
 
 
 def setup_configs():

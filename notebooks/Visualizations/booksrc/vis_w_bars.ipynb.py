@@ -19,20 +19,19 @@ class pathMap():
     def __init__(self) -> None:
         scratch = '/scratch/enis/data/nna/'
         home = '/home/enis/projects/nna/'
-        self.data_folder = home + 'data/'
+        self.data_folder = scratch + 'database/'
 
         self.exp_dir = '/home/enis/projects/nna/src/nna/exp/megan/run-3/'
 
         self.clipping_results_path = Path(scratch +
-                                          'clipping_info/all_data_2021-02-08/')
+                                          'clipping_info/all-merged_2021-02-10/')
 
         self.output_dir = scratch + 'real/'
 
-        self.file_properties_df_path = self.data_folder + '/allFields_dataV4.pkl'
+        self.file_properties_df_path = self.data_folder + 'allFields_dataV5.pkl'
 
         self.results_folder = home + 'results/'
         self.vis_output_path = self.results_folder + 'vis/bars_test_V2/'
-
 
 def setup_configs():
     pathmap = pathMap()
@@ -87,8 +86,16 @@ def setup_configs():
     aCmap = pl.cm.tab20
     norm_cmaps = visutils.add_normal_dist_alpha(aCmap)
     # cached results
-    src='/home/enis/projects/nna/src/scripts/'
-    csv_file=src+'dalton/03/aggregated/multi9-V1_prob2binary=False_output-data-freq=270min_prob.csv'
+    # src='/home/enis/projects/nna/src/scripts/'
+    # csv_file=src+'dalton/03/aggregated/multi9-V1_prob2binary=False_output-data-freq=270min_prob.csv'
+    vis_cache_csv_folder = '/scratch/enis/data/nna/results/vis_export/'
+    vis_cache_csv_folder+='182tahb6-V1/'
+    csv_file = '/prudhoe/11/aggregated/2019/182tahb6-V1_prob2binary=True_output-data-freq=270min_prob.csv'
+    # cached_preds = {}
+    # for site_id,location_id in site_location:
+    # # site_id,location_id='dalton','03'
+    #     cached_preds[(site_id,location_id)]=f'{vis_cache_csv_folder}/{site_id}/{location_id}/aggregated/'
+    csv_file='/scratch/enis/data/nna/results/vis_export/182tahb6-V1/dalton/03/aggregated/2019/182tahb6-V1_prob2binary=True_output-data-freq=270min_prob.csv'
 
     cached_preds = {('dalton','03'):csv_file}
     config['cached_preds'] = cached_preds
@@ -162,9 +169,12 @@ def vis_preds_with_clipping_local(region_location, config, file_properties_df,
             pathmap.vis_output_path,
             config['id2name'],
             clipping_threshold=1.0,
+            prob2binary_flag=True,
             pre_process_func=sigmoid,
             classname2colorindex=config.get('classname2colorindex',None),
-            cached_pred=cached_preds[(region,location_id)])
+            cached_pred=cached_preds[(region,location_id)],
+            cached_pred_version='V1',
+            save_fig=False)
 
 
         return figures_axes, no_result_paths
@@ -199,12 +209,12 @@ csv_path = 'dalton03labels.csv'
 
 (letters,y_multi_labels_by_month,
  x_multi_label_by_month, 
- classname2colorindex,color_indexes)=load_enis_labels4bars(csv_path,classname2colorindex)
+ classname2colorindex,color_indexes)=visutils.load_enis_labels4bars(csv_path,config['classname2colorindex'])
 
-norm_cmaps=add_equally_spaced_bars(letters,y_multi_labels_by_month,
+norm_cmaps=visutils.add_equally_spaced_bars(letters,y_multi_labels_by_month,
                         x_multi_label_by_month,ax,color_indexes,norm_cmaps)
 
-add_legend(ax,classname2colorindex,norm_cmaps,legend_ax_index=0,)
+visutils.add_legend(ax,classname2colorindex,norm_cmaps,legend_ax_index=0,)
 fig.tight_layout()
 fig.subplots_adjust(top=0.95)
 

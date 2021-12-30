@@ -171,7 +171,7 @@ def test_file2TableDict():  # pylint: disable=invalid-name
             file_properties_df,
             input_data_freq='10S',
             output_data_freq=output_data_freq,
-            # prob2binary_threshold=0.5,
+            prob2binary_threshold=0.5,
             # channel=1,
             # gathered_results_perTag=None,
             result_path=func_output_path,
