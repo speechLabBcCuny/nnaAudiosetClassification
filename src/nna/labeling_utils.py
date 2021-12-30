@@ -15,10 +15,8 @@ import csv
 
 from .fileUtils import save_to_csv
 
-import librosa as librosa
 import numpy as np
 import matplotlib.pyplot as plt
-import librosa.display
 
 # mp3_file_path=f[0]
 
@@ -128,7 +126,8 @@ def cut_random_file(input_mp3_file,
                     split_folder="./splits",
                     total_minute=49 * 60,
                     depth=0,
-                    backend="ffmpeg"):
+                    backend="ffmpeg",
+                    backend_path=''):
 
     start_minute = random.randint(0, total_minute)
     start_second = random.randint(0, 59)
@@ -146,7 +145,8 @@ def cut_random_file(input_mp3_file,
                       split_folder,
                       start_time,
                       end_time,
-                      backend=backend)
+                      backend=backend,
+                      backend_path=backend_path)
 
     if result == 0 and depth < 3:
         print(input_mp3_file, start_time, end_time)
@@ -163,16 +163,28 @@ def splitmp3(input_mp3_file,
              end_time,
              depth=5,
              backend="ffmpeg",
-             outputSuffix=None):
+             backend_path='',
+             outputSuffix=None,
+             dry_run=False,
+             stereo2mono=False,
+             overwrite=True,
+             sampling_rate=None):
     # -f increases precision (ONLY mp3)
     # -t
     # -d folder
     # input
     # end time minute.seconds
     # start_time
+    if backend_path=='':
+        backend_path=backend
+    
     if backend == "mp3splt":
+        if stereo2mono:
+            raise NotImplementedError('stereo to mono not implemented for mp3splt')
+        if overwrite:
+            raise NotImplementedError('overwrite not implemented for mp3splt')
         cmd = [
-            'mp3splt', '-f', '-d', split_folder, input_mp3_file, start_time,
+            backend_path, '-f', '-d', split_folder, input_mp3_file, start_time,
             end_time
         ]
     elif backend == "ffmpeg":
@@ -186,20 +198,31 @@ def splitmp3(input_mp3_file,
         output_file = Path(split_folder) / (
             wholepath.stem + "_" + start_minute + "m_" + start_second + "s__" +
             end_minute + "m_" + end_second + "s" + outputSuffix)
+
         cmd = [
-            'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
-            '-ss',
-            str(start_time), '-t',
-            str(end_time - start_time), "-i",
-            str(input_mp3_file),
-            str(output_file)
+            # 'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
+            backend_path, '-strict', '-2',
+            '-ss', str(start_time),
+            '-t', str(end_time - start_time),
+            '-i',str(input_mp3_file),
         ]
+        if stereo2mono:
+            cmd.extend(['-ac','1'])
+        if overwrite:
+            cmd.extend(['-y'])
+        if sampling_rate is not None:
+            cmd.extend(['-ar',str(sampling_rate)])
+        cmd.append(str(output_file))
+
     else:
-        print(
+        raise Exception(
             "{} is not supported as backend, available ones are mp3splt and ffmpeg"
             .format(backend))
+        
     # custom name (@f_@n+@m:@s+@M:@S)
     # cmd+=["-o","temp"+str(file_index)]
+    if dry_run:
+        return cmd
 
     proc = subprocess.Popen(cmd,
                             stdout=subprocess.PIPE,
@@ -230,6 +253,10 @@ def splitmp3(input_mp3_file,
 
 def play_html_modify(mp3file, items):
     out = items["mp3_output"]
+    import librosa as librosa
+    import librosa.display
+
+
     with out:
         clear_output()
         # displayed=display(HTML("<audio controls  loop autoplay><source src={} type='audio/{}'></audio>".format(mp3file,mp3file.suffix[1:])))

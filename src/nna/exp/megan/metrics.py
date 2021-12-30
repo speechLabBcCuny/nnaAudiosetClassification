@@ -5,23 +5,50 @@ def activated_output_transform(output):
 #     y_pred = torch.exp(y_pred)
     return y_pred, y
     
-def roc_auc_perClass_compute_fn(y_preds, y_targets):
-    try:
-        from sklearn.metrics import roc_auc_score
-    except ImportError:
-        raise RuntimeError(
-            "This contrib module requires sklearn to be installed.")
+# def roc_auc_perClass_compute_fn(y_preds, y_targets):
+#     try:
+#         from sklearn.metrics import roc_auc_score
+#     except ImportError:
+#         raise RuntimeError(
+#             "This contrib module requires sklearn to be installed.")
+#     for i in range(10):
+#         print('AaaaaAAAAAAAAAAAAAAaaaaa')
+#     y_true = y_targets.numpy()
+#     y_pred = y_preds.numpy()
+#     # following for loop could be replaced by that line
+#     # res = roc_auc_score(y_true, y_pred, average=None)
+#     print('y_true.shape,y_pred.shape')
 
-    y_true = y_targets.numpy()
-    y_pred = y_preds.numpy()
-#     print(y_pred,y_true)
+#     print(y_true.shape,y_pred.shape)
 #     res = []
 #     for y_true_perClass_Index in y_true.shape[1]:
+#         a=y_true[:, y_true_perClass_Index]
+#         b=y_pred[:, y_true_perClass_Index]
+#         print('a.shape','b.shape')
+#         print(a.shape,b.shape)
 #         res.append(
-#             roc_auc_score(y_true[:, y_true_perClass_Index],
-#                           y_pred[:, y_true_perClass_Index]))
-    res = roc_auc_score(y_true, y_pred, average=None)
-    return res
+#             roc_auc_score(a,
+#                           b))
+
+#     return res
+
+# def roc_auc_perClass_compute_fn(y_preds, y_targets):
+#     try:
+#         from sklearn.metrics import roc_auc_score
+#     except ImportError:
+#         raise RuntimeError(
+#             "This contrib module requires sklearn to be installed.")
+
+#     y_true = y_targets.numpy()
+#     y_pred = y_preds.numpy()
+# #     print(y_pred,y_true)
+# #     res = []
+# #     for y_true_perClass_Index in y_true.shape[1]:
+# #         res.append(
+# #             roc_auc_score(y_true[:, y_true_perClass_Index],
+# #                           y_pred[:, y_true_perClass_Index]))
+#     res = roc_auc_score(y_true, y_pred, average=None)
+#     return res
 
 
 #[docs]

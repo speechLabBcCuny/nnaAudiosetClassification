@@ -56,7 +56,7 @@ class pathMap():
         self.clipping_results_path = (scratch +
                                       'clipping_info/all-merged_2021-02-10/')
         self.output_dir = scratch + 'real/'
-        self.file_properties_df_path = home + 'data/allFields_dataV4.pkl'
+        self.file_properties_df_path = scratch + 'database/allFields_dataV5.pkl'
         # model_path= ('/home/enis/projects/nna/src/nna/exp/megan/run-3/'+
         # 'checkpoints_keep/glorious-sweep-57/best_model_56_ROC_AUC=0.8690.pt')
         checkpoints_dir = scratch + 'runs_models/megan/run-5/checkpoints/'

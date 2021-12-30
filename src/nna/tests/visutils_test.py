@@ -340,8 +340,8 @@ def test_export_raw_results_2_csv():
         lines = list(reader)
         header, lines = lines[0], lines[1:]
     assert set(['1']) == set(i[1] for i in lines)
-    second = datetime.datetime.strptime(lines[11][0], '%Y-%m-%d %H:%M:%S')
-    first = datetime.datetime.strptime(lines[10][0], '%Y-%m-%d %H:%M:%S')
+    second = datetime.datetime.strptime(lines[11][0], '%Y-%m-%d_%H:%M:%S')
+    first = datetime.datetime.strptime(lines[10][0], '%Y-%m-%d_%H:%M:%S')
     assert (second - first).seconds == 10
     assert header[1] == csv_files_written[0].stem.split('_')[-1]
 
@@ -400,7 +400,7 @@ def test_vis_preds_with_clipping():
                                                     region]
         file_prop_df_filtered = file_properties_df[file_properties_df.locationId
                                                     == location_id]
-        region_location_name = '_'.join([region, location_id])
+        region_location_name = '-'.join([region, location_id])
         _ = mock_data.mock_clipping_results_dict_file(
             file_prop_df_filtered,
             region_location_name,

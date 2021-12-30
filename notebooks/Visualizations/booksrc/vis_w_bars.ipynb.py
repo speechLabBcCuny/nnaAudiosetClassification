@@ -10,6 +10,8 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pylab as pl
 
+from nna import visutils 
+
 
 # CONFIGS
 class pathMap():
@@ -133,14 +135,6 @@ def sigmoid(data):
 
 
 # %%
-from nna import visutils 
-
-
-# %%
-
-
-
-# %%
 
 def vis_preds_with_clipping_local(region_location, config, file_properties_df,
                             pathmap,norm_cmaps,cached_preds):
@@ -174,7 +168,6 @@ def vis_preds_with_clipping_local(region_location, config, file_properties_df,
 
 
         return figures_axes, no_result_paths
-
 
 
 # %%

@@ -69,7 +69,7 @@ def setup_config(config, wandb_project_name):
     config = runconfigs.default_config
     # wandb.config.update(args) # adds all of the arguments as config variables
     # config['batch_size'] = 64
-
+    Path(runconfigs.EXP_DIR).mkdir(exist_ok=True,parents=True)
     os.chdir(runconfigs.EXP_DIR)
 
     device = torch.device(f"cuda:{config['device']}" if

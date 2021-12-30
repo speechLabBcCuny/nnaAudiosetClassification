@@ -30,7 +30,7 @@ class Audio():
         self.clipping = clipping
         self.data = np.empty(0)  # suppose to be np.array
         self.sr: Optional[int] = None  # sampling rate
-        self.location_id = None # 
+        self.location_id = None  #
         self.samples = []
 
     def __str__(self,):
@@ -62,11 +62,12 @@ class Audio():
         dtype=np.int16,
     ):
         sound_array, sr = nna.clippingutils.load_audio(self.path,
-                                                               dtype=dtype,
-                                                               backend='pydub')
+                                                       dtype=dtype,
+                                                       backend='pydub')
 
         self.data = sound_array
         self.sr = sr
+
 
 class Dataset(MutableMapping):
     """A dictionary that holds data points."""
@@ -80,7 +81,7 @@ class Dataset(MutableMapping):
         if data_dict is not None:
             self.update(dict(**data_dict))  # use the free update to set keys
         self.excerpt_length = excerpt_len  # in seconds
-        self.name_v = dataset_name_v
+        self.dataset_name_v = dataset_name_v
         if dataset_folder == '':
             self.dataset_folder = ''
         else:
@@ -167,7 +168,7 @@ class Dataset(MutableMapping):
                                                                backend='pydub')
             else:
                 sound_array, sr = data
-            
+
             self.store[key].data = sound_array
             self.store[key].sr = sr
 
@@ -186,7 +187,6 @@ class Dataset(MutableMapping):
 
         with open(output_file_path, 'wb') as f:
             np.save(f, data_dict)
-
 
 # taxonomy YAML have an issue that leafes has a different structure then previous
 # orders, I should change that.
@@ -286,131 +286,3 @@ class Taxonomy(MutableMapping):
                 d[key.split('.')[-1]] = val
         return d
 
-
-# tax={'0': {'0.0': {'0.0.0': ['other-anthrophony']},
-#   '0.1': {'0.1.0': ['other-car'],
-#    '0.1.1': ['truck'],
-#    '0.1.X': ['unknown-car']},
-#   '0.2': {'0.2.0': ['other-aircraft'],
-#    '0.2.1': ['propeller-plane'],
-#    '0.2.2': ['helicopter'],
-#    '0.2.3': ['commercial-plane'],
-#    '0.2.X': ['unknown-aircraft']},
-#   '0.3': {'0.3.0': ['other-machinery'], '0.3.X': ['unknown-machinery']}},
-#  '1': {'1.0': {'1.0.0': ['other-biophony']},
-#   '1.1': {'1.1.0': ['other-bird'],
-#    '1.1.1': ['hummingbirds'],
-#    '1.1.2': ['shorebirds'],
-#    '1.1.3': ['loons'],
-#    '1.1.4': ['raptors-falcons'],
-#    '1.1.5': ['seabirds'],
-#    '1.1.6': ['owls'],
-#    '1.1.7': ['duck-goose-swan'],
-#    '1.1.8': ['grouse-ptarmigan'],
-#    '1.1.9': ['woodpecker'],
-#    '1.1.10': ['songbirds'],
-#    '1.1.11': ['cranes'],
-#    '1.1.X': ['unknown-bird']},
-#   '1.2': {'1.2.0': ['other-mammal'],
-#    '1.2.1': ['rodents'],
-#    '1.2.2': ['ursids'],
-#    '1.2.3': ['cervids'],
-#    '1.2.4': ['canids'],
-#    '1.2.5': ['mustelids'],
-#    '1.2.6': ['felids'],
-#    '1.2.7': ['lagomorphs'],
-#    '1.2.8': ['shrews'],
-#    '1.2.X': ['unknown-mammal']},
-#   '1.3': {'1.3.0': ['other-insect'],
-#    '1.3.1': ['mosquito'],
-#    '1.3.2': ['fly'],
-#    '1.3.3': ['bee'],
-#    '1.3.X': ['unknown-insect']},
-#   '1.X': {'1.X.X': ['unknown-biophony']}},
-#  '2': {'2.0': {'2.0.0': ['other-geology']},
-#   '2.1': {'2.1.0': ['other-rain'], '2.1.X': ['unknown-rain']},
-#   '2.2': {'2.2.0': ['other-water'], '2.2.X': ['unknown-water']},
-#   '2.X': {'2.X.X': ['unknown-geology']}},
-#  'X': {'X.X': {'X.X.X': ['unknown-sound']}}}
-
-# from pprint import pprint
-# t = Taxonomy(tax)
-# pprint(len(t.edges))
-# pprint(t.edges)
-# pprint(list(t.items()))
-
-
-def megan_excell_row2yaml_code(row: Dict, excell_names2code: Dict = None):
-    '''Megan style labels to nna yaml topology V1.
-
-    Row is a mapping, with 3 topology levels, function starts from most specific
-    category and goes to most general one, when a mapping is found, returns
-    corresponding code such as 0.2.0 for plane.
-
-    Args:
-        row = dictinary with following keys
-                'Anthro/Bio','Category','Specific Category'
-        excell_names2code = mapping from names to topology code
-
-    '''
-    if excell_names2code is None:
-        excell_names2code = {
-            'anth': '0.0.0',
-            'auto': '0.1.0',
-            'bio': '1.0.0',
-            'bird': '1.1.0',
-            'bug': '1.3.0',
-            'dgs': '1.1.7',
-            'flare': '0.4.0',
-            'fox': '1.2.4',
-            'geo': '2.0.0',
-            'grouse': '1.1.8',
-            'loon': '1.1.3',
-            'mam': '1.2.0',
-            'plane': '0.2.0',
-            'ptarm': '1.1.8',
-            'rain': '2.1.0',
-            'seab': '1.1.5',
-            'silence': '3.0.0',
-            'songbird': '1.1.10',
-            'unknown': 'X.X.X',
-            'water': '2.2.0',
-            'x': 'X.X.X',
-        }
-    if row['Specific Category'] in ['Songb', 'SongB']:
-        row['Specific Category'] = 'Songbird'
-
-    if row['Category'] in ['Mamm']:
-        row['Category'] = 'Mam'
-    # 'S4A10288_20190729_033000_unknown.wav', # 'Anthro/Bio': 'Uknown', no other data
-
-    if row['Anthro/Bio'] in ['Uknown', 'Unknown']:
-        row['Anthro/Bio'] = ''
-
-    code = [row['Anthro/Bio'], row['Category'], row['Specific Category']]
-
-    # place X for unknown topology
-    # '0' is reserved for 'other'
-    code = [i if i != '' else 'X' for i in code]
-
-    # place X for unknown topology
-    # '0' is reserved for 'other'
-    # print(code)
-    code = [i if i != '' else 'X' for i in code]
-    for c in code:
-        if '/' in c:
-            raise NotImplementedError(
-                f"row has wrong info about categories, '/' found: {row}")
-
-    if code == ['X', 'X', 'X']:
-        yaml_code = 'X.X.X'
-    elif code[2] != 'X':
-        yaml_code = excell_names2code[code[2].lower()]
-    elif code[1] != 'X':
-        yaml_code = excell_names2code[code[1].lower()]
-    elif code[0] != 'X':
-        yaml_code = excell_names2code[code[0].lower()]
-    else:
-        print(code)
-        raise ValueError(f'row does not belong to any toplogy: {row}')
-    return yaml_code
