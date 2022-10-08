@@ -24,20 +24,20 @@ class pathMap():
         self.exp_dir = '/home/enis/projects/nna/src/nna/exp/megan/run-3/'
 
         self.clipping_results_path = Path(scratch +
-                                          'clipping_info/all-merged_2021-02-10/')
+                                          'clipping_info/all-merged_2021-12-24/')
 
         self.output_dir = scratch + 'real/'
 
-        self.file_properties_df_path = self.data_folder + 'allFields_dataV5.pkl'
+        self.file_properties_df_path = self.data_folder + 'allFields_dataV6.pkl'
 
         self.results_folder = home + 'results/'
-        self.vis_output_path = self.results_folder + 'vis/bars_test_V2/'
+        self.vis_output_path = self.results_folder + 'vis/3rk9ayjc-V1/'
 
 def setup_configs():
     pathmap = pathMap()
 
     config = {}
-    versiontag = 'multi9-V1'
+    versiontag = '3rk9ayjc-V1'
     id2name={'1-0-0': 'biophony',
      '1-1-0': 'bird',
      '1-1-10': 'songbirds',
