@@ -30,19 +30,24 @@ def load_all_rawcsv_as_df(
     reg_loc,
     merged_out_dir,
     versiontag,
+    years=None,
 ):
     '''
     Iterate all files, load with get_csv_into_pd
     '''
+    if years is None:
+        years = []
     preds_list = []
     for region, location in reg_loc:
         year_folders = glob.glob(
             f'{merged_out_dir}{versiontag}/{region}/{location}/*')
+        print(f'{merged_out_dir}{versiontag}/{region}/{location}/*')
         for year in year_folders:
             year = (Path(year).stem)
-            pred_for_year = get_csv_into_pd(merged_out_dir, versiontag, region,
-                                            location, year)
-            preds_list.append(pred_for_year.copy())
+            if not years or year in years:
+                pred_for_year = get_csv_into_pd(merged_out_dir, versiontag,
+                                                region, location, year)
+                preds_list.append(pred_for_year.copy())
 
     preds_df = pd.concat(preds_list)
 
@@ -205,15 +210,18 @@ def relative_time(file_start_time, clip_start_time, length):
     return s_str, e_str
 
 
-def cut_corresponding_clip(clip_start_time,
-                           file_start_time,
-                           length,
-                           output_folder,
-                           orig_row,
-                           dry_run=False,
-                           stereo2mono=False,
-                           overwrite=True,
-                           sampling_rate=48000,):
+def cut_corresponding_clip(
+    clip_start_time,
+    file_start_time,
+    length,
+    output_folder,
+    orig_row,
+    outputSuffix=None,
+    dry_run=False,
+    stereo2mono=False,
+    overwrite=True,
+    sampling_rate=48000,
+):
 
     s_str, e_str = relative_time(file_start_time, clip_start_time, length)
 
@@ -224,10 +232,10 @@ def cut_corresponding_clip(clip_start_time,
                         s_str,
                         e_str,
                         backend_path='/home/enis/sbin/ffmpeg',
-                        outputSuffix='.wav',
+                        outputSuffix=outputSuffix,
                         dry_run=dry_run,
                         stereo2mono=stereo2mono,
-                        overwrite=True,
+                        overwrite=overwrite,
                         sampling_rate=sampling_rate)
 
     return out_file
@@ -266,6 +274,12 @@ def label_row_by_thresholds(pred_row,
                             excell_labels_2_pdnames=None):
     '''
         Given confidence values and thresholds, set 1,0 for labels.
+
+        upper_taxo_links: dict of {label: [list of labels]} for taxonomy
+                            labels that are parents to the label.
+        excell_label_headers: list of labels that are in the excell file.
+        labels_thresholds: dict of {label: threshold} for labels.
+        excell_labels_2_pdnames: dict of {label: pdname} for labels.
     '''
     if labels_thresholds is None:
         labels_thresholds = {'default': '0.5'}
@@ -311,10 +325,13 @@ def generate_new_dataset(
     buffer=0,
     excell_label_headers=None,
     labels_thresholds=None,
+    outputSuffix=None,
     dry_run=False,
     excell_labels_2_names=None,
     stereo2mono=False,
     overwrite=True,
+    sampling_rate=48000,
+    label_row_by_threshold=True,
 ):
     # create dataset csv from picked rows
     # get related info and clip wav files
@@ -353,13 +370,14 @@ def generate_new_dataset(
         orig_row = sorted_filtered.iloc[0]
         row = generate_new_row(dataset_version, versiontag, location,
                                orig_row.name, length, start_time)
-        row = label_row_by_thresholds(
-            pred_row,
-            row,
-            upper_taxo_links,
-            excell_label_headers,
-            labels_thresholds,
-            excell_labels_2_pdnames=excell_labels_2_names)
+        if label_row_by_threshold:
+            row = label_row_by_thresholds(
+                pred_row,
+                row,
+                upper_taxo_links,
+                excell_label_headers,
+                labels_thresholds,
+                excell_labels_2_pdnames=excell_labels_2_names)
         # clip and save audio file
         output_folder = f'{split_out_path}{versiontag}/{region}/{location}/'
         Path(output_folder).mkdir(exist_ok=True, parents=True)
@@ -371,10 +389,11 @@ def generate_new_dataset(
                                           length,
                                           output_folder,
                                           orig_row,
+                                          outputSuffix=outputSuffix,
                                           dry_run=dry_run,
                                           stereo2mono=stereo2mono,
                                           overwrite=overwrite,
-                                          sampling_rate=48000)
+                                          sampling_rate=sampling_rate)
 
         row['Clip Path'] = out_file
         row['Comments'] = ''
@@ -398,14 +417,17 @@ def write_csv(new_csv_file, rows_new, fieldnames=None):
         writer.writerows(rows_new)
 
 
-def setup():
+def setup(versiontag=None,):
     config = {}
 
     # highest value other label predictions can take
     # anthrophony, bird, songbird have their own thresholds
-    config['versiontag'] = '3rk9ayjc-V1'
+    if versiontag is None:
+        config['versiontag'] = '3rk9ayjc-V1'
+    else:
+        config['versiontag'] = versiontag
     data_folder = '/scratch/enis/data/nna/'
-    config['merged_out_dir'] = (data_folder + 'results/csv_export_raw_merged/')
+    config['merged_out_dir'] = (data_folder + f'results/csv_export_raw_merged/')
     config['split_out_path'] = data_folder + 'labeling/megan/'
 
     config['new_dataset_path'] = './datasetV2.1.XXX.csv'
@@ -428,14 +450,14 @@ def setup():
     config['confidence_threshold'] = 0.95  # only applies to main label
 
     config['confidence_thresholds'] = {
-        'biophony':0.99,
-            'insect': 0.99,
-            'bird':0.99,
-                'songbirds':0.95,
-                'duck-goose-swan': 0.9,
-                'grouse-ptarmigan': 0.9,
+        'biophony': 0.99,
+        'insect': 0.99,
+        'bird': 0.99,
+        'songbirds': 0.95,
+        'duck-goose-swan': 0.9,
+        'grouse-ptarmigan': 0.9,
         'anthrophony': 0.99,
-            'aircraft': 0.99,
+        'aircraft': 0.99,
         'silence': 0.99,
     }
     config['labels_thresholds'] = {
@@ -450,7 +472,6 @@ def setup():
         'aircraft': 0.5,
         'silence': 0.5,
     }
-
 
     # new_data_classes_counts_all = { 'biophony':1000,
     #                                'insect':2000,
@@ -550,6 +571,8 @@ def setup():
         'Airc': 'aircraft',
         'Sil': 'silence'
     }
+
+    
 
     config['excell_label_headers'] = [
         'Anth', 'Bio', 'Geo', 'Sil', 'Auto', 'Airc', 'Mach', 'Flare', 'Bird',
