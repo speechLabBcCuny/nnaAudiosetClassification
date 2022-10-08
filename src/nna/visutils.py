@@ -695,6 +695,7 @@ def load_cached_preds(cached_pred,
     data['TimeStamp'] = pd.to_datetime(  # type: ignore
         data['TimeStamp'], format='%Y-%m-%d_%H:%M:%S')
     data = data.set_index('TimeStamp')
+    data.dropna(inplace=True)
     return data
 
 
@@ -894,6 +895,7 @@ def create_figure(location_id,
                 continue
             #convert dates to numbers first
             inxval = mdates.date2num(month[col].index.to_pydatetime())
+            # print(inxval)
             points = np.array([inxval, month[col].values]).T.reshape(-1, 1, 2)  # pylint: disable=too-many-function-args
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
             lc = LineCollection(
@@ -934,6 +936,7 @@ def create_figure(location_id,
     #     uniqueYears.size
 
     for i, an_ax in enumerate(ax):
+        print(i,an_ax)
         an_ax.set_ylabel('{}'.format(months_time[i].strftime('%Y-%B')),
                          fontsize=48)  #, fontweight='black')
 
