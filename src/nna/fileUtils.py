@@ -14,6 +14,7 @@ import pandas as pd
 from IPython.display import display
 from pydub import AudioSegment
 
+from nna.labeling_utils import run_cmd
 # from PIL import Image
 
 
@@ -398,30 +399,53 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
     return file_properties, exceptions
 
 
-def change_sampling_rate(input_file, output_file, sampling_rate):
+def make_mono_set_sr(
+        input_file,
+        output_file,
+        stereo2mono=False,
+        sampling_rate=None,
+        backend_path='/scratch/enis/conda/envs/speechEnv/bin/ffmpeg',
+        overwrite=True,
+        dry_run=False):
+
     input_file = str(input_file)
     output_file = str(output_file)
+
     if input_file == output_file:
-        raise Exception("input and output file are the same")
-    cmd = [
-        'ffmpeg', '-i',
-        str(input_file), '-y', '-ar',
-        str(sampling_rate),
-        str(output_file)
-    ]
+        raise Exception("input and output cannot be same, ffmpeg needs source")
 
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    o, e = proc.communicate()
-
-    if proc.returncode != 0:
-        print("---------")
-        print(cmd)
-        print('Output: ' + o.decode('ascii'))
-        print('Error: ' + e.decode('ascii'))
+    if not stereo2mono and sampling_rate is None:
+        print('make_mono_set_sr, nothing to do')
         return 0
-    else:
+    cmd = [
+        # 'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
+        backend_path,
+        # '-strict', # allow non standardized experimental things, #TODO
+        # '-2',
+        '-i',
+        str(input_file),
+    ]
+    if stereo2mono:
+        cmd.extend(['-ac', '1'])
+    if overwrite:
+        cmd.extend(['-y'])
+    if sampling_rate is not None:
+        cmd.extend(['-ar', str(sampling_rate)])
+    cmd.append(str(output_file))
+
+    output, error, returncode = run_cmd(cmd, dry_run=dry_run)
+    if returncode == 0:
         return output_file
+    else:
+        return 0
+
+
+def change_sampling_rate(input_file, output_file, sampling_rate, dry_run=False):
+
+    return make_mono_set_sr(input_file,
+                            output_file,
+                            sampling_rate=sampling_rate,
+                            dry_run=dry_run)
 
 
 # example usage in ../notebooks/Labeling/save_file_properties.ipynb
@@ -688,9 +712,12 @@ def get_audio(sorted_filtered,
               display_flag=True,
               save=True,
               file_name="output",
-              tmpfolder="./trap_photo_audio/"):
+              tmpfolder="./trap_photo_audio/",
+              stereo2mono=False,
+              sampling_rate=None):
     del save
     total_seconds = 0
+    file_names = []
     for _, f in enumerate(sorted_filtered.iterrows()):
 
         # in audio file, where should excerpt starts and ends
@@ -712,33 +739,48 @@ def get_audio(sorted_filtered,
         mp3_file_path = f[0]
         file_extension = str(Path(mp3_file_path).suffix)
 
-        save_audiofile(mp3_file_path, file_extension, file_name_specific,
-                       start_seconds, end_seconds, tmpfolder)
+        save_audiofile(mp3_file_path,
+                       file_extension,
+                       file_name_specific,
+                       start_seconds,
+                       end_seconds,
+                       tmpfolder,
+                       stereo2mono=stereo2mono,
+                       sampling_rate=sampling_rate)
 
         if display_flag:
             display_audio(tmpfolder, file_name_specific, file_extension)
         # if not save:
         # delete the file
         total_seconds += excerpt_length
+        file_name = tmpfolder + file_name_specific + file_extension
+        file_names.append(file_name)
+    return file_names
 
 
-def save_audiofile(mp3_file_path, file_extension, file_name, start_seconds,
-                   end_seconds, tmpfolder):
-    from nna.labeling_utils import ffmpeg_split_mp3
+def save_audiofile(mp3_file_path,
+                   file_extension,
+                   file_name,
+                   start_seconds,
+                   end_seconds,
+                   tmpfolder,
+                   stereo2mono=False,
+                   sampling_rate=None):
+    from nna.labeling_utils import ffmpeg_split_audio
 
     # if end_seconds bigger than file, ffmpeg ignores it, if both out
     # of order than output is emtpy
-    ffmpeg_split_mp3(mp3_file_path,
-                     start_seconds,
-                     end_seconds,
-                     tmpfolder=tmpfolder)
 
-    try:
-        os.rename(tmpfolder + "output" + file_extension,
-                  tmpfolder + file_name + file_extension)
-
-    except:
-        print("{}".format(sys.exc_info()[0]))
+    output_file = tmpfolder + file_name + file_extension
+    output, error = ffmpeg_split_audio(
+        mp3_file_path,
+        start_seconds,
+        end_seconds,
+        output_file,
+        stereo2mono=stereo2mono,
+        sampling_rate=sampling_rate,
+    )
+    return output, error
 
 
 def display_audio(tmpfolder, file_name, file_extension):
@@ -764,27 +806,32 @@ def query_audio(location,
                 file_name,
                 display_flag=True,
                 save=True,
-                tmp_folder="./tmp_audio_excerpt/"):
+                tmp_folder="./tmp_audio_excerpt/",
+                version='V1',
+                stereo2mono=False,
+                sampling_rate=None):
     '''Find audio segment,trim segment and name according to found time.
 
         Audio can be found in given 'exact' time. 
             If buffer is bigger than 0 then it can be found 'earlier' or 'later'
             on of these words is placed in tmp audio file name accordingly.
-            ex: f'{filename}_exact_{start_time.strftime(%Y-%m-%d_%H:%M:%S)}'
+            ex: f'{filename}_exact_{start_time.strftime(%Y-%m-%d_%H-%M-%S)}'
 
         Args:
 
         Returns: File df with entries corresponding to the query.
 
     '''
-    output = find_filesv2(location,
-                          region,
-                          start_time,
-                          end_time,
-                          length,
-                          0,
-                          file_properties_df,
-                          only_continuous=False)
+    output = find_filesv2(
+        location,
+        region,
+        start_time,
+        end_time,
+        length,
+        0,
+        file_properties_df,
+        only_continuous=False,
+    )
     sorted_filtered, start_time, end_time, start_time_org, end_time_org = output
 
     # if there is no file without buffer then search again with buffer
@@ -806,45 +853,55 @@ def query_audio(location,
         closestRight = sorted_filtered[
             sorted_filtered["timestamp"] > end_time_org][:1]
         if len(sorted_filtered.index) == 0:
+            if version == 'V2':
+                return [], sorted_filtered
             return sorted_filtered
-            print("Recording not found")
         elif len(closestLeft.index) == 0:
             start_time = closestRight["timestamp"][0]
             end_time = closestRight["timestamp"][0] + datetime.timedelta(
                 seconds=length)
             file_name += "_earlier_" + start_time.strftime("%Y-%m-%d_%H:%M:%S")
 
-            get_audio(closestRight,
-                      start_time,
-                      end_time,
-                      display_flag=display_flag,
-                      save=save,
-                      file_name=file_name,
-                      tmpfolder=tmp_folder)
+            file_names = get_audio(closestRight,
+                                   start_time,
+                                   end_time,
+                                   display_flag=display_flag,
+                                   save=save,
+                                   file_name=file_name,
+                                   tmpfolder=tmp_folder,
+                                   stereo2mono=stereo2mono,
+                                   sampling_rate=sampling_rate)
         elif len(closestRight.index) == 0:
             start_time = closestLeft["timestampEnd"][0] - datetime.timedelta(
                 seconds=length)
             end_time = closestLeft["timestampEnd"][0]
-            file_name += "_later_" + start_time.strftime("%Y-%m-%d_%H:%M:%S")
-            get_audio(closestLeft,
-                      start_time,
-                      end_time,
-                      display_flag=display_flag,
-                      save=save,
-                      file_name=file_name,
-                      tmpfolder=tmp_folder)
+            file_name += "_later_" + start_time.strftime("%Y-%m-%d_%H-%M-%S")
+            file_names = get_audio(closestLeft,
+                                   start_time,
+                                   end_time,
+                                   display_flag=display_flag,
+                                   save=save,
+                                   file_name=file_name,
+                                   tmpfolder=tmp_folder,
+                                   stereo2mono=stereo2mono,
+                                   sampling_rate=sampling_rate)
 
     else:
         #     print(sorted_filtered)
-        file_name += "_exact_" + start_time_org.strftime("%Y-%m-%d_%H:%M:%S")
-        get_audio(sorted_filtered,
-                  start_time_org,
-                  end_time_org,
-                  display_flag=display_flag,
-                  save=save,
-                  file_name=file_name,
-                  tmpfolder=tmp_folder)
+        file_name += "_exact_" + start_time_org.strftime("%Y-%m-%d_%H-%M-%S")
+        file_names = get_audio(sorted_filtered,
+                               start_time_org,
+                               end_time_org,
+                               display_flag=display_flag,
+                               save=save,
+                               file_name=file_name,
+                               tmpfolder=tmp_folder,
+                               stereo2mono=stereo2mono,
+                               sampling_rate=sampling_rate)
     # print(file_name)
+    if version == 'V2':
+        return file_names, sorted_filtered
+
     return sorted_filtered
 
 
