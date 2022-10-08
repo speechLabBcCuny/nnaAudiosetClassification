@@ -1,7 +1,7 @@
 '''
 * applies sigmoid by default
 * input directory is hard coded TODO
-* source_folder_path and merged_folder_path are hard coded TODO
+* raw_folder4_merge and merged_folder_path are hard coded TODO
 '''
 # %%
 import pandas as pd
@@ -35,30 +35,80 @@ def setup_configs(args):
         '0-2-0': 'aircraft',
         '3-0-0': 'silence'
     }
-# model # 3rk9ayjc, validation
+    # # model # 3rk9ayjc, validation
+    # # label               F-1 score    threshold
+    # # ----------------  -----------  -----------
+    # # biophony                0.942        0.43
+    # # insect                  0.531        0.402
+    # # bird                    0.917        0.425
+    # # songbirds               0.775        0.376
+    # # duck-goose-swan         0.366        0.548
+    # # anthrophony             0.514        0.548
+    # # grouse-ptarmigan        0.571        0.899
+    # # aircraft                0.571        0.764
+    # # silence                 0.358        0.561
+    #     prob2binary_thresholds_dict = {
+    #         '1-0-0': 0.43,
+    #         '1-1-0': 0.425,
+    #         '1-1-10': 0.376,
+    #         '1-1-7': 0.548,
+    #         '0-0-0': 0.548,
+    #         '1-3-0': 0.402,
+    #         '1-1-8': 0.899,
+    #         '0-2-0': 0.764,
+    #         '3-0-0': 0.561,
+    #     }
 
-# label               F-1 score    threshold
-# ----------------  -----------  -----------
-# biophony                0.942        0.43
-# insect                  0.531        0.402
-# bird                    0.917        0.425
-# songbirds               0.775        0.376
-# duck-goose-swan         0.366        0.548
-# anthrophony             0.514        0.548
-# grouse-ptarmigan        0.571        0.899
-# aircraft                0.571        0.764
-# silence                 0.358        0.561
+    # model 1jvt1zva, validation
+    # label               F-1 score    threshold
+    # ----------------  -----------  -----------
+    # biophony                0.846    0.301301
+    # insect                  0.897    0.116116
+    # bird                    0.907    0.267267
+    # songbirds               0.879    0.214214
+    # duck-goose-swan         0.929    0.0970971
+    # anthrophony             0.892    0.154154
+    # grouse-ptarmigan        0.933    0.414414
+    # aircraft                0.939    0.500501
+    # silence                 0.913    1
+
+    # prob2binary_thresholds_dict = {
+    #     '1-0-0': 0.301301,
+    #     '1-1-0': 0.267267,
+    #     '1-1-10': 0.214214,
+    #     '1-1-7': 0.0970971,
+    #     '0-0-0': 0.154154,
+    #     '1-3-0': 0.116116,
+    #     '1-1-8': 0.414414,
+    #     '0-2-0': 0.500501,
+    #     '3-0-0': 1,
+    # }
+
+    # model yfitloiq, test
+    # label               F-1 score    threshold
+    # ----------------  -----------  -----------
+    # biophony                0.909    0.796797
+    # insect                  0.931    0.394394
+    # bird                    0.957    0.714715
+    # songbirds               0.951    0.471471
+    # duck-goose-swan         0.952    0.122122
+    # anthrophony             0.976    0.702703
+    # grouse-ptarmigan        0.945    0.60961
+    # aircraft                0.976    0.211211
+    # silence                 0.883    0.0620621
+
     prob2binary_thresholds_dict = {
-        '1-0-0': 0.43,
-        '1-1-0': 0.425,
-        '1-1-10': 0.376,
-        '1-1-7': 0.548,
-        '0-0-0': 0.548,
-        '1-3-0': 0.402,
-        '1-1-8': 0.899,
-        '0-2-0': 0.764,
-        '3-0-0': 0.561,
+        '1-0-0': 0.7967967967967968,
+        '1-1-0': 0.7147147147147147,
+        '1-1-10': 0.47147147147147145,
+        '1-1-7': 0.12212212212212212,
+        '0-0-0': 0.7027027027027027,
+        '1-3-0': 0.3943943943943944,
+        '1-1-8': 0.6096096096096096,
+        '0-2-0': 0.2112112112112112,
+        '3-0-0': 0.062062062062062065
     }
+
     generic_id2name = list(id2name.items())
     id2name = {}
     for k, v in generic_id2name:
@@ -67,7 +117,7 @@ def setup_configs(args):
             f'{versiontag}-{k}'] = prob2binary_thresholds_dict[k]
         del prob2binary_thresholds_dict[k]
 
-    print(prob2binary_thresholds_dict)
+    # print(prob2binary_thresholds_dict)
     config['prob2binary_threshold'] = prob2binary_thresholds_dict
 
     config['id2name'] = id2name
@@ -88,30 +138,28 @@ class pathMap():
         self.data_folder = home + 'data/'
 
         self.clipping_results_path = Path(
-            scratch + 'clipping_info/all-merged_2021-02-10/')
+            scratch + 'clipping_info/all-merged_2021-12-24/')
 
         # source of the input files
         self.output_dir = scratch + 'real/'
-        
-        # self.input_dir = scratch + 'real/'
-        self.input_dir = scratch + 'audio_collars/'
+
+        self.input_dir = scratch + 'real/'
+        # self.input_dir = scratch + 'audio_collars/'
 
         if args.output_folder == '':
             out_dir = Path(self.output_dir)
-            out_dir = (out_dir / args.region / args.location)
-            self.export_output_path = out_dir
         else:
             out_dir = Path(args.output_folder)
-            out_dir = (out_dir / args.region / args.location)
-            self.export_output_path = out_dir
+        # self.merge_folder = (out_dir.parent / (out_dir.stem + '-merged'))
+        self.merge_folder = (out_dir / args.region / args.location)
+        self.export_output_path = (out_dir / args.region / args.location)
 
         self.file_properties_df_path = args.file_database
 
         self.export_output_path = Path(self.export_output_path)
         self.export_output_path.mkdir(parents=True, exist_ok=True)
-        self.source_folder_path = scratch + 'results/csv_export_raw/audio_collars/'
-        self.merge_folder = scratch + 'results/csv_export_raw_merged/audio_collars/'
-
+        
+        self.raw_folder4_merge = '/scratch/enis/data/nna/results/csv_export_raw'
 
 def setup(args, pathmap, region_location):
 
@@ -217,38 +265,41 @@ def export_raw_results_2_csv(region_location, config, file_properties_df,
     return results, no_result
 
 
-def merge_raw_csv_files(versiontag, region_location, source_folder_path,
+def merge_raw_csv_files(versiontag, region_location, raw_folder4_merge,
                         merge_folder, id2name):
-    assert str(source_folder_path[-1]) == '/'
-    for region, location in region_location:
-        # location_csv_files=glob.glob(f'export_raw_v6/{i[1]}*')
-        year_folders = glob.glob(
-            f'{source_folder_path}{versiontag}/{region}/{location}/*')
+    # assert str(raw_folder4_merge[-1]) == '/'
+    assert len(region_location)==1
+    region, location = region_location[0]
+    # for region, location in region_location:
+    #     # location_csv_files=glob.glob(f'export_raw_v6/{i[1]}*')
+    search_folder = f'{str(raw_folder4_merge)}/{versiontag}/{region}/{location}/*'
+    year_folders = glob.glob(search_folder)
+    # print(search_folder)
+    for year in year_folders:
+        line_dicts = {}
 
-        for year in year_folders:
-            lineDicts = {}
+        csv_files = glob.glob(year + '/*')
+        # print(csv_files)
+        for csv_file in csv_files:
+            with open(csv_file, 'r') as csvf_handle:
+                rr = csv.reader(csvf_handle)
+                lines = list(rr)
+                headers, lines = lines[0], lines[1:]
+                line_dict = dict(lines)  # type: ignore
+                line_dicts[headers[1]] = line_dict
 
-            csv_files = glob.glob(year + '/*')
-            for csv_file in csv_files:
-                with open(csv_file, 'r') as csvf_handle:
-                    rr = csv.reader(csvf_handle)
-                    lines = list(rr)
-                    headers, lines = lines[0], lines[1:]
-                    lineDict = dict(lines)  # type: ignore
-                    lineDicts[headers[1]] = lineDict
-
-            aa = pd.DataFrame(data=lineDicts,
-                              columns=sorted(list(lineDicts.keys())))
-            aa = aa.rename(columns=id2name,)
-            aa.index.name = 'TIMESTAMP'
-            year_str = Path(year).stem
-            output_csv_path = f'{merge_folder}{versiontag}/{region}/{location}/{year_str}/{versiontag}.csv'
-            Path(output_csv_path).parent.mkdir(exist_ok=True, parents=True)
-            aa.to_csv(output_csv_path)
-            print(output_csv_path)
-            del aa
-
-
+        merged_into_dataframe = pd.DataFrame(data=line_dicts,
+                                                columns=sorted(
+                                                    list(line_dicts.keys())))
+        merged_into_dataframe = merged_into_dataframe.rename(
+            columns=id2name,)
+        merged_into_dataframe.index.name = 'TIMESTAMP'
+        year_str = Path(year).stem
+        output_csv_path = (merge_folder /
+                            year_str / (f'{versiontag}.csv'))
+        Path(output_csv_path).parent.mkdir(exist_ok=True, parents=True)
+        merged_into_dataframe.to_csv(output_csv_path)
+        del merged_into_dataframe
 
 
 def get_cached_file_name(config, df_type='prob'):
@@ -315,7 +366,7 @@ def main(args):
     elif raw_csv_merge:
 
         merge_raw_csv_files(config['versiontag'], region_location,
-                            pathmap.source_folder_path, pathmap.merge_folder,
+                            pathmap.raw_folder4_merge, pathmap.merge_folder,
                             config['id2name'])
     else:
         results, no_result = export_files2table_dict(region_location, config,
@@ -406,8 +457,9 @@ if __name__ == '__main__':
         '-d',
         '--file_database',
         help='path to file_properties_df_path',
-        required=False,
-        default='/scratch/enis/data/nna/database/allFields_dataV5.pkl')
+        required=True,
+        #default='/scratch/enis/data/nna/database/allFields_dataV6.pkl'
+    )
     parser.add_argument("--raw_csv_merge",
                         type=str2bool,
                         required=False,
