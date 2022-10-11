@@ -340,27 +340,6 @@ def play_html_modify(audiofile,
                 ))
 
 
-def load_labels(csv_file="assets/class_labels_indices.csv"):
-    import csv
-    if os.path.exists(csv_file):
-        csvfile = open(str(csv_file), newline='')
-        csv_lines = csvfile.readlines()
-        csvfile.close()
-    else:
-        import requests
-        url = "https://raw.githubusercontent.com/qiuqiangkong/audioset_classification/master/metadata/class_labels_indices.csv"
-        with requests.Session() as s:
-            download = s.get(url)
-            decoded_content = download.content.decode('utf-8')
-            csv_lines = decoded_content.splitlines()
-    labels = []
-    reader = csv.reader(csv_lines, delimiter=',')
-    headers = next(reader)
-    for row in reader:
-        labels.append(row[2])
-    return labels
-
-
 def read_csv(csv_file_path, fieldnames=None):
     with open(csv_file_path, encoding='utf-8') as csv_file:
         rows = csv.DictReader(csv_file, fieldnames=fieldnames)
@@ -516,16 +495,11 @@ class labeling_UI:
                                      is_random=is_random)
         self.sample_rows = sample_rows
 
-        # self.current_audio_index = 0
-        # if len(self.sample_rows) == 0:
-        #     print('!!! No samples to label, change location if possible !!!')
-        #     return None
         self.current_audio = self.sample_rows.next()
         if self.current_audio is None:
             print('!!! No samples to label, change location if possible !!!')
             return None
         self.sample_rows.set_reviewed(self.current_audio, self.username)
-        # self.labels = load_labels()
 
         if clippingFile != None:
             self.clippingDict = self.loadClippingData(clippingFile)
