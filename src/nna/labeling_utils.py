@@ -507,6 +507,7 @@ class labeling_UI:
         self.init_UI()
 
     def init_UI(self):
+
         text = widgets.Text(value=None,
                             placeholder='Other tags (coma seperated)',
                             description='',
@@ -623,6 +624,7 @@ class labeling_UI:
         else:
             clear_output()
             print('!!!! No more clips to review !!!!')
+            self.end = True
             return None
 
         # create new UI
