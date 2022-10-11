@@ -437,7 +437,7 @@ class SamplesDataset():
                 return row
         return None
 
-    def set_reviewed(self, row, username=True):
+    def set_reviewed(self, row, username='True'):
         row["Reviewed"] = username
         return row
 
