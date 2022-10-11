@@ -70,7 +70,7 @@ def ffmpeg_split_audio(
         # 'conda', 'run', '-n', 'speechEnv', 'ffmpeg', '-strict', '-2',
         backend_path,
         '-strict',
-        '-2', # allow non standardized experimental things, #TODO
+        '-2',  # allow non standardized experimental things, #TODO
         '-ss',
         str(start_time),
         '-t',
@@ -255,7 +255,11 @@ def splitmp3(input_mp3_file,
 
     elif backend == "ffmpeg":
         start_time, end_time, output_file = human_readable2ffmpeg_io(
-            input_mp3_file, start_time, end_time, out_folder, outputSuffix=outputSuffix)
+            input_mp3_file,
+            start_time,
+            end_time,
+            out_folder,
+            outputSuffix=outputSuffix)
 
         output, error = ffmpeg_split_audio(input_mp3_file,
                                            start_time,
@@ -424,8 +428,10 @@ display(debug_view)
 
 class SamplesDataset():
 
-    def __init__(self, rows, locations=None):
+    def __init__(self, rows, locations=None, is_random=False):
         self.rows = rows
+        if is_random:
+            random.shuffle(self.rows)
         self.filter_locations = locations
         self.index = 0
 
