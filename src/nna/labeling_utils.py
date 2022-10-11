@@ -435,7 +435,7 @@ class SamplesDataset():
         for row in self.rows:
             if self.is_available(row):
                 return row
-        return None
+        return None  # type: ignore
 
     def set_reviewed(self, row, username='True'):
         row["Reviewed"] = username
@@ -506,8 +506,10 @@ class labeling_UI:
         else:
             self.clippingDict = None
 
-        suggested_tags = self.get_AI_tags()
+        self.suggested_tags = self.get_AI_tags()
+        self.init_UI()
 
+    def init_UI(self):
         text = widgets.Text(value=None,
                             placeholder='Other tags (coma seperated)',
                             description='',
@@ -532,7 +534,7 @@ class labeling_UI:
                 icon=button_icon,
                 layout=widgets.Layout(width='auto'))
 
-        for tag in suggested_tags:
+        for tag in self.suggested_tags:
             self.items[tag + "_Predicted_TagButton"] = widgets.Button(
                 value=False,
                 description=tag,
@@ -668,8 +670,8 @@ class labeling_UI:
             return None
         self.sample_rows.set_reviewed(self.current_audio, self.username)
 
-        suggested_tags = self.get_AI_tags()
-        self.update_suggested_tags(suggested_tags)
+        self.suggested_tags = self.get_AI_tags()
+        self.update_suggested_tags()
         image_file, _ = find_image_loc(self.current_audio,
                                        self.samples_dir,
                                        s3=True)
@@ -704,12 +706,12 @@ class labeling_UI:
                 suggested_tags.add(tag)
 
         suggested_tags = sorted(list(suggested_tags - set(self.tags)))
-
-        return suggested_tags
+        self.suggested_tags = suggested_tags
+        return self.suggested_tags
 
     # @debug_view.capture(clear_output=True)
-    def update_suggested_tags(self, suggested_tags):
-        if not suggested_tags:
+    def update_suggested_tags(self,):
+        if not self.suggested_tags:
             return None
         old_suggested_tags = [
             key for key, value in self.items.items()
@@ -718,7 +720,7 @@ class labeling_UI:
         for key in old_suggested_tags:
             del self.items[key]
         # print(suggested_tags)
-        for tag in suggested_tags:
+        for tag in self.suggested_tags:
             self.items[tag + "_Predicted_TagButton"] = widgets.Button(
                 value=False,
                 description=tag,
