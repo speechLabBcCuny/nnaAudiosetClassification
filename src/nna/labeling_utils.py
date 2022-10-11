@@ -378,20 +378,6 @@ def write_csv(new_csv_file, rows_new, fieldnames=None):
         writer.writerows(rows_new)
 
 
-# def filter_samples(sample_rows, locations):
-#     # filter out ones with reviewed!=False
-#     # include given locations
-#     # include given labels
-#     locations = set(locations)
-#     filtered_rows = []
-#     for row in sample_rows:
-#         if row["Reviewed"] == "False" and (not locations or
-#                                            row["Site ID"] in locations):
-#             filtered_rows.append(row)
-
-#     return filtered_rows
-
-
 def sort_samples(sample_rows,):
     # sort by label
     # sort by location
@@ -523,35 +509,12 @@ class labeling_UI:
         now = datetime.datetime.now()
         timestamp = now.strftime('%m-%d-%y_%H:%M:%S')
         self.csv_file_name = "nna_labels_" + self.username + "_" + timestamp
-        if samples_csv == '':
-            print(f"No csv file provided, using samples_dir {samples_dir}")
-            self.mp3_splitted_files = listdir(str(self.samples_dir))
 
-            self.mp3_splitted_files = [
-                Path(f)
-                for f in self.mp3_splitted_files
-                if (".mp3" in f[-4:].lower() or ".flac" in f[-5:].lower())
-            ]
-            if self.model_tags:
-                self.mp3_splitted_files = [
-                    f for f in self.mp3_splitted_files
-                    if model_tags.get(f.name, None) != None
-                ]
-            if is_random:
-                random.shuffle(self.mp3_splitted_files)
-            row_list = []
-            for ff in self.mp3_splitted_files:
-                row = {tag: '0' for tag in tags}
-                row["clip_path"] = str(ff)
-                row_list.append(row)
-            self.sample_rows = SamplesDataset(row_list, locations)
-
-        else:
-            sample_rows = read_csv(samples_csv)
-            sample_rows = SamplesDataset(sample_rows, locations)
-            # sample_rows = filter_samples(sample_rows, locations)
-            # sample_rows = sort_samples(sample_rows)
-            self.sample_rows = sample_rows
+        sample_rows = read_csv(samples_csv)
+        sample_rows = SamplesDataset(sample_rows,
+                                     locations,
+                                     is_random=is_random)
+        self.sample_rows = sample_rows
 
         # self.current_audio_index = 0
         # if len(self.sample_rows) == 0:
