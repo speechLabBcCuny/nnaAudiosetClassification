@@ -458,7 +458,6 @@ class labeling_UI:
         username="",
         RESULTS_DIR="./",
         TEST_MODE=False,
-        model_tags={},
         tag_threshold=0.1,
         clippingFile=None,
         is_random=False,
@@ -472,7 +471,6 @@ class labeling_UI:
 
         self.TEST_MODE = TEST_MODE
         self.tag_threshold = tag_threshold
-        self.model_tags = model_tags
         self.samples_dir = samples_dir
         self.tags = tags
         self.RESULTS_DIR = Path(RESULTS_DIR)
@@ -506,7 +504,6 @@ class labeling_UI:
         else:
             self.clippingDict = None
 
-        self.suggested_tags = self.get_AI_tags()
         self.init_UI()
 
     def init_UI(self):
@@ -534,14 +531,6 @@ class labeling_UI:
                 icon=button_icon,
                 layout=widgets.Layout(width='auto'))
 
-        for tag in self.suggested_tags:
-            self.items[tag + "_Predicted_TagButton"] = widgets.Button(
-                value=False,
-                description=tag,
-                disabled=False,
-                icon="square",
-                layout=widgets.Layout(width='auto'))
-
         self.items["extra_Text"] = text
         self.items["save_Button"] = save_button
 
@@ -555,15 +544,6 @@ class labeling_UI:
                 grid_template_columns=
                 f"repeat({self.box_per_row}, {self.box_length}px)"))
 
-        predicted_grid_list = [
-            value for key, value in self.items.items()
-            if "_Predicted_TagButton" in key
-        ]
-        predicted_grid = widgets.GridBox(
-            predicted_grid_list,
-            layout=widgets.Layout(
-                grid_template_columns=
-                f"repeat({self.box_per_row}, {self.box_length}px)"))
         self.predicted_explanation = widgets.HTML(
             value=" <b>Computer generated labels, might be unrelated</b>",
             placeholder='',
@@ -571,22 +551,13 @@ class labeling_UI:
         )
 
         self.items["mp3_output"] = widgets.Output()
-        self.items["predicted_TagsOutput"] = widgets.Output()
         self.items["static_TagsOutput"] = widgets.Output()
 
         with self.items["static_TagsOutput"]:
             clear_output()
             display(static_grid)
-
-        with self.items["predicted_TagsOutput"]:
-            clear_output()
-            display(self.predicted_explanation)
-            display(predicted_grid)
-
         display(self.items["static_TagsOutput"])
         display(self.items["extra_Text"])
-        if self.model_tags:
-            display(self.items["predicted_TagsOutput"])
         display(self.items["save_Button"])
 
         display(self.items["mp3_output"])
@@ -670,8 +641,6 @@ class labeling_UI:
             return None
         self.sample_rows.set_reviewed(self.current_audio, self.username)
 
-        self.suggested_tags = self.get_AI_tags()
-        self.update_suggested_tags()
         image_file, _ = find_image_loc(self.current_audio,
                                        self.samples_dir,
                                        s3=True)
@@ -689,63 +658,6 @@ class labeling_UI:
             btn_object.icon = "square"
         else:
             btn_object.icon = "check-square"
-
-    # @debug_view.capture(clear_output=True)
-    def get_AI_tags(self):
-        # get AI generated labels
-        original, audioop = self.model_tags.get(
-            str(self.current_audio['Clip Path']), (None, None))
-        if (original, audioop) == (None, None):
-            return []
-        suggested_tags_index, suggested_tags_prob = (original[0] + audioop[0],
-                                                     original[1] + audioop[1])
-        suggested_tags = set()
-        for tag_index, prob in zip(suggested_tags_index, suggested_tags_prob):
-            if prob > self.tag_threshold:
-                tag = self.labels[tag_index]
-                suggested_tags.add(tag)
-
-        suggested_tags = sorted(list(suggested_tags - set(self.tags)))
-        self.suggested_tags = suggested_tags
-        return self.suggested_tags
-
-    # @debug_view.capture(clear_output=True)
-    def update_suggested_tags(self,):
-        if not self.suggested_tags:
-            return None
-        old_suggested_tags = [
-            key for key, value in self.items.items()
-            if "_Predicted_TagButton" in key
-        ]
-        for key in old_suggested_tags:
-            del self.items[key]
-        # print(suggested_tags)
-        for tag in self.suggested_tags:
-            self.items[tag + "_Predicted_TagButton"] = widgets.Button(
-                value=False,
-                description=tag,
-                disabled=False,
-                icon="square",
-                #style={'description_width': 'initial'},
-                layout=widgets.Layout(width='auto'))
-        for checkbox in self.items.keys():
-            if "_Predicted_TagButton" in checkbox:
-                self.items[checkbox].on_click(self.my_event_handler2)
-
-        predicted_grid_list = [
-            value for key, value in self.items.items()
-            if "_Predicted_TagButton" in key
-        ]
-
-        predicted_grid = widgets.GridBox(
-            predicted_grid_list,
-            layout=widgets.Layout(
-                grid_template_columns=
-                f"repeat({self.box_per_row}, {self.box_length}px)"))
-        with self.items["predicted_TagsOutput"]:
-            clear_output()
-            display(self.predicted_explanation)
-            display(predicted_grid)
 
     def loadClippingData(self, clippingFile):
         clippingDict = np.load(clippingFile)
