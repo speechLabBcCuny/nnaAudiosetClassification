@@ -520,15 +520,6 @@ class labeling_UI:
             tooltip='Description',
             icon='check')
 
-        # self.items = {
-        #     name + "_static_TagButton":
-        #     widgets.Button(value=False,
-        #                    description=name,
-        #                    disabled=False,
-        #                    icon="square",
-        #                    layout=widgets.Layout(width='auto'))
-        #     for name in self.tags
-        # }
         self.items = {}
         for name in self.tags:
             button_value = bool(self.current_audio[name] == '1')
@@ -713,17 +704,6 @@ class labeling_UI:
                 suggested_tags.add(tag)
 
         suggested_tags = sorted(list(suggested_tags - set(self.tags)))
-        #         suggested_tags_dict={} # [("speech",0.2)]
-        #         suggested_tags_set=set()
-        #         for tag_index,prob in zip(suggested_tags_index,suggested_tags_prob):
-        #             if prob>self.tag_threshold:
-        #                 tag=self.labels[tag_index]
-        #                 if tag not in suggested_tags_set:
-        #                     suggested_tags_dict[tag]=prob
-        #                     suggested_tags_set.add(tag)
-        #                 else:
-        #                     suggested_tags_dict[tag]= prob if prob>suggested_tags_dict[tag] else suggested_tags_dict[tag]
-        #         suggested_tags=suggested_tags_dict.items()
 
         return suggested_tags
 
@@ -744,7 +724,7 @@ class labeling_UI:
                 description=tag,
                 disabled=False,
                 icon="square",
-                #                                                         style={'description_width': 'initial'},
+                #style={'description_width': 'initial'},
                 layout=widgets.Layout(width='auto'))
         for checkbox in self.items.keys():
             if "_Predicted_TagButton" in checkbox:
@@ -766,6 +746,5 @@ class labeling_UI:
             display(predicted_grid)
 
     def loadClippingData(self, clippingFile):
-        import numpy as np
         clippingDict = np.load(clippingFile)
         return clippingDict
