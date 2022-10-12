@@ -614,6 +614,9 @@ class labeling_UI:
         self.write_rows2csv()
         # get new sample
         self.current_audio = self.sample_rows.next()
+        if self.current_audio is None:
+            print('!!! No samples to label, change location if possible !!!')
+            return None
 
         self.update_UI_with_current_audio()
 
@@ -632,10 +635,6 @@ class labeling_UI:
         # clear extra tags
         self.items["extra_Text"].value = ""
         self.items["save_Button"].icon = "square"
-
-        if self.current_audio is None:
-            print('!!! No samples to label, change location if possible !!!')
-            return None
 
         image_file, _ = find_image_loc(self.current_audio,
                                        self.samples_dir,
