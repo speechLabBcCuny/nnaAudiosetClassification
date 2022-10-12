@@ -568,7 +568,7 @@ class labeling_UI:
         self.items["save_Button"].on_click(self.save_button_func)
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
-                self.items[checkbox].on_click(self.my_event_handler2)
+                self.items[checkbox].on_click(self.reverse_square_box)
 
         self.items["question_answered"] = False
 
@@ -662,7 +662,7 @@ class labeling_UI:
                          img_height=self.img_height,
                          img_width=self.img_width)
 
-    def my_event_handler2(self, btn_object):
+    def reverse_square_box(self, btn_object):
         if btn_object.icon == "check-square":
             btn_object.icon = "square"
         else:
