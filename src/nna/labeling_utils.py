@@ -507,13 +507,18 @@ class labeling_UI:
             self.clippingDict = None
 
         self.init_UI()
+        self.update_UI_with_current_audio()
 
     def init_UI(self):
+
+        self.items = {}
 
         text = widgets.Text(value=None,
                             placeholder='Other tags (coma seperated)',
                             description='',
                             disabled=False)
+        self.items["extra_Text"] = text
+
         save_button = widgets.Button(
             value=False,
             description='Save',
@@ -521,11 +526,11 @@ class labeling_UI:
             button_style='',  # 'success', 'info', 'warning', 'danger' or ''
             tooltip='Description',
             icon='check')
+        self.items["save_Button"] = save_button
 
-        self.items = {}
         for name in self.tags:
-            button_value = bool(self.current_audio[name] == '1')
-            button_icon = "check-square" if button_value else "square"
+            button_value = False
+            button_icon = "square"
 
             self.items[name + "_static_TagButton"] = widgets.Button(
                 value=button_value,
@@ -533,9 +538,6 @@ class labeling_UI:
                 disabled=False,
                 icon=button_icon,
                 layout=widgets.Layout(width='auto'))
-
-        self.items["extra_Text"] = text
-        self.items["save_Button"] = save_button
 
         static_grid_list = [
             value for key, value in self.items.items()
@@ -546,12 +548,6 @@ class labeling_UI:
             layout=widgets.Layout(
                 grid_template_columns=
                 f"repeat({self.box_per_row}, {self.box_length}px)"))
-
-        self.predicted_explanation = widgets.HTML(
-            value=" <b>Computer generated labels, might be unrelated</b>",
-            placeholder='',
-            description='',
-        )
 
         self.items["mp3_output"] = widgets.Output()
         self.items["static_TagsOutput"] = widgets.Output()
@@ -569,18 +565,6 @@ class labeling_UI:
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
                 self.items[checkbox].on_click(self.reverse_square_box)
-
-        image_file, _ = find_image_loc(self.current_audio,
-                                       self.samples_dir,
-                                       s3=True)
-
-        play_html_modify(*find_file_loc(self.current_audio,
-                                        self.samples_dir,
-                                        s3=True),
-                         self.items,
-                         image_file=image_file,
-                         img_height=self.img_height,
-                         img_width=self.img_width)
 
     def update_row_with_UI_info(self):
         labels_from_UI = {}
@@ -628,12 +612,12 @@ class labeling_UI:
         self.update_row_with_UI_info()
         # save previous data
         self.write_rows2csv()
-
-        self.update_UI_with_new_sample()
-
-    def update_UI_with_new_sample(self):
         # get new sample
         self.current_audio = self.sample_rows.next()
+
+        self.update_UI_with_current_audio()
+
+    def update_UI_with_current_audio(self):
 
         # create new UI with new sample
         # if sample labeled before, tick label boxes
