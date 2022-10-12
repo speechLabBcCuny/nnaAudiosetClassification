@@ -570,8 +570,6 @@ class labeling_UI:
             if "TagButton" in checkbox:
                 self.items[checkbox].on_click(self.reverse_square_box)
 
-        self.items["question_answered"] = False
-
         image_file, _ = find_image_loc(self.current_audio,
                                        self.samples_dir,
                                        s3=True)
@@ -584,29 +582,34 @@ class labeling_UI:
                          img_height=self.img_height,
                          img_width=self.img_width)
 
-    def update_csv_write_file(self,):
-        csv_input = {}
+    def update_row_with_UI_info(self):
+        labels_from_UI = {}
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
                 if self.items[checkbox].icon == "check-square":
-                    csv_input[self.items[checkbox].description] = '1'
+                    labels_from_UI[self.items[checkbox].description] = '1'
+                elif "square":
+                    labels_from_UI[self.items[checkbox].description] = '0'
                 else:
-                    csv_input[self.items[checkbox].description] = '0'
+                    raise ValueError("Unknown icon")
 
         if self.current_audio['Reviewed'].lower() != 'false':
             print(
                 f'{self.current_audio["Clip Path"]} has been reviewed before!\n'
             )
-            print('last reviewed:', self.current_audio['Reviewed'], '\n')
+            print('last reviewed by:', self.current_audio['Reviewed'], '\n')
             print('overwriting...\n')
 
         for key, _ in self.current_audio.items():
             if '_r' in key:
                 org_value = self.current_audio[key[:-2]]
-                self.current_audio[key] = csv_input.get(key[:-2], org_value)
+                self.current_audio[key] = labels_from_UI.get(
+                    key[:-2], org_value)
 
         self.current_audio['extra_tags'] = self.items["extra_Text"].value
-        self.current_audio['Reviewed'] = self.username
+        self.sample_rows.set_reviewed(self.current_audio, self.username)
+
+    def write_rows2csv(self,):
 
         now = datetime.datetime.now()
         timestamp = now.strftime('%y-%m-%d_%H-%M-%S')
@@ -620,14 +623,12 @@ class labeling_UI:
 
     @debug_view.capture(clear_output=True)
     def save_button_func(self, btn_object):
+
+        # set current audio as reviewed
+        self.update_row_with_UI_info()
         # save previous data
-        if self.end == False:
-            self.update_csv_write_file()
-        else:
-            clear_output()
-            print('!!!! No more clips to review !!!!')
-            self.end = True
-            return None
+        self.write_rows2csv()
+
         self.update_UI_with_new_sample()
 
     def update_UI_with_new_sample(self):
@@ -635,6 +636,7 @@ class labeling_UI:
         self.current_audio = self.sample_rows.next()
 
         # create new UI with new sample
+        # if sample labeled before, tick label boxes
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
                 tag_name = checkbox.split('_')[0]
@@ -642,13 +644,14 @@ class labeling_UI:
                 button_icon = "check-square" if button_value else "square"
                 self.items[checkbox].value = button_value
                 self.items[checkbox].icon = button_icon
+
+        # clear extra tags
         self.items["extra_Text"].value = ""
         self.items["save_Button"].icon = "square"
 
         if self.current_audio is None:
             print('!!! No samples to label, change location if possible !!!')
             return None
-        self.sample_rows.set_reviewed(self.current_audio, self.username)
 
         image_file, _ = find_image_loc(self.current_audio,
                                        self.samples_dir,
