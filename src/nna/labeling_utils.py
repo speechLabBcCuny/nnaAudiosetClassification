@@ -631,7 +631,10 @@ class labeling_UI:
         self.update_UI_with_new_sample()
 
     def update_UI_with_new_sample(self):
-        # create new UI
+        # get new sample
+        self.current_audio = self.sample_rows.next()
+
+        # create new UI with new sample
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
                 tag_name = checkbox.split('_')[0]
@@ -641,7 +644,7 @@ class labeling_UI:
                 self.items[checkbox].icon = button_icon
         self.items["extra_Text"].value = ""
         self.items["save_Button"].icon = "square"
-        self.current_audio = self.sample_rows.next()
+
         if self.current_audio is None:
             print('!!! No samples to label, change location if possible !!!')
             return None
