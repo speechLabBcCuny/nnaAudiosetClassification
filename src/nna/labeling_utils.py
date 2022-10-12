@@ -400,16 +400,6 @@ class SamplesDataset():
         self.filter_locations = locations
         self.index = 0
 
-    def get_index(self,):
-        if self.index == len(self.rows) - 1:
-            self.index = 0
-        else:
-            self.index += 1
-        return self.index
-
-    def __getitem__(self, idx):
-        return self.rows[idx]
-
     def is_available(self, row):
         if row["Reviewed"].lower() == "false" and (not self.filter_locations or
                                                    row["Site ID"]
@@ -418,6 +408,18 @@ class SamplesDataset():
         else:
             return False
 
+    def get_index(self):
+        index = 0
+        for row in self.rows:
+            if self.is_available(row):
+                return index
+            else:
+                index += 1
+        return -1
+
+    def __getitem__(self, idx):
+        return self.rows[idx]
+
     def __len__(self):
         count = 0
         for row in self.rows():
@@ -425,17 +427,12 @@ class SamplesDataset():
                 count += 1
         return count
 
-    def next(self, unfiltered=True) -> Dict:
-        if unfiltered:
-            return self.next_unreviewed()
+    def next(self,) -> Dict:
+        index = self.get_index()
+        if index == -1:
+            return {}
         else:
-            return self.rows(self.get_index())
-
-    def next_unreviewed(self) -> Dict:
-        for row in self.rows:
-            if self.is_available(row):
-                return row
-        return None  # type: ignore
+            return self.rows[index]
 
     def set_reviewed(self, row, username='True'):
         if username.lower() == 'false':
@@ -496,10 +493,10 @@ class labeling_UI:
         self.sample_rows = sample_rows
 
         self.current_audio = self.sample_rows.next()
-        if self.current_audio is None:
-            print('!!! No samples to label, change location if possible !!!')
+        if not self.current_audio:
+            print(
+                '!!! No samples left to label, change location if possible !!!')
             return None
-        self.sample_rows.set_reviewed(self.current_audio, self.username)
 
         if clippingFile != None:
             self.clippingDict = self.loadClippingData(clippingFile)
@@ -614,14 +611,13 @@ class labeling_UI:
         self.write_rows2csv()
         # get new sample
         self.current_audio = self.sample_rows.next()
-        if self.current_audio is None:
+        if not self.current_audio:
             print('!!! No samples to label, change location if possible !!!')
             return None
 
         self.update_UI_with_current_audio()
 
     def update_UI_with_current_audio(self):
-
         # create new UI with new sample
         # if sample labeled before, tick label boxes
         for checkbox in self.items.keys():
