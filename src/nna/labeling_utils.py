@@ -411,9 +411,9 @@ class SamplesDataset():
         return self.rows[idx]
 
     def is_available(self, row):
-        if row["Reviewed"] == "False" and (not self.filter_locations or
-                                           row["Site ID"]
-                                           in self.filter_locations):
+        if row["Reviewed"].lower() == "false" and (not self.filter_locations or
+                                                   row["Site ID"]
+                                                   in self.filter_locations):
             return True
         else:
             return False
@@ -438,6 +438,8 @@ class SamplesDataset():
         return None  # type: ignore
 
     def set_reviewed(self, row, username='True'):
+        if username.lower() == 'false':
+            raise ValueError('username cannot be false')
         row["Reviewed"] = username
         return row
 
@@ -591,7 +593,7 @@ class labeling_UI:
                 else:
                     csv_input[self.items[checkbox].description] = '0'
 
-        if self.current_audio['Reviewed'] != 'False':
+        if self.current_audio['Reviewed'].lower() != 'false':
             print(
                 f'{self.current_audio["Clip Path"]} has been reviewed before!\n'
             )
@@ -626,7 +628,9 @@ class labeling_UI:
             print('!!!! No more clips to review !!!!')
             self.end = True
             return None
+        self.update_UI_with_new_sample()
 
+    def update_UI_with_new_sample(self):
         # create new UI
         for checkbox in self.items.keys():
             if "TagButton" in checkbox:
