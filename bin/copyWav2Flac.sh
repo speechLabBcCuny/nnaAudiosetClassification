@@ -16,7 +16,7 @@ K=${3:-1}
 N=${4:-1}
 
 
-find "$SRC" -name '*.wav' \
+find "$SRC" -iname '*.wav' \
     | sort \
     | sed -n "${K}~${N}p" \
     | while read fullwav ; do 
