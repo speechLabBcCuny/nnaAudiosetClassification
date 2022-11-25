@@ -48,11 +48,10 @@ if __name__ == '__main__':
         '--region',
         help='region-location_id such as anwr or stinchcomb etc',
         required=True)
-    parser.add_argument(
-        '--location',
-        help='location_id such as 11 or 14-Rocky etc',
-        required=True)
-    
+    parser.add_argument('--location',
+                        help='location_id such as 11 or 14-Rocky etc',
+                        required=True)
+
     parser.add_argument('-O',
                         '--output_folder',
                         help='output folder',
@@ -87,7 +86,8 @@ if __name__ == '__main__':
     location_id_filtered = region_filtered[region_filtered.locationId ==
                                            location]
     # print(len(location_id_filtered))
-    duration_filtered = location_id_filtered[location_id_filtered.durationSec > 0]
+    duration_filtered = location_id_filtered[
+        location_id_filtered.durationSec > 0]
     # print(len(duration_filtered.index))
 
     all_results_dict, files_w_errors = clippingutils.run_task_save(
