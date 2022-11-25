@@ -354,17 +354,26 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
         # usual ones
         if len(apath.parents) == 8:
             recorderId_startDateTime = apath.stem
-
-            recorderId_startDateTime = recorderId_startDateTime.split("_")
-            recorderId = recorderId_startDateTime[0]
             if debug > 0:
                 print(recorderId_startDateTime)
-            date = recorderId_startDateTime[1]
+            recorderId_startDateTime = recorderId_startDateTime.split("_")
+            # most of the recordings have format of recorderID_date_clock
+            # ex: S4A10422_20210521_235233.flac
+            if len(recorderId_startDateTime) == 3:
+                recorderId, date, hour_min_sec = recorderId_startDateTime
+            # collar data only has format of date_clock
+            # ex: 20210521_235233.flac
+            elif len(recorderId_startDateTime) == 2:
+                date, hour_min_sec = recorderId_startDateTime
+                recorderId = 'N/A'
+            else:
+                exceptions.append(apath)
+                return None
+
             if debug > 0:
                 print(date)
             year, month, day = date[0:4], date[4:6], date[6:8]
 
-            hour_min_sec = recorderId_startDateTime[2]
             if hour_min_sec is None:
                 print(apath)
             # hour = hour_min_sec[0:2]
@@ -467,7 +476,7 @@ def getLength(
     )
     output_b = result.communicate(b"\n")
     output = [i.decode("ascii") for i in output_b]
-    length: Union[float] = -1.0
+    length: float = -1.0
     if output[0] == "" or output[0] == "N/A":
         print("ERROR file is too short {}".format(input_video))
         print("command run with ERROR: {}".format(cmd))
