@@ -1,1 +1,0 @@
-This is for testing embeddings from wav2vec.
