@@ -63,7 +63,6 @@ def parse_rows(rows_picked, location, region, short, short_headers,
             datetime.timedelta(hours=3 * offset / (timestamps_per_row + 1))
             for offset in range(1, timestamps_per_row + 1)
         ]
-
         # Iterate through each timestamp offset
         for timestamp_offset in timestamp_offsets:
             # Create a new dictionary to store the row data
@@ -75,6 +74,8 @@ def parse_rows(rows_picked, location, region, short, short_headers,
 
             # Compute the timestamp for the current offset
             timestamp = datetime.datetime(year, month, day, hour=hour)
+            #timestamps represent timeperiod starting from 3 hours earlier
+            timestamp = timestamp - datetime.timedelta(hours=3)
             timestamp += timestamp_offset
             pd_row["TIMESTAMP"] = timestamp.strftime(TIMESTAMP_FORMAT)
 
