@@ -47,26 +47,45 @@ def get_random_rows(reader, file_per_location, station_years):
 
 
 def parse_rows(rows_picked, location, region, short, short_headers,
-               long_headers) -> list:
-
+               long_headers, timestamps_per_row):
+    # Determine which headers to use
     input_csv_headers = short_headers if short else long_headers
 
     pd_rows = []
+
+    # Iterate through each row
     for row in rows_picked:
+        # Extract the year, month, day, and hour from the row
         year, month, day, hour = [int(row[x]) for x in range(4)]
 
-        pd_row = {}
-        pd_row['location'] = location
-        pd_row['region'] = region.lower()
-        timestamp = datetime.datetime(year, month, day, hour=hour)
-        # timestamps represent timeperiod starting from 3 hours earlier
-        # we place them in the middle for finding best representation in audio
-        timestamp = timestamp - datetime.timedelta(hours=1.5)
-        pd_row['TIMESTAMP'] = timestamp.strftime(TIMESTAMP_FORMAT)
-        row[4:] = [float(x) for x in row[4:]]
-        for label, data in zip(input_csv_headers, row[4:]):
-            pd_row[label] = data
-        pd_rows.append(pd_row)
+        # Compute equally spaced timestamps within the 3-hour window
+        timestamp_offsets = [
+            datetime.timedelta(hours=3 * offset / (timestamps_per_row + 1))
+            for offset in range(1, timestamps_per_row + 1)
+        ]
+
+        # Iterate through each timestamp offset
+        for timestamp_offset in timestamp_offsets:
+            # Create a new dictionary to store the row data
+            pd_row = {}
+
+            # Add the location and region to the row
+            pd_row["location"] = location
+            pd_row["region"] = region.lower()
+
+            # Compute the timestamp for the current offset
+            timestamp = datetime.datetime(year, month, day, hour=hour)
+            timestamp += timestamp_offset
+            pd_row["TIMESTAMP"] = timestamp.strftime(TIMESTAMP_FORMAT)
+
+            # Convert the data values to floats and add them to the row
+            row[4:] = [float(x) for x in row[4:]]
+            for label, data in zip(input_csv_headers, row[4:]):
+                pd_row[label] = data
+
+            # Add the row to the list of rows
+            pd_rows.append(pd_row)
+
     return pd_rows
 
 
