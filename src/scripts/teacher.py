@@ -332,6 +332,7 @@ def generate_new_dataset(
     overwrite=True,
     sampling_rate=48000,
     label_row_by_threshold=True,
+    print_logs=True,
 ):
     # create dataset csv from picked rows
     # get related info and clip wav files
@@ -355,10 +356,11 @@ def generate_new_dataset(
         (sorted_filtered, start_time, _, _, _) = output
 
         if len(sorted_filtered.index) == 0:
-            print('--------------------------------------')
-            print('Not Found')
             not_found_rows.append((index, pred_row))
-            print(index, pred_row)
+            if print_logs:
+                print('--------------------------------------')
+                print('Not Found')
+                print(index, pred_row)
             continue
 
         if len(sorted_filtered.index) > 1:
@@ -397,7 +399,7 @@ def generate_new_dataset(
 
         row['Clip Path'] = out_file
         row['Comments'] = ''
-        if dry_run:
+        if dry_run and print_logs:
             print('--------------------------------------')
             # print(index, pred_row)
             print(out_file)
@@ -408,7 +410,7 @@ def generate_new_dataset(
 
 
 def write_csv(new_csv_file, rows_new, fieldnames=None):
-    with open(new_csv_file, 'w', newline='') as csvfile:
+    with open(new_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
         if fieldnames is None:
             fieldnames = rows_new[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -571,8 +573,6 @@ def setup(versiontag=None,):
         'Airc': 'aircraft',
         'Sil': 'silence'
     }
-
-    
 
     config['excell_label_headers'] = [
         'Anth', 'Bio', 'Geo', 'Sil', 'Auto', 'Airc', 'Mach', 'Flare', 'Bird',
