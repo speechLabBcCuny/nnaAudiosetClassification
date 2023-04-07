@@ -697,7 +697,7 @@ def find_filesv2(location,
         while i < len(sorted_filtered.index):
             # if recordings are not continues
             if timestamps[i + 1] != timestamp_ends[i]:
-                print('123')
+                # print('123')
                 return site_filtered[
                     0:0], start_time, end_time, start_time_org, end_time_org
             i += 1
