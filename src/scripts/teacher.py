@@ -343,7 +343,8 @@ def generate_new_dataset(
     for index, pred_row in pred_df.iterrows():
         row = {}
         start_time = pred_row['TIMESTAMP']
-        start_time = datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
+        if isinstance(start_time, str):
+            start_time = datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
 
         output = find_filesv2(pred_row['location'],
                               pred_row['region'],
