@@ -58,7 +58,7 @@ def parse_row(row, location, region, input_csv_headers):
     pd_row = {}
 
     # Add the location and region to the row
-    pd_row['location'] = location
+    pd_row['location'] = location.lower()
     pd_row['region'] = region.lower()
 
     # Compute the timestamp for the current offset
@@ -192,8 +192,14 @@ def get_bin_index(interval_index, timestamp):
 def get_weather_index(weather_data,
                       timestamp_fromat=TIMESTAMP_FORMAT,
                       weather_data_freq=WEATER_DATA_FREQ):
-    weather_data['timestamp_start'] = weather_data['TIMESTAMP'].apply(
-        lambda x: pd.to_datetime(x, format=timestamp_fromat))
+
+    if not pd.api.types.is_datetime64_dtype(weather_data['TIMESTAMP']):
+        # Do nothing, the column is already in datetime type
+        weather_data['timestamp_start'] = weather_data['TIMESTAMP'].apply(
+            lambda x: pd.to_datetime(x, format=timestamp_fromat))
+    else:
+        weather_data['timestamp_start'] = weather_data['TIMESTAMP']
+
     weather_data['timestamp_end'] = weather_data[
         'timestamp_start'] + pd.Timedelta(seconds=weather_data_freq)
     weather_data.sort_values(by='timestamp_start', inplace=True)
@@ -221,8 +227,14 @@ def get_random_timestamp(start, end):
     return random_timestamp
 
 
-def get_weather_rows(filtered_files, weather_data, file_per_location):
-    interval_index = get_weather_index(weather_data)
+def get_weather_rows(filtered_files,
+                     weather_data,
+                     file_per_location,
+                     timestamp_fromat=TIMESTAMP_FORMAT,
+                     weather_data_freq=WEATER_DATA_FREQ):
+    interval_index = get_weather_index(weather_data,
+                                       timestamp_fromat=timestamp_fromat,
+                                       weather_data_freq=weather_data_freq)
     valid_indices = []
     valid_timestamps = []
 
@@ -241,3 +253,33 @@ def get_weather_rows(filtered_files, weather_data, file_per_location):
     weather_rows.loc[:, 'timestamp_orig_weather'] = weather_rows['TIMESTAMP']
     weather_rows.loc[:, 'TIMESTAMP'] = valid_timestamps
     return weather_rows
+
+
+def load_neon_data(tool_weather_data_path,
+                   length=5,
+                   location='',
+                   region='',
+                   local_time_zone='America/Anchorage'):
+    neon_files = glob.glob(f'{tool_weather_data_path}/*TOOL*/*{length}min*.csv')
+    neon_df = []
+    for file in neon_files:
+        w_d = pd.read_csv(file)
+        w_d['startDateTime'] = pd.to_datetime(
+            w_d['startDateTime']).dt.tz_convert(local_time_zone).dt.tz_localize(
+                None)
+        w_d['endDateTime'] = pd.to_datetime(w_d['endDateTime']).dt.tz_convert(
+            local_time_zone).dt.tz_localize(None)
+        if location != '':
+            w_d['location'] = location.lower()
+        if region != '':
+            w_d['region'] = region.lower()
+
+        w_d['TIMESTAMP'] = w_d['startDateTime']
+        neon_df.append(w_d)
+    # priPrecipFinalQF is the quality flag for precipitation
+    # 0 is good, 1 is bad
+    neon_df = pd.concat(neon_df)
+    neon_df = neon_df.sort_values(by=['startDateTime'])
+    neon_df = neon_df.reset_index(drop=True)
+
+    return neon_df
