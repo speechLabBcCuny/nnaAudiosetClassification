@@ -1,16 +1,36 @@
 """
 Copy wav files in a directory tree to another directory tree of flac files.
-If third and fourth arguments (K and N) are provided, then take every Nth
-filename starting at position K (for parallelization across several
-simultaneous runs).
+
 """
-import sys
 import csv
-import fcntl
+import argparse
+import concurrent.futures
 from pathlib import Path
-from nna.labeling_utils import run_cmd
+import threading
+import subprocess
 
 CSV_FILE = "processed_files.csv"
+# Create a global lock for CSV file writing
+CSV_FILE_LOCK = threading.Lock()
+
+
+def run_cmd(cmd, dry_run=False, verbose=True):
+    if dry_run:
+        return ''.join(cmd), '\n cmd not run, dry_run is True', 'no run'
+
+    proc = subprocess.Popen(cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True)
+    output, error = proc.communicate()
+
+    if proc.returncode != 0 and verbose:
+        print('---------')
+        print(cmd)
+        print('Output: \n' + output)
+        print('Error: \n' + error)
+
+    return output, error, proc.returncode
 
 
 def load_processed_files():
@@ -27,33 +47,44 @@ def load_processed_files():
     return processed_files
 
 
-def process_wav_files(src_dir, dst_dir, k=1, n=1, dry_run=False):
-    wav_files = get_wav_files(src_dir, k, n)
+def process_wav_files(src_dir, dst_dir, dry_run=False):
+    wav_files = get_wav_files(src_dir)
     errors = []
     processed_files = load_processed_files()
 
-    for fullwav in wav_files:
-        error = process_single_wav_file(src_dir, dst_dir, fullwav,
-                                        processed_files, dry_run)
-        if error:
-            errors.append((fullwav, error))
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future_to_wav = {
+            executor.submit(process_single_wav_file, src_dir, dst_dir, fullwav,
+                            processed_files, dry_run): fullwav
+            for fullwav in wav_files
+        }
+        for future in concurrent.futures.as_completed(future_to_wav):
+            fullwav = future_to_wav[future]
+            try:
+                error = future.result()
+                if error:
+                    errors.append((fullwav, error))
+            except Exception as exc:
+                print(f"{fullwav!r} generated an exception: {exc}")
 
     print_errors(errors)
 
 
-def get_wav_files(src_dir, k, n):
+def get_wav_files(src_dir):
     wav_files = sorted([
         path for path in Path(src_dir).rglob("*")
         if path.suffix.lower() == ".wav"
     ])
-    wav_files = wav_files[k - 1::n]
     return wav_files
 
 
-def process_single_wav_file(src_dir, dst_dir, fullwav, processed_files,
-                            dry_run):
+def process_single_wav_file(src_dir,
+                            dst_dir,
+                            fullwav,
+                            processed_files,
+                            dry_run,
+                            ffmpeg_path="/home/enis/sbin/ffmpeg"):
     if str(fullwav) in processed_files:
-        # print(f"Skipping {fullwav} as it's already processed.")
         return None
 
     wav = fullwav.relative_to(src_dir)
@@ -61,16 +92,16 @@ def process_single_wav_file(src_dir, dst_dir, fullwav, processed_files,
 
     create_directory(dst_dir, wav)
     _, error, returncode = run_cmd(
-        ["ffmpeg", "-y", "-nostdin", "-i",
-         str(fullwav),
-         str(outfile)],
+        [
+            ffmpeg_path, "-y", "-nostdin", "-loglevel", "fatal", "-i",
+            str(fullwav),
+            str(outfile)
+        ],
         dry_run=dry_run,
     )
 
     if returncode != 0:
         print(f"Error processing {fullwav}: {error}")
-    # else:
-    #     print(f"Successfully processed {fullwav}")
 
     append_to_csv(fullwav, outfile, error)
     return error
@@ -82,11 +113,10 @@ def create_directory(dst_dir, wav):
 
 
 def append_to_csv(fullwav, outfile, error):
-    with open(CSV_FILE, "a", newline="", encoding="utf-8") as csvfile:
-        fcntl.flock(csvfile.fileno(), fcntl.LOCK_EX)
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow([str(fullwav), str(outfile), error or ""])
-        fcntl.flock(csvfile.fileno(), fcntl.LOCK_UN)
+    with CSV_FILE_LOCK:
+        with open(CSV_FILE, "a", newline="", encoding="utf-8") as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow([str(fullwav), str(outfile), error or ""])
 
 
 def print_errors(errors):
@@ -97,22 +127,19 @@ def print_errors(errors):
 
 
 def parse_arguments():
-    argc = len(sys.argv)
-    if argc < 3 or argc > 6:
-        print(f"Usage: {sys.argv[0]} src_dir dst_dir [k n] [--dry-run]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--src_dir", type=str, help="Source directory path")
+    parser.add_argument("--dst_dir",
+                        type=str,
+                        help="Destination directory path")
+    parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
 
-    src_dir = Path(sys.argv[1])
-    dst_dir = Path(sys.argv[2])
-    k = int(sys.argv[3]) if argc > 3 and sys.argv[3].isdigit() else 1
-    n = int(sys.argv[4]) if argc > 4 and sys.argv[4].isdigit() else 1
-    dry_run = "--dry-run" in sys.argv
-
-    return src_dir, dst_dir, k, n, dry_run
+    args = parser.parse_args()
+    return args.src_dir, args.dst_dir, args.dry_run
 
 
 if __name__ == "__main__":
-    # Initialize the CSV file with headers if it doesn't exist
+    # Initialize the CSV file with headers if it doesn"t exist
     if not Path(CSV_FILE).exists():
         with open(CSV_FILE, "w", newline="", encoding="utf-8") as csvfile_g:
             csv_writer_g = csv.writer(csvfile_g)

@@ -304,7 +304,7 @@ def splitmp3(input_mp3_file,
     return output_file
 
 
-def run_cmd(cmd, dry_run=False):
+def run_cmd(cmd, dry_run=False, verbose=True):
     if dry_run:
         return ''.join(cmd), '\n cmd not run, dry_run is True', 'no run'
 
@@ -314,7 +314,7 @@ def run_cmd(cmd, dry_run=False):
                             text=True)
     output, error = proc.communicate()
 
-    if proc.returncode != 0:
+    if proc.returncode != 0 and verbose:
         print('---------')
         print(cmd)
         print('Output: \n' + output)
