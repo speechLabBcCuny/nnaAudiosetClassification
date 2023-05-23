@@ -16,7 +16,6 @@ import signal
 CSV_FILE = "processed_files.csv"
 # Create a global lock for CSV file writing
 CSV_FILE_LOCK = threading.Lock()
-MAX_WORKERS = 10  # you can adjust this number based on your system performance
 
 
 def run_cmd(cmd, dry_run=False, verbose=True, timeout=None):
@@ -104,13 +103,14 @@ def get_wav_files_left(src_dir):
     return wav_files_to_process
 
 
-def process_wav_files(src_dir, dst_dir, dry_run=False):
+def process_wav_files(src_dir, dst_dir, dry_run=False, max_workers=10):
     errors = []
 
     wav_files_to_process = get_wav_files_left(src_dir)
 
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=MAX_WORKERS) as executor:
+            max_workers=max_workers) as executor:
+
         future_to_wav = {
             executor.submit(process_single_wav_file, src_dir, dst_dir, fullwav,
                             dry_run): fullwav
@@ -192,9 +192,13 @@ def parse_arguments():
                         type=str,
                         help="Destination directory path")
     parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
+    parser.add_argument("--max_workers",
+                        type=int,
+                        default=10,
+                        help="Maximum number of worker threads")
 
     args = parser.parse_args()
-    return args.src_dir, args.dst_dir, args.dry_run
+    return args.src_dir, args.dst_dir, args.dry_run, args.max_workers
 
 
 if __name__ == "__main__":
@@ -205,4 +209,5 @@ if __name__ == "__main__":
             csv_writer_g.writerow(
                 ["Source File", "Destination File", "Error", "Return Code"])
 
-    process_wav_files(*parse_arguments())
+    src_dir_g, dst_dir_g, dry_run_g, max_workers_g = parse_arguments()
+    process_wav_files(src_dir_g, dst_dir_g, dry_run_g, max_workers_g)
