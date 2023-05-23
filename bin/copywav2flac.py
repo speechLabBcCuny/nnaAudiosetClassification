@@ -8,12 +8,15 @@ import concurrent.futures
 from pathlib import Path
 import threading
 import subprocess
+from tqdm import tqdm
+
 import shlex
 import signal
 
 CSV_FILE = "processed_files.csv"
 # Create a global lock for CSV file writing
 CSV_FILE_LOCK = threading.Lock()
+MAX_WORKERS = 10  # you can adjust this number based on your system performance
 
 
 def run_cmd(cmd, dry_run=False, verbose=True, timeout=None):
@@ -47,7 +50,7 @@ def run_cmd(cmd, dry_run=False, verbose=True, timeout=None):
 
     except subprocess.TimeoutExpired:
         # Handle timeout if specified
-        process.kill()
+        process.kill()  #type: ignore
         return None, 'Command execution timed out', -1
 
     except Exception as e:
@@ -106,13 +109,16 @@ def process_wav_files(src_dir, dst_dir, dry_run=False):
 
     wav_files_to_process = get_wav_files_left(src_dir)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_WORKERS) as executor:
         future_to_wav = {
             executor.submit(process_single_wav_file, src_dir, dst_dir, fullwav,
                             dry_run): fullwav
             for fullwav in wav_files_to_process
         }
-        for future in concurrent.futures.as_completed(future_to_wav):
+        for future in tqdm(concurrent.futures.as_completed(future_to_wav),
+                           total=len(wav_files_to_process),
+                           desc="Processing wav files"):
             fullwav = future_to_wav[future]
             try:
                 error = future.result()

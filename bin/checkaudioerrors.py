@@ -1,10 +1,16 @@
 import sys
 import csv
 import subprocess
+from tqdm import tqdm
+import concurrent.futures
 from collections import defaultdict
 from pathlib import Path
+import threading
+
+lock = threading.Lock()
 
 CSV_FILE = "audio_error_files.csv"
+MAX_WORKERS = 10  # you can adjust this number based on your system performance
 
 AUDIO_EXTENSIONS = [".wav", ".mp3", ".flac", ".m4a", ".aac", ".ogg", ".wma"]
 
@@ -14,8 +20,20 @@ def check_audio_files(folder_path, ffprobe_path="/home/enis/sbin/ffprobe"):
     audio_files = sorted(
         [path for path in files if path.suffix.lower() in AUDIO_EXTENSIONS])
 
-    for audio_file in audio_files:
-        check_audio_file(audio_file, ffprobe_path=ffprobe_path)
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(check_audio_file, audio_file, ffprobe_path):
+            audio_file for audio_file in audio_files
+        }
+        for future in tqdm(concurrent.futures.as_completed(futures),
+                           total=len(futures),
+                           ncols=70):
+            try:
+                future.result()
+            except Exception as exc:
+                audio_file = futures[future]
+                print(f'File {audio_file} generated an exception: {exc}')
 
     print_extension_counts(files)
 
@@ -35,15 +53,16 @@ def check_audio_file(wav_file, ffprobe_path="/home/enis/sbin/ffprobe"):
         output = e.output
 
     if "error" in output.lower():
-        print(f"Error in {wav_file}:")
-        print(output)
+        # print(f"Error in {wav_file}:")
+        # print(output)
         write_to_csv(wav_file, output)
 
 
 def write_to_csv(wav_file, error_message):
-    with open(CSV_FILE, "a", newline="", encoding="utf-8") as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow([str(wav_file), error_message])
+    with lock:
+        with open(CSV_FILE, "a", newline="", encoding="utf-8") as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow([str(wav_file), error_message])
 
 
 def print_extension_counts(files):
