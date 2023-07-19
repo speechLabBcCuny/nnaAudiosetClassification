@@ -10,9 +10,6 @@ import threading
 import subprocess
 from tqdm import tqdm
 
-import shlex
-import signal
-
 CSV_FILE = "processed_files.csv"
 # Create a global lock for CSV file writing
 CSV_FILE_LOCK = threading.Lock()
@@ -103,7 +100,11 @@ def get_wav_files_left(src_dir):
     return wav_files_to_process
 
 
-def process_wav_files(src_dir, dst_dir, dry_run=False, max_workers=10):
+def process_wav_files(src_dir,
+                      dst_dir,
+                      dry_run=False,
+                      max_workers=10,
+                      ffmpeg_path="/home/enis/sbin/ffmpeg"):
     errors = []
 
     wav_files_to_process = get_wav_files_left(src_dir)
@@ -113,7 +114,7 @@ def process_wav_files(src_dir, dst_dir, dry_run=False, max_workers=10):
 
         future_to_wav = {
             executor.submit(process_single_wav_file, src_dir, dst_dir, fullwav,
-                            dry_run): fullwav
+                            dry_run, ffmpeg_path): fullwav
             for fullwav in wav_files_to_process
         }
         for future in tqdm(concurrent.futures.as_completed(future_to_wav),
@@ -157,8 +158,8 @@ def process_single_wav_file(src_dir,
     )
     if returncode != 0:
         print(f"Error processing {fullwav}: {error}")
-        if error == '':
-            error = 'Error: no error message'
+        if error == "":
+            error = "Error: no error message"
 
     append_to_csv(fullwav, outfile, error, returncode)
     return error
@@ -196,9 +197,14 @@ def parse_arguments():
                         type=int,
                         default=10,
                         help="Maximum number of worker threads")
+    parser.add_argument("--ffmpeg_path",
+                        type=str,
+                        default="/home/enis/sbin/ffmpeg",
+                        help="Path to the ffmpeg executable")
 
     args = parser.parse_args()
-    return args.src_dir, args.dst_dir, args.dry_run, args.max_workers
+    return (args.src_dir, args.dst_dir, args.dry_run, args.max_workers,
+            args.ffmpeg_path)
 
 
 if __name__ == "__main__":
@@ -208,6 +214,7 @@ if __name__ == "__main__":
             csv_writer_g = csv.writer(csvfile_g)
             csv_writer_g.writerow(
                 ["Source File", "Destination File", "Error", "Return Code"])
-
-    src_dir_g, dst_dir_g, dry_run_g, max_workers_g = parse_arguments()
-    process_wav_files(src_dir_g, dst_dir_g, dry_run_g, max_workers_g)
+    (src_dir_g, dst_dir_g, dry_run_g, max_workers_g,
+     ffmpeg_path_g) = parse_arguments()
+    process_wav_files(src_dir_g, dst_dir_g, dry_run_g, max_workers_g,
+                      ffmpeg_path_g)
