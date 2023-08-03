@@ -227,13 +227,9 @@ def get_random_timestamp(start, end):
     return random_timestamp
 
 
-def get_weather_rows(filtered_files,
-                     weather_data,
-                     file_per_location,
-                     timestamp_fromat=TIMESTAMP_FORMAT,
-                     weather_data_freq=WEATER_DATA_FREQ):
+def get_weather_rows(filtered_files, weather_data, file_per_location,
+                     weather_data_freq):
     interval_index = get_weather_index(weather_data,
-                                       timestamp_fromat=timestamp_fromat,
                                        weather_data_freq=weather_data_freq)
     valid_indices = []
     valid_timestamps = []
@@ -250,8 +246,8 @@ def get_weather_rows(filtered_files,
             valid_timestamps.append(random_timestamp)
 
     weather_rows = weather_data.iloc[valid_indices].copy()
-    weather_rows.loc[:, 'timestamp_orig_weather'] = weather_rows['TIMESTAMP']
-    weather_rows.loc[:, 'TIMESTAMP'] = valid_timestamps
+    weather_rows.loc[:, 'timestamp_orig_weather'] = weather_rows['timestamp']
+    weather_rows.loc[:, 'timestamp'] = valid_timestamps
     return weather_rows
 
 
