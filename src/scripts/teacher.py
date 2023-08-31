@@ -249,7 +249,7 @@ def generate_new_row(dataset_version, model_version_tag, region, location,
     row = {}
     row['data_version'] = dataset_version
     row['Annotator'] = model_version_tag
-    row['Site ID'] = location
+    # row['Site ID'] = location
     row['location'] = location
     row['region'] = region
     row['Comments'] = ''
