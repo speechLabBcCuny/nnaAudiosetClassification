@@ -241,7 +241,7 @@ def cut_corresponding_clip(
     return out_file
 
 
-def generate_new_row(dataset_version, model_version_tag, location,
+def generate_new_row(dataset_version, model_version_tag, region, location,
                      orig_filename, length, start_time):
     '''
         Generate single row for dataset with partial info.
@@ -249,7 +249,10 @@ def generate_new_row(dataset_version, model_version_tag, location,
     row = {}
     row['data_version'] = dataset_version
     row['Annotator'] = model_version_tag
-    row['Site ID'] = location
+    # row['Site ID'] = location
+    row['location'] = location
+    row['region'] = region
+    row['Comments'] = ''
     row['File Name'] = str(orig_filename)
     row['Start Time'] = datetime.strftime(
         start_time,  # type: ignore
@@ -262,7 +265,14 @@ def generate_new_row(dataset_version, model_version_tag, location,
         start_time,  # type: ignore
         '%m/%d/%Y')
     row['Length'] = '00:00:10.000000'
-
+    row['Reviewed'] = 'false'
+    row['extra_tags'] = ''
+    row['start_date_time'] = datetime.strftime(start_time,
+                                               '%Y-%m-%dT%H:%M:%S.%f')
+    row['end_date_time'] = datetime.strftime(
+        start_time +  # type: ignore
+        timedelta(seconds=length),
+        '%Y-%m-%dT%H:%M:%S.%f')
     return row
 
 
@@ -332,17 +342,21 @@ def generate_new_dataset(
     overwrite=True,
     sampling_rate=48000,
     label_row_by_threshold=True,
+    print_logs=True,
 ):
     # create dataset csv from picked rows
     # get related info and clip wav files
+    # needs region,location,timestamp in pred_df
+    # needs file_properties_df
 
     new_dataset_csv = []
     not_found_rows = []
 
     for index, pred_row in pred_df.iterrows():
         row = {}
-        start_time = pred_row['TIMESTAMP']
-        start_time = datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
+        start_time = pred_row['timestamp']
+        if isinstance(start_time, str):
+            start_time = datetime.strptime(start_time, '%Y-%m-%d_%H:%M:%S')
 
         output = find_filesv2(pred_row['location'],
                               pred_row['region'],
@@ -355,10 +369,11 @@ def generate_new_dataset(
         (sorted_filtered, start_time, _, _, _) = output
 
         if len(sorted_filtered.index) == 0:
-            print('--------------------------------------')
-            print('Not Found')
             not_found_rows.append((index, pred_row))
-            print(index, pred_row)
+            if print_logs:
+                print('--------------------------------------')
+                print('Not Found')
+                print(index, pred_row)
             continue
 
         if len(sorted_filtered.index) > 1:
@@ -366,9 +381,10 @@ def generate_new_dataset(
 
         location = pred_row['location']
         region = pred_row['region']
+        year = pred_row['timestamp'].year
 
         orig_row = sorted_filtered.iloc[0]
-        row = generate_new_row(dataset_version, versiontag, location,
+        row = generate_new_row(dataset_version, versiontag, region, location,
                                orig_row.name, length, start_time)
         if label_row_by_threshold:
             row = label_row_by_thresholds(
@@ -379,7 +395,7 @@ def generate_new_dataset(
                 labels_thresholds,
                 excell_labels_2_pdnames=excell_labels_2_names)
         # clip and save audio file
-        output_folder = f'{split_out_path}{versiontag}/{region}/{location}/'
+        output_folder = f'{split_out_path}{versiontag}/audio_{dataset_version}/{region}/{location}/{year}/'
         Path(output_folder).mkdir(exist_ok=True, parents=True)
 
         clip_start_time = start_time
@@ -395,9 +411,9 @@ def generate_new_dataset(
                                           overwrite=overwrite,
                                           sampling_rate=sampling_rate)
 
-        row['Clip Path'] = out_file
+        row['Clip Path'] = str(out_file)
         row['Comments'] = ''
-        if dry_run:
+        if dry_run and print_logs:
             print('--------------------------------------')
             # print(index, pred_row)
             print(out_file)
@@ -408,7 +424,7 @@ def generate_new_dataset(
 
 
 def write_csv(new_csv_file, rows_new, fieldnames=None):
-    with open(new_csv_file, 'w', newline='') as csvfile:
+    with open(new_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
         if fieldnames is None:
             fieldnames = rows_new[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -571,8 +587,6 @@ def setup(versiontag=None,):
         'Airc': 'aircraft',
         'Sil': 'silence'
     }
-
-    
 
     config['excell_label_headers'] = [
         'Anth', 'Bio', 'Geo', 'Sil', 'Auto', 'Airc', 'Mach', 'Flare', 'Bird',

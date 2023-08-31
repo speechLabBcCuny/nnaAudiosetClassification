@@ -3,9 +3,11 @@
 import csv
 import datetime
 import glob
-import os
 import subprocess
 import sys
+import json
+import shlex
+import concurrent.futures
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
@@ -458,33 +460,74 @@ def change_sampling_rate(input_file, output_file, sampling_rate, dry_run=False):
 
 
 # example usage in ../notebooks/Labeling/save_file_properties.ipynb
-def getLength(
-    input_video,
+
+
+def get_media_info(
+    file_path,
     ffprobe_path="/scratch/enis/conda/envs/speechEnv/bin/ffprobe",
+    verbose=False,
 ):
-    input_video = str(input_video)
+    cmd = f"{ffprobe_path} -v quiet -print_format json -show_format"
+    args = shlex.split(cmd)
+    args.append(file_path)
 
-    cmd = []
-    cmd.extend([
-        ffprobe_path, "-i", "{}".format(input_video), "-show_entries",
-        "format=duration", "-v", "quiet"
-    ])
-    result = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    output_b = result.communicate(b"\n")
-    output = [i.decode("ascii") for i in output_b]
-    length: float = -1.0
-    if output[0] == "" or output[0] == "N/A":
-        print("ERROR file is too short {}".format(input_video))
-        print("command run with ERROR: {}".format(cmd))
+    try:
+        # run the ffprobe process, decode stdout into utf-8 & convert to JSON
+        ffprobe_output = subprocess.check_output(args).decode("utf-8")
+        ffprobe_output = json.loads(ffprobe_output)
+
+        # just grab the duration
+        info = (ffprobe_output["format"])
+
+        return info, None
+
+    except subprocess.CalledProcessError as e:
+        if verbose:
+            print("ffprobe encountered an error with this file:", e)
+        return {}, str(e)
+
+    except Exception as e:
+        if verbose:
+            print("An error occurred:", e)
+        return {}, str(e)
+
+
+def get_media_duration(
+        file_path,
+        ffprobe_path="/scratch/enis/conda/envs/speechEnv/bin/ffprobe",
+        verbose=False):
+    info, error = get_media_info(file_path, ffprobe_path, verbose)
+    if error:
+        return -1, error
     else:
-        output_stdout = output[0]
-        length = float(output_stdout.split("\n")[1].split("=")[1])
+        duration = float(info["duration"])
+        return duration, error
 
-    return length
+
+def concurrent_get_media_duration(
+        files,
+        ffprobe_path="/scratch/enis/conda/envs/speechEnv/bin/ffprobe",
+        verbose=False):
+    filesWError = []
+    length_dict = {}
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(get_media_duration, file, ffprobe_path, verbose):
+            file for file in files
+        }
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            if i % 1000 == 0:
+                print(f'Progress: {i/len(files):.2%}')
+            file = futures[future]
+            try:
+                duration, error = future.result()
+                if error:
+                    filesWError.append((file, error))
+                else:
+                    length_dict[file] = duration
+            except Exception as exc:
+                print(f"An exception occurred with file {file}: {exc}")
+    return length_dict, filesWError
 
 
 def list_files(search_path: str = "/search_path/",
@@ -697,7 +740,7 @@ def find_filesv2(location,
         while i < len(sorted_filtered.index):
             # if recordings are not continues
             if timestamps[i + 1] != timestamp_ends[i]:
-                print('123')
+                # print('123')
                 return site_filtered[
                     0:0], start_time, end_time, start_time_org, end_time_org
             i += 1
