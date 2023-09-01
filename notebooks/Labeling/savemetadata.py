@@ -164,30 +164,26 @@ def get_new_files(new_file_list, current_file_properties_df=None):
     return new_file_path_list
 
 
-def parse_file_paths(file_paths, parent_path=''):
+def parse_file_paths(file_paths,):
     parsed_data = {}
     exceptions = []
 
     for file_path in file_paths:
-        # Ensure the path starts with the parent_path
-        if not file_path.startswith(parent_path):
-            exceptions.append(file_path)
-            continue
 
-        # Removing the parent path and
-        #  splitting the remaining path into segments
-        segments = os.path.relpath(file_path, parent_path).split(os.sep)
+        segments = file_path.split(os.sep)
 
         # If there are not enough segments, add to exceptions
         if len(segments) < 4:
             exceptions.append(file_path)
             continue
 
-        # Extracting the values based on segments
-        region = segments[0]
-        location = segments[1]
-        year = segments[2]
-
+        # Extracting the values based on the last 4 segments
+        region = segments[-4]
+        location = segments[-3]
+        year = segments[-2]
+        if not year.isdigit():
+            exceptions.append(file_path)
+            continue
         # Splitting the filename based on underscores
         filename_parts = segments[-1].split('_')
 
@@ -271,7 +267,9 @@ def parse_args(args=None):
     parser.add_argument('--search_path',
                         default='./',
                         help='Path to search for audio files,' +
-                        ' suggested to use absolute path')
+                        ' suggested to use absolute path' +
+                        'last part of the path should have format of ' +
+                        ' /region/location/year/audiofile.extension')
     parser.add_argument(
         '--search_parent_path',
         default='',
@@ -311,13 +309,8 @@ def main_logic(args):
     new_metadata_path = Path(args.new_metadata_path)
     log_folder = Path(args.log_folder)
     search_path = args.search_path
-    search_parent_path = args.search_parent_path
     ignore_folders = args.search_ignore_folders
 
-    if search_parent_path == '':
-        print('search_parent_path is not given, ' +
-              'make sure search_path starts with region folder' +
-              'however it is suggested to use search_parent_path')
     # we can load them
     new_metadata_path_name = new_metadata_path.name
     files_audio_error_out_file = (
@@ -357,8 +350,7 @@ def main_logic(args):
             f.write('\n'.join(lines) + '\n')
         print(f'files with errors are saved in {files_audio_error_out_file}')
 
-    file_properties, exceptions = parse_file_paths(list(length_dict.keys()),
-                                                   search_parent_path)
+    file_properties, exceptions = parse_file_paths(list(length_dict.keys()),)
 
     check_year_consistency(file_properties)
 

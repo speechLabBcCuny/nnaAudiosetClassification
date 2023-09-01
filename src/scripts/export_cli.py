@@ -225,8 +225,8 @@ def filter_files(file_properties_df, region, location_id):
     # print(region, all_regions.index(region),'location_id',location_id)
 
     filtered_files = file_properties_df[file_properties_df.region == region]
-    filtered_files = filtered_files[filtered_files.locationId == location_id]
-    filtered_files = filtered_files[filtered_files.durationSec > 0]
+    filtered_files = filtered_files[filtered_files.location == location_id]
+    filtered_files = filtered_files[filtered_files.duration_sec > 0]
 
     # year is an integer here
     years = np.array([i.year for i in filtered_files.timestamp])

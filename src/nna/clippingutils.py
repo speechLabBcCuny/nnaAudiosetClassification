@@ -45,10 +45,32 @@ from argparse import ArgumentError
 import pickle
 from pathlib import Path
 from typing import List, Tuple, Union
+import pandas as pd
 
 # import librosa
 import numpy as np
 # from pydub import AudioSegment
+
+FILE_PATH_COL = 'file_path'
+
+
+# file_properties_df_path = '../../data/prudhoeAndAnwr4photoExp_dataV1.pkl'
+def load_metadata(metadata_file):
+    if not metadata_file or metadata_file == '.':
+        return pd.DataFrame()
+    metadata_file = Path(metadata_file)
+    if metadata_file.exists():
+        if metadata_file.suffix == '.pkl':
+            metadata_df = pd.read_pickle(str(metadata_file))
+            metadata_df.set_index(FILE_PATH_COL, inplace=True, drop=False)
+        elif metadata_file.suffix == '.csv':
+            metadata_df = pd.read_csv(str(metadata_file),
+                                      index_col=FILE_PATH_COL)
+        else:
+            raise ValueError('unknown file type for current_metadata_file')
+        return metadata_df
+    else:
+        raise ValueError(f'{metadata_file} does NOT exists')
 
 
 def load_audio(
@@ -245,7 +267,7 @@ def run_task_save(input_files: List[Union[str, Path]],
             #mono
             if len(y.shape) == 1:
                 res = get_clipping_percent(y[clip_i:(clip_i +
-                                                        (segment_len * sr))],
+                                                     (segment_len * sr))],
                                            threshold=clipping_threshold)
             elif len(y.shape) == 2:
                 res = get_clipping_percent(y[:, clip_i:(clip_i +
