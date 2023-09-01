@@ -410,6 +410,78 @@ def read_file_properties_v2(mp3_files_path_list, debug=0):
     return file_properties, exceptions
 
 
+# TODO ,work with relative paths not absolute IMPORTANT fix that
+# then update
+def read_file_properties_v3(mp3_files_path_list, parent_folder='', debug=0):
+    parent_folder = Path(parent_folder)
+    if isinstance(mp3_files_path_list, str):
+        if debug > 0:
+            print("using txt file at {}".format(mp3_files_path_list))
+        with open(str(mp3_files_path_list)) as f:
+            lines = f.readlines()
+            mp3_files_path_list = [line.strip() for line in lines]
+
+    def inner_loop(apath, exceptions):
+        if debug > 0:
+            print(apath)
+        apath = Path(apath)
+        # usual ones
+        if len(apath.parents) == 8:
+            recorderId_startDateTime = apath.stem
+            if debug > 0:
+                print(recorderId_startDateTime)
+            recorderId_startDateTime = recorderId_startDateTime.split("_")
+            # most of the recordings have format of recorderID_date_clock
+            # ex: S4A10422_20210521_235233.flac
+            if len(recorderId_startDateTime) == 3:
+                recorderId, date, hour_min_sec = recorderId_startDateTime
+            # collar data only has format of date_clock
+            # ex: 20210521_235233.flac
+            elif len(recorderId_startDateTime) == 2:
+                date, hour_min_sec = recorderId_startDateTime
+                recorderId = 'N/A'
+            else:
+                exceptions.append(apath)
+                return None
+
+            if debug > 0:
+                print(date)
+            year, month, day = date[0:4], date[4:6], date[6:8]
+
+            if hour_min_sec is None:
+                print(apath)
+            # hour = hour_min_sec[0:2]
+            location_id = apath.parts[6]
+            region = apath.parts[5]
+
+            site_name = ""
+
+            file_properties[apath] = str2timestamp({
+                "site_id": location_id,
+                "locationId": location_id,
+                "site_name": site_name,
+                "recorderId": recorderId,
+                "hour_min_sec": hour_min_sec,
+                "year": year,
+                "month": month,
+                "day": day,
+                "region": region
+            })
+
+        else:
+            exceptions.append(apath)
+
+    exceptions: List[str] = []
+    file_properties = {}
+    for apath in mp3_files_path_list:
+        try:
+            inner_loop(apath, exceptions)
+        except:
+            exceptions.append(apath)
+
+    return file_properties, exceptions
+
+
 def make_mono_set_sr(
         input_file,
         output_file,
