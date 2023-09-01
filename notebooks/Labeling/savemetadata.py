@@ -22,7 +22,7 @@ try:
     from megantaxo import io as m_io
     TIMESTAMP_DATASET_FORMAT = m_io.TIMESTAMP_DATASET_FORMAT
 except:
-    TIMESTAMP_DATASET_FORMAT = '%Y-%m-%d %H:%M:%S'
+    TIMESTAMP_DATASET_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
 
 FILE_PATH_COL = 'file_path'
 REGION_COL = 'region'
