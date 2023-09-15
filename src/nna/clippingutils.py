@@ -78,6 +78,7 @@ def load_audio(
     dtype: np.dtype = np.int16,
     backend: str = "pydub",
     resample_rate=None,
+    ffmpeg_path='ffmpeg',
 ) -> Tuple[np.ndarray, int]:
     """Load audio file as numpy array using given backend.
 
@@ -129,7 +130,7 @@ def load_audio(
             # sound_array = sound_array.astype(np.int16)
     elif backend == "pydub":
         from pydub import AudioSegment
-        AudioSegment.converter = '/home/enis/sbin/ffmpeg'
+        AudioSegment.converter = ffmpeg_path
         sound_array = AudioSegment.from_file(filepath)
         sr = sound_array.frame_rate
         channels = sound_array.channels
@@ -191,7 +192,8 @@ def run_task_save(input_files: List[Union[str, Path]],
                   clipping_threshold: float,
                   segment_len: int = 10,
                   audio_load_backend: str = "pydub",
-                  save=True) -> Tuple[dict, list]:
+                  save=True,
+                  ffmpeg_path='ffmpeg') -> Tuple[dict, list]:
     """Save clipping in dict to a file named as f"{area_id}_{threshold}.pkl"
 
         Computes clipping for only files
@@ -256,7 +258,8 @@ def run_task_save(input_files: List[Union[str, Path]],
         # print(audio_file)
         y, sr = load_audio(audio_file,
                            dtype=np.int16,
-                           backend=audio_load_backend)
+                           backend=audio_load_backend,
+                           ffmpeg_path=ffmpeg_path)
 
         assert sr == int(sr)
         sr = int(sr)

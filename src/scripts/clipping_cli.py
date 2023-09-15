@@ -1,6 +1,4 @@
 '''Calculate clipping info of all files from a specific location.
-
-    TODO: ffmpeg executable hard coded in clippint utils for pydub
     
 
     Ex:
@@ -65,10 +63,14 @@ if __name__ == '__main__':
                         type=float,
                         default=1.0)
 
+    parser.add_argument('--ffmpeg_path',
+                        help='path to ffmpeg executable',
+                        default='ffmpeg')
+
     args = parser.parse_args()
 
     from nna import clippingutils
-
+    ffmpeg_path = args.ffmpeg_path
     clipping_threshold = args.clipping_threshold
 
     metadata_path = args.metadata_path
@@ -94,6 +96,7 @@ if __name__ == '__main__':
         region_location,
         clipping_results_path,
         clipping_threshold,
+        ffmpeg_path=ffmpeg_path,
     )
 
     if files_w_errors:
