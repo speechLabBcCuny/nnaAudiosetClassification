@@ -359,7 +359,7 @@ def main_logic(args):
         print(f'there are {len(files_werror)}' +
               ' number of files with errors reading length via ffprobe')
         with open(files_audio_error_out_file, 'w', encoding='utf-8') as f:
-            lines = [line.join(',') for line in files_werror]
+            lines = [','.join(line) for line in files_werror]
             f.write('\n'.join(lines) + '\n')
         print(f'files with errors are saved in {files_audio_error_out_file}')
 
