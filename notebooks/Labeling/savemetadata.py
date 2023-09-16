@@ -45,14 +45,13 @@ def load_previous_data(metadata_file):
     if metadata_file.exists():
         if metadata_file.suffix == '.pkl':
             current_file_properties_df = pd.read_pickle(str(metadata_file))
-            current_file_properties_df.set_index(FILE_PATH_COL,
-                                                 inplace=True,
-                                                 drop=False)
         elif metadata_file.suffix == '.csv':
-            current_file_properties_df = pd.read_csv(str(metadata_file),
-                                                     index_col=FILE_PATH_COL)
+            current_file_properties_df = pd.read_csv(str(metadata_file))
         else:
             raise ValueError('unknown file type for current_metadata_file')
+        current_file_properties_df.set_index(FILE_PATH_COL,
+                                             inplace=True,
+                                             drop=False)
         return current_file_properties_df
     else:
         print(f'{metadata_file} does NOT exists')
