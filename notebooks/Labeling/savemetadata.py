@@ -58,7 +58,7 @@ def load_previous_data(metadata_file):
         return pd.DataFrame()
 
 
-def list_files(search_path: str = '/search_path/',
+def list_files(search_path: str,
                ignore_folders: Union[List, None] = None,
                file_name: str = '*.*'):
     if ignore_folders is None:
@@ -145,6 +145,7 @@ def concurrent_get_media_duration(
             except Exception as exc:
                 print(f'\nAn exception occurred with file {file}: {exc}'
                      )  # Added newline for cleaner print if exception occurs
+                files_werror.append((str(file), str(exc)))
     return length_dict, files_werror
 
 
@@ -307,6 +308,9 @@ def main_logic(args):
         args.previous_metadata_path) if args.previous_metadata_path else None
     new_metadata_path = Path(args.new_metadata_path)
     new_metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    if new_metadata_path.exists():
+        print('WARNING: metadata already exists, ' +
+              f'it will be overwritten! at {new_metadata_path}')
     log_folder = Path(args.log_folder)
     log_folder.mkdir(parents=True, exist_ok=True)
     search_path = args.search_path
@@ -314,10 +318,18 @@ def main_logic(args):
 
     # we can load them
     new_metadata_path_name = new_metadata_path.stem
+    # Get the current date and time
+    now = datetime.now()
+
+    # Format as a string
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+
     files_audio_error_out_file = (
-        log_folder / f'files-audio-error_{new_metadata_path_name}.csv')
-    files_w_wrong_name = (log_folder /
-                          f'files-wrong-name_{new_metadata_path_name}.txt')
+        log_folder /
+        f'files-audio-error_{new_metadata_path_name}_{timestamp}.csv')
+    files_w_wrong_name = (
+        log_folder /
+        f'files-wrong-name_{new_metadata_path_name}_{timestamp}.txt')
 
     # Find files
     # in given search path ignoring given directories
