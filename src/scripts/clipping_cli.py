@@ -89,8 +89,8 @@ if __name__ == '__main__':
         location_id_filtered.duration_sec > 0]
     # print(len(duration_filtered.index))
     if len(duration_filtered.index) == 0:
-        raise ValueError(
-            f'No files found for {region_location} at {metadata_path}')
+        print(f'No files found for {region} region and {location} ' +
+              f'location at {metadata_path}')
     all_results_dict, files_w_errors = clippingutils.run_task_save(
         duration_filtered.index,
         region_location,

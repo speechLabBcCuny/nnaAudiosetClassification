@@ -307,12 +307,14 @@ def main_logic(args):
     previous_metadata_path = Path(
         args.previous_metadata_path) if args.previous_metadata_path else None
     new_metadata_path = Path(args.new_metadata_path)
+    new_metadata_path.parent.mkdir(parents=True, exist_ok=True)
     log_folder = Path(args.log_folder)
+    log_folder.mkdir(parents=True, exist_ok=True)
     search_path = args.search_path
     ignore_folders = args.search_ignore_folders
 
     # we can load them
-    new_metadata_path_name = new_metadata_path.name
+    new_metadata_path_name = new_metadata_path.stem
     files_audio_error_out_file = (
         log_folder / f'files-audio-error_{new_metadata_path_name}.csv')
     files_w_wrong_name = (log_folder /

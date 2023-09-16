@@ -276,6 +276,8 @@ def run_task_save(input_files: List[Union[str, Path]],
                 res = get_clipping_percent(y[:, clip_i:(clip_i +
                                                         (segment_len * sr))],
                                            threshold=clipping_threshold)
+            else:
+                raise ValueError("only mono and stereo sound is supported")
             results.append(res)
         resultsnp = np.array(results)
         all_results_dict[audio_file] = resultsnp[:]
